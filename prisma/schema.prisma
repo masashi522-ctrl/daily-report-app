@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("leader")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports  Report[]
+  comments Comment[]
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  userId         String
+  date           DateTime @default(now())
+  userReport     String
+  workReport     String
+  externalReport String
+  summary        String
+  chatHistory    String   @default("[]")
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  reportId  String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
