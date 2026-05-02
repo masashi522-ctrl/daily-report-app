@@ -23,9 +23,10 @@ const BP_DIA = range(30, 200, 5)
 const PULSE  = range(30, 200, 5)
 const TEMP   = range(35.0, 42.0, 0.5)
 const FLUID  = range(0, 1000, 50)
+const FLUID_SELECT = range(50, 1000, 50)
 const MEAL_OPTIONS = [0,1,2,3,4,5,6,7,8,9,10]
 
-// 入力＋ドロップダウン一体型（モバイル用）
+// モバイル用: 入力＋ドロップダウン一体型
 function ComboNum({ listId, values, current, onChange, placeholder = '-', min, max, step = 1, inputMode = 'numeric' }: {
   listId: string; values: number[]; current: number | null | undefined
   onChange: (v: number | null) => void; placeholder?: string
@@ -38,7 +39,8 @@ function ComboNum({ listId, values, current, onChange, placeholder = '-', min, m
         placeholder={placeholder} min={min} max={max} step={step}
         value={current ?? ''}
         onChange={e => onChange(e.target.value !== '' ? +e.target.value : null)}
-        className="flex-1 min-w-0 px-2 py-2 text-sm text-center text-gray-900 bg-white focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="flex-1 min-w-0 px-2 py-2 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        style={{ color: '#111827', backgroundColor: '#ffffff', WebkitTextFillColor: '#111827' }}
       />
       <select
         value={current ?? ''}
@@ -52,7 +54,7 @@ function ComboNum({ listId, values, current, onChange, placeholder = '-', min, m
   )
 }
 
-// ±ボタン＋入力＋ドロップダウン一体型（体温用）
+// モバイル用: ±ボタン＋入力＋ドロップダウン一体型（体温用）
 function ComboTemp({ listId, values, current, onChange }: {
   listId: string; values: number[]; current: number | null | undefined
   onChange: (v: number | null) => void
@@ -68,7 +70,8 @@ function ComboTemp({ listId, values, current, onChange }: {
         min={35} max={42} step={0.1} placeholder="36.0"
         value={current ?? ''}
         onChange={e => onChange(e.target.value !== '' ? +e.target.value : null)}
-        className="flex-1 min-w-0 px-1 py-2 text-sm text-center text-gray-900 bg-white focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none border-x border-gray-200"
+        className="flex-1 min-w-0 px-1 py-2 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none border-x border-gray-200"
+        style={{ color: '#111827', backgroundColor: '#ffffff', WebkitTextFillColor: '#111827' }}
       />
       <select
         value={current ?? ''}
@@ -139,15 +142,14 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     )
   }
 
-  // デスクトップ用インプット（スピナーなし）
-  const numSm = 'w-14 border border-gray-200 rounded px-1 py-0.5 text-center text-xs text-gray-900 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
+  // デスクトップ用スタイル
+  const numSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-center text-xs text-gray-900 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
+  const selSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-xs text-gray-700 w-full'
   const selMd = 'w-full border border-gray-200 rounded-lg px-2 py-2 text-sm'
   const vRow  = 'grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 items-center'
   const vLbl  = 'text-xs text-gray-500 leading-tight'
-  // デスクトップ テーブルヘッダー
-  const th1 = 'px-2 py-1.5 font-semibold text-center text-[11px] border-b border-gray-200'
-  const th2 = 'px-2 py-1 font-medium text-center text-[10px] text-gray-500 border-b border-gray-200'
-  const td  = 'px-1.5 py-1.5'
+  const th = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b border-gray-200 bg-blue-50 text-gray-700'
+  const td = 'px-1 py-1.5 align-middle'
 
   return (
     <>
@@ -310,15 +312,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
         })}
       </div>
 
-      {/* ── デスクトップ：2段テーブル（横スクロールなし） ── */}
-      {/*
-          列構成（14列）:
-          1:名前(rs=2)  2:形態(rs=2)
-          3:血圧AM/入浴  4:血圧PM/食事  5:脈AM/水分AM  6:脈PM/水分PM
-          7:体温AM/朝   8:体温PM/昼前  9:-/昼後  10:-/夕  11:-/口腔
-          12:-/備考  13:-/特記  14:保存(rs=2)
-      */}
-      <div className="hidden md:block rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {/* ── デスクトップ：コンパクト1行テーブル（合計約940px） ── */}
+      <div className="hidden md:block rounded-xl border border-gray-200 bg-white shadow-sm overflow-x-auto">
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p>{residents.length === 0 ? '利用者が登録されていません' : '該当する利用者がいません'}</p>
@@ -326,142 +321,193 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           </div>
         )}
         {filtered.length > 0 && (
-          <table className="w-full text-xs" style={{ tableLayout: 'fixed' }}>
+          <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '940px', width: '100%' }}>
             <colgroup>
-              <col style={{ width: '80px' }} />  {/* 名前 */}
-              <col style={{ width: '48px' }} />  {/* 形態 */}
-              <col style={{ width: '100px' }} /> {/* 血圧AM / 入浴 */}
-              <col style={{ width: '100px' }} /> {/* 血圧PM / 食事 */}
-              <col style={{ width: '52px' }} />  {/* 脈AM / 水分AM */}
-              <col style={{ width: '52px' }} />  {/* 脈PM / 水分PM */}
-              <col style={{ width: '52px' }} />  {/* 体温AM / 朝薬 */}
-              <col style={{ width: '52px' }} />  {/* 体温PM / 昼前 */}
-              <col style={{ width: '36px' }} />  {/* - / 昼後 */}
-              <col style={{ width: '36px' }} />  {/* - / 夕薬 */}
-              <col style={{ width: '36px' }} />  {/* - / 口腔 */}
-              <col style={{ width: '90px' }} />  {/* - / 備考 */}
-              <col style={{ width: '110px' }} /> {/* - / 特記事項 */}
+              <col style={{ width: '90px' }} />  {/* 名前 */}
+              <col style={{ width: '88px' }} />  {/* 血圧AM */}
+              <col style={{ width: '88px' }} />  {/* 血圧PM */}
+              <col style={{ width: '78px' }} />  {/* 脈拍 AM+PM */}
+              <col style={{ width: '78px' }} />  {/* 体温 AM+PM */}
+              <col style={{ width: '44px' }} />  {/* 入浴 */}
+              <col style={{ width: '82px' }} />  {/* 食事 主+副 */}
+              <col style={{ width: '90px' }} />  {/* 水分 AM+PM */}
+              <col style={{ width: '90px' }} />  {/* 服薬・口腔 */}
+              <col style={{ width: '76px' }} />  {/* 備考 */}
+              <col style={{ width: '84px' }} />  {/* 特記 */}
               <col style={{ width: '52px' }} />  {/* 保存 */}
             </colgroup>
             <thead>
-              {/* ヘッダー1段目 */}
-              <tr className="bg-blue-50 text-gray-700">
-                <th className={`${th1} text-left sticky left-0 bg-blue-50`} rowSpan={2}>名前</th>
-                <th className={th1} rowSpan={2}>形態</th>
-                <th className={th1}>血圧AM<span className="text-[9px] font-normal text-gray-400 ml-0.5">収/拡</span></th>
-                <th className={th1}>血圧PM<span className="text-[9px] font-normal text-gray-400 ml-0.5">収/拡</span></th>
-                <th className={th1}>脈AM</th>
-                <th className={th1}>脈PM</th>
-                <th className={th1}>体温AM</th>
-                <th className={th1}>体温PM</th>
-                <th className={`${th1} bg-gray-50`} colSpan={5}></th>
-                <th className={th1} rowSpan={2}>保存</th>
-              </tr>
-              {/* ヘッダー2段目 */}
-              <tr className="bg-gray-50 text-gray-600">
-                <th className={th2}>入浴</th>
-                <th className={th2}>食事<span className="text-[9px] font-normal ml-0.5">主/副</span></th>
-                <th className={th2}>水分AM</th>
-                <th className={th2}>水分PM</th>
-                <th className={th2}>朝</th>
-                <th className={th2}>昼前</th>
-                <th className={th2}>昼後</th>
-                <th className={th2}>夕</th>
-                <th className={th2}>口腔</th>
-                <th className={th2}>備考</th>
-                <th className={th2}>特記事項</th>
+              <tr className="border-b border-gray-200">
+                <th className={th}>名前</th>
+                <th className={th}>
+                  <div>血圧 AM</div>
+                  <div className="text-[9px] font-normal text-gray-400">収 / 拡</div>
+                </th>
+                <th className={th}>
+                  <div>血圧 PM</div>
+                  <div className="text-[9px] font-normal text-gray-400">収 / 拡</div>
+                </th>
+                <th className={th}>
+                  <div>脈拍</div>
+                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
+                </th>
+                <th className={th}>
+                  <div>体温</div>
+                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
+                </th>
+                <th className={th}>入浴</th>
+                <th className={th}>
+                  <div>食事</div>
+                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>主</span><span>副</span></div>
+                </th>
+                <th className={th}>
+                  <div>水分(ml)</div>
+                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
+                </th>
+                <th className={th}>
+                  <div className="flex justify-around text-[9px]">
+                    <span>朝</span><span>昼前</span><span>昼後</span><span>夕</span><span>口腔</span>
+                  </div>
+                </th>
+                <th className={th}>備考</th>
+                <th className={th}>特記事項</th>
+                <th className={th}>保存</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((resident, i) => {
                 const d = getDraft(resident.id)
-                const base = i % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                const base = i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
                 return (
-                  <>
-                    {/* バイタル行 */}
-                    <tr key={`${resident.id}-v`} className={`${base} hover:bg-blue-50 transition border-t border-gray-200`}>
-                      <td className={`${td} sticky left-0 bg-inherit font-medium text-gray-800`} rowSpan={2}>
-                        <div className="font-semibold">{resident.name}</div>
-                        <div className="text-[10px] text-gray-500 mt-0.5">
-                          {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
-                        </div>
-                        {resident.foodRestrictions && <div className="text-red-500 text-[10px]">{resident.foodRestrictions}</div>}
-                      </td>
-                      <td className={`${td} text-gray-500 text-[10px] text-center`} rowSpan={2}>
+                  <tr key={resident.id} className={`${base} hover:bg-blue-50/40 transition border-t border-gray-100`}>
+                    {/* 名前 */}
+                    <td className={td}>
+                      <div className="font-semibold text-gray-800 leading-tight text-[11px] truncate">{resident.name}</div>
+                      <div className="text-[9px] text-gray-400 leading-tight truncate mt-0.5">
                         {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
-                      </td>
-                      <td className={td}>
-                        <div className="flex items-center gap-0.5">
-                          <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200} value={d.bpSystolic ?? ''} onChange={numHandler(resident.id, 'bpSystolic')} className={numSm} />
-                          <span className="text-gray-300">/</span>
-                          <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200} value={d.bpDiastolic ?? ''} onChange={numHandler(resident.id, 'bpDiastolic')} className={numSm} />
-                        </div>
-                      </td>
-                      <td className={td}>
-                        <div className="flex items-center gap-0.5">
-                          <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200} value={d.bpSystolicPm ?? ''} onChange={numHandler(resident.id, 'bpSystolicPm')} className={numSm} />
-                          <span className="text-gray-300">/</span>
-                          <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200} value={d.bpDiastolicPm ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPm')} className={numSm} />
-                        </div>
-                      </td>
-                      <td className={`${td} text-center`}><input type="number" list="dl-pulse" min={30} max={200} value={d.pulse ?? ''} onChange={numHandler(resident.id, 'pulse')} className={numSm} /></td>
-                      <td className={`${td} text-center`}><input type="number" list="dl-pulse" min={30} max={200} value={d.pulsePm ?? ''} onChange={numHandler(resident.id, 'pulsePm')} className={numSm} /></td>
-                      <td className={`${td} text-center`}><input type="number" list="dl-temp" step="0.1" min={35} max={42} value={d.tempMorning ?? ''} onChange={numHandler(resident.id, 'tempMorning')} className={numSm} /></td>
-                      <td className={`${td} text-center`}><input type="number" list="dl-temp" step="0.1" min={35} max={42} value={d.tempAfternoon ?? ''} onChange={numHandler(resident.id, 'tempAfternoon')} className={numSm} /></td>
-                      <td colSpan={5} className="bg-gray-50/50" />
-                      <td className={td} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                        <SaveBtn id={resident.id} />
-                      </td>
-                    </tr>
-                    {/* ケア行 */}
-                    <tr key={`${resident.id}-c`} className={`${base} hover:bg-blue-50 transition border-t border-gray-100`}>
-                      {/* 名前・形態は rowspan=2 でスキップ */}
-                      <td className={`${td} text-center`}>
-                        <select value={d.bathing ?? 'NOT_APPLICABLE'} onChange={e => upd(resident.id, 'bathing', e.target.value)}
-                          className="border border-gray-200 rounded px-1 py-0.5 text-xs w-full">
-                          <option value="DONE">○</option>
-                          <option value="NOT_DONE">×</option>
-                          <option value="NOT_APPLICABLE">-</option>
+                      </div>
+                      {resident.foodRestrictions && <div className="text-red-500 text-[9px] leading-tight">{resident.foodRestrictions}</div>}
+                    </td>
+                    {/* 血圧AM */}
+                    <td className={td}>
+                      <div className="flex items-center gap-0.5 justify-center">
+                        <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200}
+                          value={d.bpSystolic ?? ''} onChange={numHandler(resident.id, 'bpSystolic')}
+                          className={`${numSm} w-[36px]`} />
+                        <span className="text-gray-300 text-[10px]">/</span>
+                        <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200}
+                          value={d.bpDiastolic ?? ''} onChange={numHandler(resident.id, 'bpDiastolic')}
+                          className={`${numSm} w-[36px]`} />
+                      </div>
+                    </td>
+                    {/* 血圧PM */}
+                    <td className={td}>
+                      <div className="flex items-center gap-0.5 justify-center">
+                        <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200}
+                          value={d.bpSystolicPm ?? ''} onChange={numHandler(resident.id, 'bpSystolicPm')}
+                          className={`${numSm} w-[36px]`} />
+                        <span className="text-gray-300 text-[10px]">/</span>
+                        <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200}
+                          value={d.bpDiastolicPm ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPm')}
+                          className={`${numSm} w-[36px]`} />
+                      </div>
+                    </td>
+                    {/* 脈拍 AM/PM */}
+                    <td className={td}>
+                      <div className="flex items-center gap-0.5 justify-center">
+                        <input type="number" list="dl-pulse" placeholder="AM" min={30} max={200}
+                          value={d.pulse ?? ''} onChange={numHandler(resident.id, 'pulse')}
+                          className={`${numSm} w-[33px]`} />
+                        <input type="number" list="dl-pulse" placeholder="PM" min={30} max={200}
+                          value={d.pulsePm ?? ''} onChange={numHandler(resident.id, 'pulsePm')}
+                          className={`${numSm} w-[33px]`} />
+                      </div>
+                    </td>
+                    {/* 体温 AM/PM */}
+                    <td className={td}>
+                      <div className="flex items-center gap-0.5 justify-center">
+                        <input type="number" list="dl-temp" placeholder="AM" step="0.1" min={35} max={42}
+                          value={d.tempMorning ?? ''} onChange={numHandler(resident.id, 'tempMorning')}
+                          className={`${numSm} w-[33px]`} />
+                        <input type="number" list="dl-temp" placeholder="PM" step="0.1" min={35} max={42}
+                          value={d.tempAfternoon ?? ''} onChange={numHandler(resident.id, 'tempAfternoon')}
+                          className={`${numSm} w-[33px]`} />
+                      </div>
+                    </td>
+                    {/* 入浴 */}
+                    <td className={`${td} text-center`}>
+                      <select value={d.bathing ?? 'NOT_APPLICABLE'} onChange={e => upd(resident.id, 'bathing', e.target.value)}
+                        className={selSm}>
+                        <option value="DONE">○</option>
+                        <option value="NOT_DONE">×</option>
+                        <option value="NOT_APPLICABLE">-</option>
+                      </select>
+                    </td>
+                    {/* 食事 主/副 */}
+                    <td className={td}>
+                      <div className="flex items-center gap-0.5 justify-center">
+                        <select value={d.mealMainFood ?? ''} onChange={e => upd(resident.id, 'mealMainFood', e.target.value !== '' ? +e.target.value : null)}
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[36px]">
+                          <option value="">主</option>
+                          {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
-                      </td>
-                      <td className={td}>
-                        <div className="flex items-center gap-0.5">
-                          <select value={d.mealMainFood ?? ''} onChange={e => upd(resident.id, 'mealMainFood', e.target.value !== '' ? +e.target.value : null)}
-                            className="border border-gray-200 rounded px-1 py-0.5 text-xs w-[44px]">
-                            <option value="">主</option>
-                            {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                          </select>
-                          <span className="text-gray-300">/</span>
-                          <select value={d.mealSideFood ?? ''} onChange={e => upd(resident.id, 'mealSideFood', e.target.value !== '' ? +e.target.value : null)}
-                            className="border border-gray-200 rounded px-1 py-0.5 text-xs w-[44px]">
-                            <option value="">副</option>
-                            {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                          </select>
-                        </div>
-                      </td>
-                      <td className={`${td} text-center`}><input type="number" list="dl-fluid" min={0} max={2000} step={50} value={d.fluidIntakeAm ?? ''} onChange={numHandler(resident.id, 'fluidIntakeAm')} className={numSm} /></td>
-                      <td className={`${td} text-center`}><input type="number" list="dl-fluid" min={0} max={2000} step={50} value={d.fluidIntakePm ?? ''} onChange={numHandler(resident.id, 'fluidIntakePm')} className={numSm} /></td>
-                      {(['medicationMorning', 'medicationBeforeLunch', 'medicationAfterLunch', 'medicationEvening'] as const).map(field => (
-                        <td key={field} className={`${td} text-center`}>
-                          <input type="checkbox" checked={!!(d as Record<string, unknown>)[field]}
-                            onChange={e => upd(resident.id, field, e.target.checked)}
-                            className="w-4 h-4 accent-blue-600" />
-                        </td>
-                      ))}
-                      <td className={`${td} text-center`}>
-                        <input type="checkbox" checked={!!d.oralCare} onChange={e => upd(resident.id, 'oralCare', e.target.checked)} className="w-4 h-4 accent-blue-600" />
-                      </td>
-                      <td className={td}>
-                        <input type="text" value={d.oralCareNote ?? ''} onChange={e => upd(resident.id, 'oralCareNote', e.target.value)}
-                          placeholder="備考" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
-                      </td>
-                      <td className={td}>
-                        <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
-                          placeholder="体重・SpO2等" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
-                      </td>
-                      {/* 保存は rowspan=2 でスキップ */}
-                    </tr>
-                  </>
+                        <span className="text-gray-300 text-[10px]">/</span>
+                        <select value={d.mealSideFood ?? ''} onChange={e => upd(resident.id, 'mealSideFood', e.target.value !== '' ? +e.target.value : null)}
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[36px]">
+                          <option value="">副</option>
+                          {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                    </td>
+                    {/* 水分 AM/PM（セレクト 50〜1000ml） */}
+                    <td className={td}>
+                      <div className="flex items-center gap-0.5 justify-center">
+                        <select value={d.fluidIntakeAm ?? ''} onChange={e => upd(resident.id, 'fluidIntakeAm', e.target.value !== '' ? +e.target.value : null)}
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[42px]">
+                          <option value="">AM</option>
+                          {FLUID_SELECT.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                        <select value={d.fluidIntakePm ?? ''} onChange={e => upd(resident.id, 'fluidIntakePm', e.target.value !== '' ? +e.target.value : null)}
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[42px]">
+                          <option value="">PM</option>
+                          {FLUID_SELECT.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                    </td>
+                    {/* 服薬・口腔（5チェックボックス） */}
+                    <td className={`${td} text-center`}>
+                      <div className="flex justify-around items-end">
+                        {([
+                          ['medicationMorning',     '朝'],
+                          ['medicationBeforeLunch', '昼前'],
+                          ['medicationAfterLunch',  '昼後'],
+                          ['medicationEvening',     '夕'],
+                          ['oralCare',              '口腔'],
+                        ] as const).map(([field, label]) => (
+                          <label key={field} className="flex flex-col items-center gap-0.5 cursor-pointer">
+                            <span className="text-[8px] text-gray-400 leading-tight">{label}</span>
+                            <input type="checkbox" checked={!!(d as Record<string, unknown>)[field]}
+                              onChange={e => upd(resident.id, field, e.target.checked)}
+                              className="w-3.5 h-3.5 accent-blue-600" />
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    {/* 備考 */}
+                    <td className={td}>
+                      <input type="text" value={d.oralCareNote ?? ''} onChange={e => upd(resident.id, 'oralCareNote', e.target.value)}
+                        placeholder="備考" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                    </td>
+                    {/* 特記 */}
+                    <td className={td}>
+                      <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
+                        placeholder="体重・SpO2等" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                    </td>
+                    {/* 保存 */}
+                    <td className={`${td} text-center`}>
+                      <SaveBtn id={resident.id} />
+                    </td>
+                  </tr>
                 )
               })}
             </tbody>
