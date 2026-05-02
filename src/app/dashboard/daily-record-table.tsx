@@ -44,6 +44,11 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
       upd(id, field, e.target.value !== '' ? +e.target.value : null)
   }
 
+  function selNum(id: string, field: string) {
+    return (e: React.ChangeEvent<HTMLSelectElement>) =>
+      upd(id, field, e.target.value !== '' ? +e.target.value : null)
+  }
+
   async function handleSave(residentId: string) {
     setSaving(residentId)
     const draft = getDraft(residentId)
@@ -118,58 +123,78 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-blue-600 text-center bg-blue-50 rounded py-0.5">AM</p>
                     <div>
-                      <span className={lblSm}>血圧（収/拡）</span>
-                      <div className="flex items-center gap-1">
-                        <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200}
-                          value={d.bpSystolic ?? ''} onChange={numHandler(resident.id, 'bpSystolic')} className={numMd} />
-                        <span className="text-gray-400 text-xs">/</span>
-                        <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200}
-                          value={d.bpDiastolic ?? ''} onChange={numHandler(resident.id, 'bpDiastolic')} className={numMd} />
-                      </div>
+                      <span className={lblSm}>血圧 収縮期</span>
+                      <select value={d.bpSystolic ?? ''} onChange={selNum(resident.id, 'bpSystolic')} className={selMd}>
+                        <option value="">-</option>
+                        {BP_SYS.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span className={lblSm}>血圧 拡張期</span>
+                      <select value={d.bpDiastolic ?? ''} onChange={selNum(resident.id, 'bpDiastolic')} className={selMd}>
+                        <option value="">-</option>
+                        {BP_DIA.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
                     </div>
                     <div>
                       <span className={lblSm}>脈拍</span>
-                      <input type="number" list="dl-pulse" min={30} max={200}
-                        value={d.pulse ?? ''} onChange={numHandler(resident.id, 'pulse')} className={numMd} />
+                      <select value={d.pulse ?? ''} onChange={selNum(resident.id, 'pulse')} className={selMd}>
+                        <option value="">-</option>
+                        {PULSE.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
                     </div>
                     <div>
                       <span className={lblSm}>体温</span>
-                      <input type="number" list="dl-temp" step="0.1" min={35} max={42}
-                        value={d.tempMorning ?? ''} onChange={numHandler(resident.id, 'tempMorning')} className={numMd} />
+                      <select value={d.tempMorning ?? ''} onChange={selNum(resident.id, 'tempMorning')} className={selMd}>
+                        <option value="">-</option>
+                        {TEMP.map(v => <option key={v} value={v}>{v.toFixed(1)}</option>)}
+                      </select>
                     </div>
                     <div>
                       <span className={lblSm}>水分(ml)</span>
-                      <input type="number" list="dl-fluid" min={0} max={2000} step={50}
-                        value={d.fluidIntakeAm ?? ''} onChange={numHandler(resident.id, 'fluidIntakeAm')} className={numMd} />
+                      <select value={d.fluidIntakeAm ?? ''} onChange={selNum(resident.id, 'fluidIntakeAm')} className={selMd}>
+                        <option value="">-</option>
+                        {FLUID.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
                     </div>
                   </div>
                   {/* PM */}
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-indigo-600 text-center bg-indigo-50 rounded py-0.5">PM</p>
                     <div>
-                      <span className={lblSm}>血圧（収/拡）</span>
-                      <div className="flex items-center gap-1">
-                        <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200}
-                          value={d.bpSystolicPm ?? ''} onChange={numHandler(resident.id, 'bpSystolicPm')} className={numMd} />
-                        <span className="text-gray-400 text-xs">/</span>
-                        <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200}
-                          value={d.bpDiastolicPm ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPm')} className={numMd} />
-                      </div>
+                      <span className={lblSm}>血圧 収縮期</span>
+                      <select value={d.bpSystolicPm ?? ''} onChange={selNum(resident.id, 'bpSystolicPm')} className={selMd}>
+                        <option value="">-</option>
+                        {BP_SYS.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span className={lblSm}>血圧 拡張期</span>
+                      <select value={d.bpDiastolicPm ?? ''} onChange={selNum(resident.id, 'bpDiastolicPm')} className={selMd}>
+                        <option value="">-</option>
+                        {BP_DIA.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
                     </div>
                     <div>
                       <span className={lblSm}>脈拍</span>
-                      <input type="number" list="dl-pulse" min={30} max={200}
-                        value={d.pulsePm ?? ''} onChange={numHandler(resident.id, 'pulsePm')} className={numMd} />
+                      <select value={d.pulsePm ?? ''} onChange={selNum(resident.id, 'pulsePm')} className={selMd}>
+                        <option value="">-</option>
+                        {PULSE.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
                     </div>
                     <div>
                       <span className={lblSm}>体温</span>
-                      <input type="number" list="dl-temp" step="0.1" min={35} max={42}
-                        value={d.tempAfternoon ?? ''} onChange={numHandler(resident.id, 'tempAfternoon')} className={numMd} />
+                      <select value={d.tempAfternoon ?? ''} onChange={selNum(resident.id, 'tempAfternoon')} className={selMd}>
+                        <option value="">-</option>
+                        {TEMP.map(v => <option key={v} value={v}>{v.toFixed(1)}</option>)}
+                      </select>
                     </div>
                     <div>
                       <span className={lblSm}>水分(ml)</span>
-                      <input type="number" list="dl-fluid" min={0} max={2000} step={50}
-                        value={d.fluidIntakePm ?? ''} onChange={numHandler(resident.id, 'fluidIntakePm')} className={numMd} />
+                      <select value={d.fluidIntakePm ?? ''} onChange={selNum(resident.id, 'fluidIntakePm')} className={selMd}>
+                        <option value="">-</option>
+                        {FLUID.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
                     </div>
                   </div>
                 </div>
