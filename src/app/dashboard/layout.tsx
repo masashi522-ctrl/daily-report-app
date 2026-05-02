@@ -16,6 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/residents" className="px-3 py-1.5 rounded-lg hover:bg-blue-600 transition">利用者管理</Link>
               <Link href="/history" className="px-3 py-1.5 rounded-lg hover:bg-blue-600 transition">過去記録</Link>
               <Link href="/analytics" className="px-3 py-1.5 rounded-lg hover:bg-blue-600 transition">集計・分析</Link>
+              <Link href="/dashboard/staff" className="px-3 py-1.5 rounded-lg hover:bg-blue-600 transition">スタッフ管理</Link>
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">
@@ -34,6 +35,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             { href: '/residents', label: '利用者' },
             { href: '/history', label: '過去記録' },
             { href: '/analytics', label: '集計' },
+            { href: '/dashboard/staff', label: 'スタッフ' },
           ].map(({ href, label }) => (
             <Link key={href} href={href} className="flex-1 text-center py-2 hover:bg-blue-600 transition">
               {label}
