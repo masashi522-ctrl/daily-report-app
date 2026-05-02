@@ -30,6 +30,11 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [drafts, setDrafts] = useState<Record<string, RecordDraft>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const [filter, setFilter] = useState('')
+
+  const filtered = filter
+    ? residents.filter(r => r.name.includes(filter))
+    : residents
 
   function getDraft(id: string): RecordDraft {
     return drafts[id] ?? recordMap[id] ?? {}
@@ -81,6 +86,41 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
 
   return (
     <>
+      {/* 利用者絞り込み */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-wrap gap-2 items-center">
+        <span className="text-xs text-gray-500 font-medium">利用者を絞り込む：</span>
+        <div className="flex items-center gap-2 flex-1 min-w-[160px]">
+          <input
+            type="text"
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            placeholder="名前で検索..."
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+          />
+          {filter && (
+            <button onClick={() => setFilter('')}
+              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100">
+              ✕ 全員
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 w-full">
+          {residents.map(r => (
+            <button key={r.id} onClick={() => setFilter(r.name === filter ? '' : r.name)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                filter === r.name
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+              }`}>
+              {r.name}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 w-full text-right">
+          {filtered.length}/{residents.length}名 表示中
+        </p>
+      </div>
+
       {/* 共通 datalist */}
       <datalist id="dl-bp-sys">{BP_SYS.map(v => <option key={v} value={v} />)}</datalist>
       <datalist id="dl-bp-dia">{BP_DIA.map(v => <option key={v} value={v} />)}</datalist>
@@ -90,13 +130,13 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
 
       {/* ── モバイル：カード表示 ── */}
       <div className="md:hidden space-y-3">
-        {residents.length === 0 && (
+        {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p>利用者が登録されていません</p>
             <a href="/residents" className="text-blue-600 underline mt-2 inline-block">利用者を登録する</a>
           </div>
         )}
-        {residents.map(resident => {
+        {filtered.map(resident => {
           const d = getDraft(resident.id)
           return (
             <div key={resident.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -294,7 +334,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             </tr>
           </thead>
           <tbody>
-            {residents.map((resident, i) => {
+            {filtered.map((resident, i) => {
               const d = getDraft(resident.id)
               return (
                 <tr key={resident.id} className={`border-t ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
@@ -363,10 +403,10 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             })}
           </tbody>
         </table>
-        {residents.length === 0 && (
+        {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
-            <p>利用者が登録されていません</p>
-            <a href="/residents" className="text-blue-600 underline mt-2 inline-block">利用者を登録する</a>
+            <p>{residents.length === 0 ? '利用者が登録されていません' : '該当する利用者がいません'}</p>
+            {residents.length === 0 && <a href="/residents" className="text-blue-600 underline mt-2 inline-block">利用者を登録する</a>}
           </div>
         )}
       </div>
