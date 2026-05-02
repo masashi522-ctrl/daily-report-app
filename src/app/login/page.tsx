@@ -15,7 +15,7 @@ export default async function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 shadow-sm mb-4">
             <span className="text-3xl">🌿</span>
           </div>
-          <h1 className="text-2xl font-bold text-stone-800 tracking-wide">日報アプリ</h1>
+          <h1 className="text-2xl font-bold text-stone-800 tracking-wide">デイサービス管理</h1>
           <p className="text-sm text-stone-500 mt-1">今日もお疲れさまです</p>
         </div>
 
@@ -24,7 +24,7 @@ export default async function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-stone-400 mt-6">
-          介護施設リーダー向け日報支援システム
+          デイサービス バイタル・ケア記録システム
         </p>
       </div>
     </div>
