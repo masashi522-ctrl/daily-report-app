@@ -38,6 +38,7 @@ export interface Resident {
   specialCondition: string | null
   isActive: boolean
   sortOrder: number
+  attendanceDays: string | null
   createdAt: string
   updatedAt: string
 }

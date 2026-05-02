@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState } from 'react'
 import { addResident } from './actions'
 import { FOOD_TYPE_LABELS } from '@/types/database'
+
+const DAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 export default function ResidentForm() {
   return (
@@ -20,6 +21,18 @@ export default function ResidentForm() {
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-700 block mb-2">利用曜日</label>
+        <div className="flex gap-1.5">
+          {DAYS.map((day, i) => (
+            <label key={i} className={`flex flex-col items-center gap-1 cursor-pointer select-none ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-700'}`}>
+              <span className="text-xs font-medium">{day}</span>
+              <input type="checkbox" name="attendanceDays" value={i}
+                className="w-4 h-4 accent-blue-600" />
+            </label>
+          ))}
+        </div>
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">禁止食品・アレルギー</label>

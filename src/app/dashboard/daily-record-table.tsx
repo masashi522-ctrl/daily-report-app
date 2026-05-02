@@ -31,10 +31,17 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [saving, setSaving] = useState<string | null>(null)
   const [, startTransition] = useTransition()
   const [filter, setFilter] = useState('')
+  const [todayOnly, setTodayOnly] = useState(true)
 
-  const filtered = filter
-    ? residents.filter(r => r.name.includes(filter))
-    : residents
+  const todayNum = new Date().getDay() // 0=日,1=月,...,6=土
+  const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
+
+  const filtered = residents.filter(r => {
+    const matchDay = !todayOnly || !r.attendanceDays ||
+      r.attendanceDays.split(',').map(Number).includes(todayNum)
+    const matchName = !filter || r.name.includes(filter)
+    return matchDay && matchName
+  })
 
   function getDraft(id: string): RecordDraft {
     return drafts[id] ?? recordMap[id] ?? {}
@@ -88,34 +95,50 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     <>
       {/* 利用者絞り込み */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-gray-500 font-medium">利用者を絞り込む：</span>
+        {/* 今日のみ／全員 トグル */}
+        <div className="flex gap-1 w-full">
+          <button onClick={() => setTodayOnly(true)}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition border ${
+              todayOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
+            }`}>
+            {DAY_LABELS[todayNum]}曜日の利用者
+          </button>
+          <button onClick={() => setTodayOnly(false)}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition border ${
+              !todayOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
+            }`}>
+            全利用者
+          </button>
+        </div>
+
+        {/* 名前検索 */}
         <div className="flex items-center gap-2 flex-1 min-w-[160px]">
-          <input
-            type="text"
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            placeholder="名前で検索..."
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
-          />
+          <input type="text" value={filter} onChange={e => setFilter(e.target.value)}
+            placeholder="名前で絞り込む..."
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
           {filter && (
             <button onClick={() => setFilter('')}
               className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100">
-              ✕ 全員
+              ✕
             </button>
           )}
         </div>
+
+        {/* 名前ボタン（フィルター後の利用者） */}
         <div className="flex flex-wrap gap-1 w-full">
-          {residents.map(r => (
-            <button key={r.id} onClick={() => setFilter(r.name === filter ? '' : r.name)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition ${
-                filter === r.name
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
-              }`}>
-              {r.name}
-            </button>
-          ))}
+          {(todayOnly ? residents.filter(r => !r.attendanceDays || r.attendanceDays.split(',').map(Number).includes(todayNum)) : residents)
+            .map(r => (
+              <button key={r.id} onClick={() => setFilter(r.name === filter ? '' : r.name)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                  filter === r.name
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+                }`}>
+                {r.name}
+              </button>
+            ))}
         </div>
+
         <p className="text-xs text-gray-400 w-full text-right">
           {filtered.length}/{residents.length}名 表示中
         </p>

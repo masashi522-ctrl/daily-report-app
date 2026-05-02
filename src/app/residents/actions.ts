@@ -13,6 +13,7 @@ export async function addResident(formData: FormData) {
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
   const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
+  const attendanceDays = (formData.getAll('attendanceDays') as string[]).join(',')
 
   if (!name) return
 
@@ -24,6 +25,7 @@ export async function addResident(formData: FormData) {
     specialCondition: specialCondition || null,
     isActive: true,
     sortOrder,
+    attendanceDays: attendanceDays || null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })

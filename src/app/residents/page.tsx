@@ -28,6 +28,7 @@ export default async function ResidentsPage() {
                 <tr className="bg-gray-50 text-gray-700 text-xs">
                   <th className="px-4 py-2 text-left">名前</th>
                   <th className="px-3 py-2 text-left">食事形態</th>
+                  <th className="px-3 py-2 text-left">利用曜日</th>
                   <th className="px-3 py-2 text-left">禁止</th>
                   <th className="px-3 py-2 text-left">特記</th>
                   <th className="px-3 py-2 text-center">状態</th>
@@ -39,6 +40,11 @@ export default async function ResidentsPage() {
                   <tr key={r.id} className={`border-t ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                     <td className="px-4 py-2 font-medium text-gray-800">{r.name}</td>
                     <td className="px-3 py-2 text-gray-600">{FOOD_TYPE_LABELS[r.foodType as FoodType]}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {r.attendanceDays
+                        ? r.attendanceDays.split(',').map((d: string) => ['日','月','火','水','木','金','土'][+d]).join(' ')
+                        : <span className="text-gray-400">-</span>}
+                    </td>
                     <td className="px-3 py-2 text-red-600 text-xs">{r.foodRestrictions ?? '-'}</td>
                     <td className="px-3 py-2 text-gray-500 text-xs max-w-[120px] truncate">{r.specialCondition ?? '-'}</td>
                     <td className="px-3 py-2 text-center">
