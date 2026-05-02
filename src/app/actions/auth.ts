@@ -5,7 +5,9 @@ import { createSession, deleteSession } from '@/lib/session'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
 
-export async function login(formData: FormData) {
+export type LoginState = { error: string } | null
+
+export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
