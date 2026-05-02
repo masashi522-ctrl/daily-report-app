@@ -1,7 +1,7 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
-import { deleteStaff } from './actions'
 import StaffForm from './staff-form'
+import DeleteButton from './delete-button'
 
 export default async function StaffPage() {
   await requireSession()
@@ -34,16 +34,7 @@ export default async function StaffPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <form action={async () => {
-                    'use server'
-                    await deleteStaff(staff.id)
-                  }}>
-                    <button type="submit"
-                      className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition"
-                      onClick={(e) => { if (!confirm(`${staff.name} を削除しますか？`)) e.preventDefault() }}>
-                      削除
-                    </button>
-                  </form>
+                  <DeleteButton id={staff.id} name={staff.name} />
                 </td>
               </tr>
             ))}
