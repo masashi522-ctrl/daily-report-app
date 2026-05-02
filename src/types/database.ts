@@ -33,7 +33,7 @@ export interface Staff {
 export interface Resident {
   id: string
   name: string
-  foodType: FoodType
+  foodType: string
   foodRestrictions: string | null
   specialCondition: string | null
   isActive: boolean

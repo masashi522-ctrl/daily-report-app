@@ -1,17 +1,22 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
-import { FOOD_TYPE_LABELS, type FoodType } from '@/types/database'
+import { FOOD_TYPE_LABELS, type FoodType, type Resident } from '@/types/database'
 import ResidentForm from './resident-form'
+import EditResidentForm from './edit-resident-form'
 import { deleteResident, toggleActive } from './actions'
 
-export default async function ResidentsPage() {
+export default async function ResidentsPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   await requireSession()
+
+  const { edit: editId } = await searchParams
 
   const { data: residents } = await supabase
     .from('Resident')
     .select('*')
     .order('sortOrder')
     .order('name')
+
+  const editingResident = editId ? residents?.find(r => r.id === editId) : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,9 +42,11 @@ export default async function ResidentsPage() {
               </thead>
               <tbody>
                 {residents?.map((r, i) => (
-                  <tr key={r.id} className={`border-t ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <tr key={r.id} className={`border-t ${editId === r.id ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                     <td className="px-4 py-2 font-medium text-gray-800">{r.name}</td>
-                    <td className="px-3 py-2 text-gray-600">{FOOD_TYPE_LABELS[r.foodType as FoodType]}</td>
+                    <td className="px-3 py-2 text-gray-600 text-xs">
+                      {r.foodType ? r.foodType.split(',').map((t: string) => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
+                    </td>
                     <td className="px-3 py-2 text-xs">
                       {r.attendanceDays
                         ? r.attendanceDays.split(',').map((d: string) => ['日','月','火','水','木','金','土'][+d]).join(' ')
@@ -55,15 +62,19 @@ export default async function ResidentsPage() {
                       </form>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <form action={deleteResident.bind(null, r.id)}>
-                        <button className="text-red-500 hover:text-red-700 text-xs">削除</button>
-                      </form>
+                      <div className="flex items-center justify-center gap-2">
+                        <a href={`/residents?edit=${r.id}`}
+                          className="text-blue-500 hover:text-blue-700 text-xs">編集</a>
+                        <form action={deleteResident.bind(null, r.id)}>
+                          <button className="text-red-500 hover:text-red-700 text-xs">削除</button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {(!residents || residents.length === 0) && (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-400">利用者が登録されていません</td>
+                    <td colSpan={7} className="text-center py-8 text-gray-400">利用者が登録されていません</td>
                   </tr>
                 )}
               </tbody>
@@ -73,8 +84,18 @@ export default async function ResidentsPage() {
 
         <div>
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            <h3 className="font-semibold text-gray-800 mb-4">利用者を追加</h3>
-            <ResidentForm />
+            {editingResident ? (
+              <>
+                <h3 className="font-semibold text-gray-800 mb-1">利用者を編集</h3>
+                <p className="text-xs text-blue-600 mb-4">{editingResident.name}</p>
+                <EditResidentForm resident={editingResident} />
+              </>
+            ) : (
+              <>
+                <h3 className="font-semibold text-gray-800 mb-4">利用者を追加</h3>
+                <ResidentForm />
+              </>
+            )}
           </div>
         </div>
       </div>

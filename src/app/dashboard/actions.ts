@@ -43,11 +43,10 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
     updatedAt: new Date().toISOString(),
   }
 
-  if (data.id) {
-    await supabase.from('DailyRecord').update(record).eq('id', data.id)
-  } else {
-    await supabase.from('DailyRecord').insert({ ...record, id: crypto.randomUUID(), createdAt: new Date().toISOString() })
-  }
+  await supabase.from('DailyRecord').upsert(
+    { ...record, id: data.id ?? crypto.randomUUID(), createdAt: new Date().toISOString() },
+    { onConflict: 'date,residentId' }
+  )
 
   revalidatePath('/dashboard')
 }
