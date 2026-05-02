@@ -1,49 +1,100 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
-model User {
+model Staff {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
   password  String
-  role      String   @default("leader")
+  role      Role     @default(STAFF)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reports  Report[]
-  comments Comment[]
+  dailyRecords DailyRecord[]
 }
 
-model Report {
-  id             String   @id @default(cuid())
-  userId         String
-  date           DateTime @default(now())
-  userReport     String
-  workReport     String
-  externalReport String
-  summary        String
-  chatHistory    String   @default("[]")
-  status         String   @default("pending")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model Resident {
+  id               String   @id @default(cuid())
+  name             String
+  foodType         FoodType @default(REGULAR)
+  foodRestrictions String?
+  specialCondition String?
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comments Comment[]
+  dailyRecords DailyRecord[]
 }
 
-model Comment {
-  id        String   @id @default(cuid())
-  reportId  String
-  userId    String
-  content   String
+model DailyRecord {
+  id         String   @id @default(cuid())
+  date       DateTime @db.Date
+  residentId String
+  staffId    String?
+
+  bpSystolic    Int?
+  bpDiastolic   Int?
+  pulse         Int?
+  tempMorning   Float?
+  tempAfternoon Float?
+
+  bathing     BathingStatus @default(NOT_APPLICABLE)
+  mealAmount  Int?
+  fluidIntake Int?
+
+  medicationMorning     Boolean @default(false)
+  medicationBeforeLunch Boolean @default(false)
+  medicationAfterLunch  Boolean @default(false)
+  medicationEvening     Boolean @default(false)
+  medicationNote        String?
+
+  functionalTrainingStart String?
+  functionalTrainingEnd   String?
+  oralCare                Boolean @default(false)
+
+  spo2Before Float?
+  spo2After  Float?
+  weight     Float?
+  eyeDrops   String?
+  insulin    String?
+
+  specialNotes String?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resident Resident @relation(fields: [residentId], references: [id])
+  staff    Staff?   @relation(fields: [staffId], references: [id])
+
+  @@unique([date, residentId])
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum FoodType {
+  REGULAR
+  LOW_SALT
+  SOFT
+  MINCED
+  BLENDED
+  PORRIDGE
+  MANNAN
+  BREAD
+  BLENDED_PORRIDGE
+}
+
+enum BathingStatus {
+  DONE
+  NOT_DONE
+  NOT_APPLICABLE
 }

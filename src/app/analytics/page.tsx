@@ -1,0 +1,207 @@
+import { requireSession } from '@/lib/session'
+import { supabase } from '@/lib/supabase'
+
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ residentId?: string; year?: string; month?: string }>
+}) {
+  await requireSession()
+  const params = await searchParams
+
+  const now = new Date()
+  const year = parseInt(params.year || String(now.getFullYear()))
+  const month = parseInt(params.month || String(now.getMonth() + 1))
+  const residentId = params.residentId || ''
+
+  const from = `${year}-${String(month).padStart(2, '0')}-01`
+  const lastDay = new Date(year, month, 0).getDate()
+  const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+  const { data: residents } = await supabase.from('Resident').select('id, name').eq('isActive', true).order('name')
+
+  let query = supabase.from('DailyRecord').select('*').gte('date', from).lte('date', to)
+  if (residentId) query = query.eq('residentId', residentId)
+  const { data: records } = await query
+
+  function avg(arr: (number | null | undefined)[]) {
+    const valid = arr.filter((v): v is number => v != null)
+    return valid.length ? (valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(1) : '-'
+  }
+  function avgCombined(a: (number | null | undefined)[], b: (number | null | undefined)[]) {
+    return avg([...a, ...b])
+  }
+  function countOf(arr: boolean[]) { return arr.filter(Boolean).length }
+
+  const total = records?.length ?? 0
+  const r = records ?? []
+
+  const stats = {
+    bpSystolicAm:       avg(r.map(x => x.bpSystolic)),
+    bpSystolicPm:       avg(r.map(x => x.bpSystolicPm)),
+    bpSystolicAll:      avgCombined(r.map(x => x.bpSystolic), r.map(x => x.bpSystolicPm)),
+    bpDiastolicAm:      avg(r.map(x => x.bpDiastolic)),
+    bpDiastolicPm:      avg(r.map(x => x.bpDiastolicPm)),
+    bpDiastolicAll:     avgCombined(r.map(x => x.bpDiastolic), r.map(x => x.bpDiastolicPm)),
+    pulseAm:            avg(r.map(x => x.pulse)),
+    pulsePm:            avg(r.map(x => x.pulsePm)),
+    pulseAll:           avgCombined(r.map(x => x.pulse), r.map(x => x.pulsePm)),
+    tempAm:             avg(r.map(x => x.tempMorning)),
+    tempPm:             avg(r.map(x => x.tempAfternoon)),
+    tempAll:            avgCombined(r.map(x => x.tempMorning), r.map(x => x.tempAfternoon)),
+    fluidAm:            avg(r.map(x => x.fluidIntakeAm)),
+    fluidPm:            avg(r.map(x => x.fluidIntakePm)),
+    fluidAll:           avgCombined(r.map(x => x.fluidIntakeAm), r.map(x => x.fluidIntakePm)),
+    mealMain:           avg(r.map(x => x.mealMainFood)),
+    mealSide:           avg(r.map(x => x.mealSideFood)),
+    bathing:            `${countOf(r.map(x => x.bathing === 'DONE'))}/${total}回`,
+    oralCare:           `${countOf(r.map(x => x.oralCare))}/${total}回`,
+    medMorning:         `${countOf(r.map(x => x.medicationMorning))}/${total}回`,
+    medLunch:           `${countOf(r.map(x => x.medicationBeforeLunch || x.medicationAfterLunch))}/${total}回`,
+    medEvening:         `${countOf(r.map(x => x.medicationEvening))}/${total}回`,
+  }
+
+  const groups = [
+    {
+      title: '血圧（収縮期）',
+      unit: 'mmHg',
+      rows: [
+        { label: 'AM', value: stats.bpSystolicAm },
+        { label: 'PM', value: stats.bpSystolicPm },
+        { label: 'AM+PM合算', value: stats.bpSystolicAll, highlight: true },
+      ],
+    },
+    {
+      title: '血圧（拡張期）',
+      unit: 'mmHg',
+      rows: [
+        { label: 'AM', value: stats.bpDiastolicAm },
+        { label: 'PM', value: stats.bpDiastolicPm },
+        { label: 'AM+PM合算', value: stats.bpDiastolicAll, highlight: true },
+      ],
+    },
+    {
+      title: '脈拍',
+      unit: '回/分',
+      rows: [
+        { label: 'AM', value: stats.pulseAm },
+        { label: 'PM', value: stats.pulsePm },
+        { label: 'AM+PM合算', value: stats.pulseAll, highlight: true },
+      ],
+    },
+    {
+      title: '体温',
+      unit: '℃',
+      rows: [
+        { label: 'AM', value: stats.tempAm },
+        { label: 'PM', value: stats.tempPm },
+        { label: 'AM+PM合算', value: stats.tempAll, highlight: true },
+      ],
+    },
+    {
+      title: '水分摂取',
+      unit: 'ml',
+      rows: [
+        { label: 'AM', value: stats.fluidAm },
+        { label: 'PM', value: stats.fluidPm },
+        { label: 'AM+PM合算', value: stats.fluidAll, highlight: true },
+      ],
+    },
+    {
+      title: '食事量（月平均）',
+      unit: '割',
+      rows: [
+        { label: '主食', value: stats.mealMain },
+        { label: '主菜', value: stats.mealSide },
+      ],
+    },
+  ]
+
+  const counts = [
+    { label: '入浴 実施', value: stats.bathing },
+    { label: '口腔ケア', value: stats.oralCare },
+    { label: '朝薬', value: stats.medMorning },
+    { label: '昼薬', value: stats.medLunch },
+    { label: '夕薬', value: stats.medEvening },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6">
+      <h2 className="text-xl font-bold text-gray-800">集計・分析</h2>
+
+      <form className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="text-xs text-gray-600 block mb-1">利用者</label>
+          <select name="residentId" defaultValue={residentId}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">全員</option>
+            {residents?.map(res => <option key={res.id} value={res.id}>{res.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-1">年</label>
+          <input type="number" name="year" defaultValue={year} min="2020" max="2099"
+            className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-1">月</label>
+          <select name="month" defaultValue={month}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>{i + 1}月</option>
+            ))}
+          </select>
+        </div>
+        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+          集計
+        </button>
+        <a
+          href={`/api/analytics/export?year=${year}&month=${month}${residentId ? `&residentId=${residentId}` : ''}`}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-1.5"
+          download
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Excelダウンロード
+        </a>
+        <span className="text-xs text-gray-400 self-center">記録 {total}件</span>
+      </form>
+
+      {/* バイタル系グループ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {groups.map(group => (
+          <div key={group.title} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-2">{group.title} <span className="text-xs font-normal text-gray-400">月平均</span></h3>
+            <div className="flex flex-col gap-2">
+              {group.rows.map(row => (
+                <div key={row.label} className={`flex items-center justify-between rounded-lg px-3 py-2 ${row.highlight ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                  <span className={`text-xs ${row.highlight ? 'font-semibold text-blue-700' : 'text-gray-500'}`}>{row.label}</span>
+                  <span className={`font-bold ${row.highlight ? 'text-blue-700 text-lg' : 'text-gray-700'}`}>
+                    {row.value}
+                    {row.value !== '-' && <span className="text-xs font-normal text-gray-400 ml-1">{group.unit}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 実施回数 */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">ケア実施回数</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {counts.map(({ label, value }) => (
+            <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+              <p className="text-xs text-gray-500 mb-1">{label}</p>
+              <p className="text-xl font-bold text-gray-700">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-400">{year}年{month}月 / 対象: {residentId ? residents?.find(x => x.id === residentId)?.name : '全利用者'}</p>
+    </div>
+  )
+}
