@@ -18,12 +18,15 @@ export async function setupAdmin(_prevState: SetupState, formData: FormData): Pr
   if (password.length < 6) return { error: 'パスワードは6文字以上にしてください' }
 
   const hash = await bcrypt.hash(password, 10)
+  const now = new Date().toISOString()
   const { error } = await supabase.from('Staff').insert({
     id: crypto.randomUUID(),
     name,
     email,
     password: hash,
     role: 'ADMIN',
+    createdAt: now,
+    updatedAt: now,
   })
 
   if (error) return { error: 'アカウントの作成に失敗しました: ' + error.message }
