@@ -86,7 +86,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
               <th className="px-2 py-2 font-semibold min-w-[40px]">昼後</th>
               <th className="px-2 py-2 font-semibold min-w-[40px]">夕薬</th>
               <th className="px-2 py-2 font-semibold min-w-[40px]">口腔</th>
-              <th className="px-2 py-2 font-semibold min-w-[100px]">口腔備考</th>
+              <th className="px-2 py-2 font-semibold min-w-[100px]">備考</th>
               <th className="px-2 py-2 font-semibold min-w-[120px]">特記事項</th>
               <th className="px-2 py-2 font-semibold min-w-[60px]">保存</th>
             </tr>
