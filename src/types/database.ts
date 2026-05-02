@@ -68,6 +68,7 @@ export interface DailyRecord {
   functionalTrainingStart: string | null
   functionalTrainingEnd: string | null
   oralCare: boolean
+  oralCareNote: string | null
   spo2Before: number | null
   spo2After: number | null
   weight: number | null
