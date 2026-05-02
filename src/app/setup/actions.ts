@@ -19,6 +19,7 @@ export async function setupAdmin(_prevState: SetupState, formData: FormData): Pr
 
   const hash = await bcrypt.hash(password, 10)
   const { error } = await supabase.from('Staff').insert({
+    id: crypto.randomUUID(),
     name,
     email,
     password: hash,

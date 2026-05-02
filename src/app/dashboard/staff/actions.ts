@@ -16,7 +16,7 @@ export async function createStaff(_prevState: StaffFormState, formData: FormData
   if (password.length < 6) return { error: 'パスワードは6文字以上にしてください' }
 
   const hash = await bcrypt.hash(password, 10)
-  const { error } = await supabase.from('Staff').insert({ name, email, password: hash, role })
+  const { error } = await supabase.from('Staff').insert({ id: crypto.randomUUID(), name, email, password: hash, role })
 
   if (error) {
     if (error.message.includes('duplicate') || error.message.includes('unique')) {
