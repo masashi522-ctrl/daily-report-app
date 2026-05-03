@@ -5,13 +5,11 @@ import { requireSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import type { DailyRecord } from '@/types/database'
 
-export async function saveRecord(data: Partial<DailyRecord> & { residentId: string; date: string }) {
-  const session = await requireSession()
-
-  const record = {
+function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; date: string }, staffId: string) {
+  return {
     residentId: data.residentId,
     date: data.date,
-    staffId: session.userId,
+    staffId,
     bpSystolic: data.bpSystolic ?? null,
     bpDiastolic: data.bpDiastolic ?? null,
     bpSystolicPm: data.bpSystolicPm ?? null,
@@ -42,11 +40,34 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
     specialNotes: data.specialNotes ?? null,
     updatedAt: new Date().toISOString(),
   }
+}
+
+export async function saveRecord(data: Partial<DailyRecord> & { residentId: string; date: string }) {
+  const session = await requireSession()
+
+  const record = buildRecordFields(data, session.userId)
 
   await supabase.from('DailyRecord').upsert(
     { ...record, id: data.id ?? crypto.randomUUID(), createdAt: new Date().toISOString() },
     { onConflict: 'date,residentId' }
   )
 
+  revalidatePath('/dashboard')
+}
+
+export async function saveAllRecords(
+  records: (Partial<DailyRecord> & { residentId: string; date: string })[]
+) {
+  if (records.length === 0) return
+  const session = await requireSession()
+  const now = new Date().toISOString()
+
+  const toUpsert = records.map(data => ({
+    ...buildRecordFields(data, session.userId),
+    id: data.id ?? crypto.randomUUID(),
+    createdAt: now,
+  }))
+
+  await supabase.from('DailyRecord').upsert(toUpsert, { onConflict: 'date,residentId' })
   revalidatePath('/dashboard')
 }

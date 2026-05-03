@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { FOOD_TYPE_LABELS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
-import { saveRecord } from './actions'
+import { saveRecord, saveAllRecords } from './actions'
 
 interface Props {
   residents: Resident[]
@@ -21,10 +21,17 @@ function range(from: number, to: number, step: number) {
 const BP_SYS = range(70, 200, 5)
 const BP_DIA = range(30, 200, 5)
 const PULSE  = range(30, 200, 5)
-const TEMP   = range(35.0, 42.0, 0.5)
+const TEMP   = range(35.0, 42.0, 0.1)
 const FLUID  = range(0, 1000, 50)
 const FLUID_SELECT = range(50, 1000, 50)
 const MEAL_OPTIONS = [0,1,2,3,4,5,6,7,8,9,10]
+
+// iOS Safari では class の color が WebkitTextFillColor に負けるためinline styleで確実に指定
+const inputStyle: React.CSSProperties = {
+  color: '#111827',
+  backgroundColor: '#ffffff',
+  WebkitTextFillColor: '#111827',
+}
 
 // モバイル用: 入力＋ドロップダウン一体型
 function ComboNum({ listId, values, current, onChange, placeholder = '-', min, max, step = 1, inputMode = 'numeric' }: {
@@ -40,7 +47,7 @@ function ComboNum({ listId, values, current, onChange, placeholder = '-', min, m
         value={current ?? ''}
         onChange={e => onChange(e.target.value !== '' ? +e.target.value : null)}
         className="flex-1 min-w-0 px-2 py-2 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        style={{ color: '#111827', backgroundColor: '#ffffff', WebkitTextFillColor: '#111827' }}
+        style={inputStyle}
       />
       <select
         value={current ?? ''}
@@ -54,42 +61,10 @@ function ComboNum({ listId, values, current, onChange, placeholder = '-', min, m
   )
 }
 
-// モバイル用: ±ボタン＋入力＋ドロップダウン一体型（体温用）
-function ComboTemp({ listId, values, current, onChange }: {
-  listId: string; values: number[]; current: number | null | undefined
-  onChange: (v: number | null) => void
-}) {
-  const dec = () => { const c = current ?? 36.0; onChange(Math.max(35.0, Math.round((c - 0.1) * 10) / 10)) }
-  const inc = () => { const c = current ?? 36.0; onChange(Math.min(42.0, Math.round((c + 0.1) * 10) / 10)) }
-  return (
-    <div className="flex items-stretch rounded-lg border border-gray-200 overflow-hidden focus-within:border-blue-400 transition-colors">
-      <button type="button" onClick={dec}
-        className="w-8 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-lg font-bold text-gray-600 shrink-0 leading-none">－</button>
-      <input
-        type="number" list={listId} inputMode="decimal"
-        min={35} max={42} step={0.1} placeholder="36.0"
-        value={current ?? ''}
-        onChange={e => onChange(e.target.value !== '' ? +e.target.value : null)}
-        className="flex-1 min-w-0 px-1 py-2 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none border-x border-gray-200"
-        style={{ color: '#111827', backgroundColor: '#ffffff', WebkitTextFillColor: '#111827' }}
-      />
-      <select
-        value={current ?? ''}
-        onChange={e => onChange(e.target.value !== '' ? +e.target.value : null)}
-        className="border-r border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs px-0.5 focus:outline-none cursor-pointer shrink-0 text-gray-700"
-      >
-        <option value="">▼</option>
-        {values.map(v => <option key={v} value={v}>{v}</option>)}
-      </select>
-      <button type="button" onClick={inc}
-        className="w-8 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-lg font-bold text-gray-600 shrink-0 leading-none">＋</button>
-    </div>
-  )
-}
-
 export default function DailyRecordTable({ residents, recordMap, date }: Props) {
   const [drafts, setDrafts] = useState<Record<string, RecordDraft>>({})
   const [saving, setSaving] = useState<string | null>(null)
+  const [savingAll, setSavingAll] = useState(false)
   const [, startTransition] = useTransition()
   const [filter, setFilter] = useState('')
   const [todayOnly, setTodayOnly] = useState(true)
@@ -127,11 +102,26 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     })
   }
 
+  async function handleSaveAll() {
+    if (savingAll) return
+    setSavingAll(true)
+    const toSave = filtered.map(resident => {
+      const draft = getDraft(resident.id)
+      const existing = recordMap[resident.id]
+      return { ...draft, residentId: resident.id, date, id: existing?.id }
+    })
+    startTransition(async () => {
+      await saveAllRecords(toSave)
+      setDrafts({})
+      setSavingAll(false)
+    })
+  }
+
   function SaveBtn({ id }: { id: string }) {
     const isSaved = !!recordMap[id]
     const isDirty = !!drafts[id]
     return (
-      <button onClick={() => handleSave(id)} disabled={saving === id}
+      <button onClick={() => handleSave(id)} disabled={saving === id || savingAll}
         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
           saving === id        ? 'bg-gray-200 text-gray-400' :
           isSaved && !isDirty ? 'bg-green-100 text-green-700 border border-green-300' :
@@ -142,14 +132,14 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     )
   }
 
-  // デスクトップ用スタイル
-  const numSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-center text-xs text-gray-900 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
-  const selSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-xs text-gray-700 w-full'
+  // デスクトップ用: 数値入力（スピナーなし、色をinline styleで保証）
+  const numBase = 'border border-gray-200 rounded px-1 py-0.5 text-center text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
   const selMd = 'w-full border border-gray-200 rounded-lg px-2 py-2 text-sm'
+  const selSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-xs text-gray-700 w-full'
   const vRow  = 'grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 items-center'
   const vLbl  = 'text-xs text-gray-500 leading-tight'
-  const th = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b border-gray-200 bg-blue-50 text-gray-700'
-  const td = 'px-1 py-1.5 align-middle'
+  const th = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b border-gray-200 bg-blue-50 text-gray-700 whitespace-nowrap'
+  const td = 'px-1.5 py-1.5 align-middle'
 
   return (
     <>
@@ -188,6 +178,28 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                     : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
                 }`}>{r.name}</button>
             ))}
+        </div>
+        <div className="flex gap-2 w-full justify-end items-center">
+          <button
+            onClick={() => window.open(`/print?date=${date}`, '_blank')}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-800 transition flex items-center gap-1.5"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            印刷
+          </button>
+          <button
+            onClick={handleSaveAll}
+            disabled={savingAll || saving !== null}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${
+              savingAll || saving !== null
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+            }`}
+          >
+            {savingAll ? '保存中...' : `全員保存（${filtered.length}名）`}
+          </button>
         </div>
         <p className="text-xs text-gray-400 w-full text-right">{filtered.length}/{residents.length}名 表示中</p>
       </div>
@@ -246,8 +258,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>体温<br /><span className="text-[10px] text-gray-400">℃</span></span>
-                    <ComboTemp listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} />
-                    <ComboTemp listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="36.0" />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="36.0" />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>水分<br /><span className="text-[10px] text-gray-400">ml</span></span>
@@ -312,7 +324,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
         })}
       </div>
 
-      {/* ── デスクトップ：コンパクト1行テーブル（合計約940px） ── */}
+      {/* ── デスクトップ：1行テーブル（横スクロールあり・幅広め） ── */}
       <div className="hidden md:block rounded-xl border border-gray-200 bg-white shadow-sm overflow-x-auto">
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
@@ -321,38 +333,38 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           </div>
         )}
         {filtered.length > 0 && (
-          <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '940px', width: '100%' }}>
+          <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '1200px', width: '100%' }}>
             <colgroup>
-              <col style={{ width: '90px' }} />  {/* 名前 */}
-              <col style={{ width: '88px' }} />  {/* 血圧AM */}
-              <col style={{ width: '88px' }} />  {/* 血圧PM */}
-              <col style={{ width: '78px' }} />  {/* 脈拍 AM+PM */}
-              <col style={{ width: '78px' }} />  {/* 体温 AM+PM */}
-              <col style={{ width: '44px' }} />  {/* 入浴 */}
-              <col style={{ width: '82px' }} />  {/* 食事 主+副 */}
-              <col style={{ width: '90px' }} />  {/* 水分 AM+PM */}
-              <col style={{ width: '90px' }} />  {/* 服薬・口腔 */}
-              <col style={{ width: '76px' }} />  {/* 備考 */}
-              <col style={{ width: '84px' }} />  {/* 特記 */}
-              <col style={{ width: '52px' }} />  {/* 保存 */}
+              <col style={{ width: '90px' }} />   {/* 名前 */}
+              <col style={{ width: '148px' }} />  {/* 血圧AM  : 60+gap+"/"+gap+60=136 + padding12 */}
+              <col style={{ width: '148px' }} />  {/* 血圧PM */}
+              <col style={{ width: '112px' }} />  {/* 脈拍 AM+PM : 48+gap+48=100 + padding12 */}
+              <col style={{ width: '112px' }} />  {/* 体温 AM+PM */}
+              <col style={{ width: '50px' }} />   {/* 入浴 */}
+              <col style={{ width: '92px' }} />   {/* 食事 */}
+              <col style={{ width: '100px' }} />  {/* 水分 AM+PM */}
+              <col style={{ width: '100px' }} />  {/* 服薬・口腔 */}
+              <col style={{ width: '86px' }} />   {/* 備考 */}
+              <col style={{ width: '90px' }} />   {/* 特記 */}
+              <col style={{ width: '58px' }} />   {/* 保存 */}
             </colgroup>
             <thead>
               <tr className="border-b border-gray-200">
                 <th className={th}>名前</th>
                 <th className={th}>
                   <div>血圧 AM</div>
-                  <div className="text-[9px] font-normal text-gray-400">収 / 拡</div>
+                  <div className="text-[9px] font-normal text-gray-400">収縮 / 拡張</div>
                 </th>
                 <th className={th}>
                   <div>血圧 PM</div>
-                  <div className="text-[9px] font-normal text-gray-400">収 / 拡</div>
+                  <div className="text-[9px] font-normal text-gray-400">収縮 / 拡張</div>
                 </th>
                 <th className={th}>
                   <div>脈拍</div>
                   <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
                 </th>
                 <th className={th}>
-                  <div>体温</div>
+                  <div>体温 ℃</div>
                   <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
                 </th>
                 <th className={th}>入浴</th>
@@ -361,11 +373,11 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>主</span><span>副</span></div>
                 </th>
                 <th className={th}>
-                  <div>水分(ml)</div>
+                  <div>水分 ml</div>
                   <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
                 </th>
                 <th className={th}>
-                  <div className="flex justify-around text-[9px]">
+                  <div className="flex justify-around">
                     <span>朝</span><span>昼前</span><span>昼後</span><span>夕</span><span>口腔</span>
                   </div>
                 </th>
@@ -386,52 +398,52 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                       <div className="text-[9px] text-gray-400 leading-tight truncate mt-0.5">
                         {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
                       </div>
-                      {resident.foodRestrictions && <div className="text-red-500 text-[9px] leading-tight">{resident.foodRestrictions}</div>}
+                      {resident.foodRestrictions && <div className="text-red-500 text-[9px]">{resident.foodRestrictions}</div>}
                     </td>
                     {/* 血圧AM */}
                     <td className={td}>
-                      <div className="flex items-center gap-0.5 justify-center">
-                        <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200}
+                      <div className="flex items-center gap-1 justify-center">
+                        <input type="number" list="dl-bp-sys" placeholder="収縮" min={70} max={200}
                           value={d.bpSystolic ?? ''} onChange={numHandler(resident.id, 'bpSystolic')}
-                          className={`${numSm} w-[36px]`} />
-                        <span className="text-gray-300 text-[10px]">/</span>
-                        <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200}
+                          className={numBase} style={{ ...inputStyle, width: '60px' }} />
+                        <span className="text-gray-400 shrink-0">/</span>
+                        <input type="number" list="dl-bp-dia" placeholder="拡張" min={30} max={200}
                           value={d.bpDiastolic ?? ''} onChange={numHandler(resident.id, 'bpDiastolic')}
-                          className={`${numSm} w-[36px]`} />
+                          className={numBase} style={{ ...inputStyle, width: '60px' }} />
                       </div>
                     </td>
                     {/* 血圧PM */}
                     <td className={td}>
-                      <div className="flex items-center gap-0.5 justify-center">
-                        <input type="number" list="dl-bp-sys" placeholder="収" min={70} max={200}
+                      <div className="flex items-center gap-1 justify-center">
+                        <input type="number" list="dl-bp-sys" placeholder="収縮" min={70} max={200}
                           value={d.bpSystolicPm ?? ''} onChange={numHandler(resident.id, 'bpSystolicPm')}
-                          className={`${numSm} w-[36px]`} />
-                        <span className="text-gray-300 text-[10px]">/</span>
-                        <input type="number" list="dl-bp-dia" placeholder="拡" min={30} max={200}
+                          className={numBase} style={{ ...inputStyle, width: '60px' }} />
+                        <span className="text-gray-400 shrink-0">/</span>
+                        <input type="number" list="dl-bp-dia" placeholder="拡張" min={30} max={200}
                           value={d.bpDiastolicPm ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPm')}
-                          className={`${numSm} w-[36px]`} />
+                          className={numBase} style={{ ...inputStyle, width: '60px' }} />
                       </div>
                     </td>
                     {/* 脈拍 AM/PM */}
                     <td className={td}>
-                      <div className="flex items-center gap-0.5 justify-center">
+                      <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-pulse" placeholder="AM" min={30} max={200}
                           value={d.pulse ?? ''} onChange={numHandler(resident.id, 'pulse')}
-                          className={`${numSm} w-[33px]`} />
+                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
                         <input type="number" list="dl-pulse" placeholder="PM" min={30} max={200}
                           value={d.pulsePm ?? ''} onChange={numHandler(resident.id, 'pulsePm')}
-                          className={`${numSm} w-[33px]`} />
+                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
                       </div>
                     </td>
                     {/* 体温 AM/PM */}
                     <td className={td}>
-                      <div className="flex items-center gap-0.5 justify-center">
+                      <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-temp" placeholder="AM" step="0.1" min={35} max={42}
                           value={d.tempMorning ?? ''} onChange={numHandler(resident.id, 'tempMorning')}
-                          className={`${numSm} w-[33px]`} />
+                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
                         <input type="number" list="dl-temp" placeholder="PM" step="0.1" min={35} max={42}
                           value={d.tempAfternoon ?? ''} onChange={numHandler(resident.id, 'tempAfternoon')}
-                          className={`${numSm} w-[33px]`} />
+                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
                       </div>
                     </td>
                     {/* 入浴 */}
@@ -445,15 +457,15 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                     </td>
                     {/* 食事 主/副 */}
                     <td className={td}>
-                      <div className="flex items-center gap-0.5 justify-center">
+                      <div className="flex items-center gap-1 justify-center">
                         <select value={d.mealMainFood ?? ''} onChange={e => upd(resident.id, 'mealMainFood', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[36px]">
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[40px]">
                           <option value="">主</option>
                           {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
-                        <span className="text-gray-300 text-[10px]">/</span>
+                        <span className="text-gray-400">/</span>
                         <select value={d.mealSideFood ?? ''} onChange={e => upd(resident.id, 'mealSideFood', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[36px]">
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[40px]">
                           <option value="">副</option>
                           {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
@@ -461,14 +473,14 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                     </td>
                     {/* 水分 AM/PM（セレクト 50〜1000ml） */}
                     <td className={td}>
-                      <div className="flex items-center gap-0.5 justify-center">
+                      <div className="flex items-center gap-1 justify-center">
                         <select value={d.fluidIntakeAm ?? ''} onChange={e => upd(resident.id, 'fluidIntakeAm', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[42px]">
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[46px]">
                           <option value="">AM</option>
                           {FLUID_SELECT.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                         <select value={d.fluidIntakePm ?? ''} onChange={e => upd(resident.id, 'fluidIntakePm', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[42px]">
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[46px]">
                           <option value="">PM</option>
                           {FLUID_SELECT.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
@@ -485,10 +497,10 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                           ['oralCare',              '口腔'],
                         ] as const).map(([field, label]) => (
                           <label key={field} className="flex flex-col items-center gap-0.5 cursor-pointer">
-                            <span className="text-[8px] text-gray-400 leading-tight">{label}</span>
+                            <span className="text-[9px] text-gray-500 leading-tight">{label}</span>
                             <input type="checkbox" checked={!!(d as Record<string, unknown>)[field]}
                               onChange={e => upd(resident.id, field, e.target.checked)}
-                              className="w-3.5 h-3.5 accent-blue-600" />
+                              className="w-4 h-4 accent-blue-600" />
                           </label>
                         ))}
                       </div>
