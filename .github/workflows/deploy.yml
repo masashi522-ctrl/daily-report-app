@@ -8,11 +8,26 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_cjroQVLZ43clHHieNW258InD
+      VERCEL_PROJECT_ID: prj_H79TYBNAUzPuoNxbt5Z6p9t2OqF7
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Vercel
-        run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
-        env:
-          VERCEL_ORG_ID: team_cjroQVLZ43clHHieNW258InD
-          VERCEL_PROJECT_ID: prj_H79TYBNAUzPuoNxbt5Z6p9t2OqF7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build (Vercel prebuilt)
+        run: npx vercel build --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+
+      - name: Deploy prebuilt to production
+        run: npx vercel deploy --prebuilt --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
