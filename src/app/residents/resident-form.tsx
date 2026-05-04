@@ -1,13 +1,24 @@
 'use client'
 
-import { useActionState } from 'react'
-import { addResident } from './actions'
+import { useActionState, useState, useTransition } from 'react'
+import { addResident, generateFurigana } from './actions'
 import { FOOD_TYPE_LABELS } from '@/types/database'
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 export default function ResidentForm() {
   const [state, action, pending] = useActionState(addResident, null)
+  const [furigana, setFurigana] = useState('')
+  const [generating, startGenerate] = useTransition()
+
+  function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const name = e.target.value.trim()
+    if (!name || furigana) return
+    startGenerate(async () => {
+      const result = await generateFurigana(name)
+      setFurigana(prev => prev || result)
+    })
+  }
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -19,12 +30,22 @@ export default function ResidentForm() {
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">名前 *</label>
         <input name="name" required placeholder="山田 花子"
+          onBlur={handleNameBlur}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">ふりがな <span className="text-gray-400 font-normal">（50音検索に使用）</span></label>
-        <input name="furigana" placeholder="やまだ はなこ"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+        <label className="text-xs font-medium text-gray-700 block mb-1">
+          ふりがな <span className="text-gray-400 font-normal">（50音検索に使用・自動生成）</span>
+        </label>
+        <div className="relative">
+          <input name="furigana" placeholder="やまだ はなこ"
+            value={furigana}
+            onChange={e => setFurigana(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 pr-16" />
+          {generating && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">生成中...</span>
+          )}
+        </div>
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-2">食事形態（複数可）</label>

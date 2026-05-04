@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { toFurigana } from '@/lib/furigana'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -72,6 +73,15 @@ export async function updateResident(id: string, formData: FormData) {
 
   revalidatePath('/residents')
   redirect('/residents')
+}
+
+export async function generateFurigana(name: string): Promise<string> {
+  if (!name.trim()) return ''
+  try {
+    return await toFurigana(name.trim())
+  } catch {
+    return ''
+  }
 }
 
 export async function toggleActive(id: string, isActive: boolean) {

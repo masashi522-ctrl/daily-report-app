@@ -1,12 +1,16 @@
 'use client'
 
-import { updateResident } from './actions'
+import { useState, useTransition } from 'react'
+import { updateResident, generateFurigana } from './actions'
 import { FOOD_TYPE_LABELS, type Resident } from '@/types/database'
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 export default function EditResidentForm({ resident }: { resident: Resident }) {
   const action = updateResident.bind(null, resident.id)
+  const [furigana, setFurigana] = useState(resident.furigana ?? '')
+  const [generating, startGenerate] = useTransition()
+
   const checkedDays = resident.attendanceDays
     ? resident.attendanceDays.split(',').map(Number)
     : []
@@ -14,18 +18,55 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
     ? resident.foodType.split(',')
     : []
 
+  function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const name = e.target.value.trim()
+    if (!name || furigana) return
+    startGenerate(async () => {
+      const result = await generateFurigana(name)
+      setFurigana(prev => prev || result)
+    })
+  }
+
+  function handleRegenerate(e: React.MouseEvent) {
+    e.preventDefault()
+    const nameInput = (e.currentTarget.closest('form') as HTMLFormElement)
+      ?.elements.namedItem('name') as HTMLInputElement | null
+    const name = nameInput?.value.trim()
+    if (!name) return
+    startGenerate(async () => {
+      const result = await generateFurigana(name)
+      if (result) setFurigana(result)
+    })
+  }
+
   return (
     <form action={action} className="flex flex-col gap-3">
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">名前 *</label>
         <input name="name" required defaultValue={resident.name}
+          onBlur={handleNameBlur}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">ふりがな <span className="text-gray-400 font-normal">（50音検索に使用）</span></label>
-        <input name="furigana" defaultValue={resident.furigana ?? ''}
-          placeholder="やまだ はなこ"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+        <label className="text-xs font-medium text-gray-700 block mb-1">
+          ふりがな <span className="text-gray-400 font-normal">（50音検索に使用・自動生成）</span>
+        </label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <input name="furigana" placeholder="やまだ はなこ"
+              value={furigana}
+              onChange={e => setFurigana(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 pr-16" />
+            {generating && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">生成中...</span>
+            )}
+          </div>
+          <button
+            onClick={handleRegenerate}
+            disabled={generating}
+            className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 whitespace-nowrap disabled:opacity-40"
+          >再生成</button>
+        </div>
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-2">食事形態（複数可）</label>
