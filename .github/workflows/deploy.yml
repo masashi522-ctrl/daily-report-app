@@ -26,6 +26,9 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Pull Vercel environment variables
+        run: npx vercel pull --environment=production --token ${{ secrets.VERCEL_TOKEN }} --yes
+
       - name: Build (Vercel prebuilt)
         run: npx vercel build --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
 
