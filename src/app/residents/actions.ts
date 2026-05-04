@@ -84,6 +84,34 @@ export async function generateFurigana(name: string): Promise<string> {
   }
 }
 
+export async function generateAllFurigana(): Promise<{ updated: number; errors: number }> {
+  await requireSession()
+  const { data: residents } = await supabase
+    .from('Resident')
+    .select('id, name, furigana')
+    .is('furigana', null)
+
+  if (!residents || residents.length === 0) return { updated: 0, errors: 0 }
+
+  let updated = 0
+  let errors = 0
+
+  for (const r of residents) {
+    try {
+      const furigana = await toFurigana(r.name)
+      if (furigana) {
+        await supabase.from('Resident').update({ furigana, updatedAt: new Date().toISOString() }).eq('id', r.id)
+        updated++
+      }
+    } catch {
+      errors++
+    }
+  }
+
+  revalidatePath('/residents')
+  return { updated, errors }
+}
+
 export async function toggleActive(id: string, isActive: boolean) {
   await requireSession()
   await supabase.from('Resident').update({ isActive, updatedAt: new Date().toISOString() }).eq('id', id)

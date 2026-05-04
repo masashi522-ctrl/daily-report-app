@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { FOOD_TYPE_LABELS, type FoodType, type Resident } from '@/types/database'
-import { deleteResident, toggleActive } from './actions'
+import { deleteResident, toggleActive, generateAllFurigana } from './actions'
 
 const GOJUUON_ROWS = [
   { label: 'あ', chars: 'あいうえおアイウエオ' },
@@ -26,6 +26,8 @@ export default function ResidentList({ residents, editId }: Props) {
   const [inputText, setInputText] = useState('')
   const [appliedText, setAppliedText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
+  const [generating, startGenerate] = useTransition()
+  const [generateResult, setGenerateResult] = useState<string | null>(null)
 
   function applySearch() {
     setAppliedText(inputText)
@@ -34,6 +36,18 @@ export default function ResidentList({ residents, editId }: Props) {
   function clearSearch() {
     setInputText('')
     setAppliedText('')
+  }
+
+  function handleGenerateAll() {
+    setGenerateResult(null)
+    startGenerate(async () => {
+      const { updated, errors } = await generateAllFurigana()
+      if (updated === 0 && errors === 0) {
+        setGenerateResult('ふりがな未登録の利用者はいません')
+      } else {
+        setGenerateResult(`${updated}名のふりがなを生成しました${errors > 0 ? `（${errors}名失敗）` : ''}`)
+      }
+    })
   }
 
   const filtered = residents.filter(r => {
@@ -97,7 +111,21 @@ export default function ResidentList({ residents, editId }: Props) {
             >{row.label}</button>
           ))}
         </div>
-        <p className="text-xs text-gray-400 text-right">{filtered.length}/{residents.length}名 表示中</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-400">{filtered.length}/{residents.length}名 表示中</p>
+          <div className="flex items-center gap-2">
+            {generateResult && (
+              <span className="text-xs text-green-600">{generateResult}</span>
+            )}
+            <button
+              onClick={handleGenerateAll}
+              disabled={generating}
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 whitespace-nowrap"
+            >
+              {generating ? '生成中...' : 'ふりがな一括生成'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* デスクトップ: テーブル */}
