@@ -59,6 +59,7 @@ export default async function AnalyticsPage({
     medMorning:         `${countOf(r.map(x => x.medicationMorning))}/${total}回`,
     medLunch:           `${countOf(r.map(x => x.medicationBeforeLunch || x.medicationAfterLunch))}/${total}回`,
     medEvening:         `${countOf(r.map(x => x.medicationEvening))}/${total}回`,
+    training:           `${countOf(r.map(x => x.trainingDone))}/${total}回`,
   }
 
   const groups = [
@@ -119,6 +120,7 @@ export default async function AnalyticsPage({
 
   const counts = [
     { label: '入浴 実施', value: stats.bathing },
+    { label: '機能訓練 実施', value: stats.training },
     { label: '口腔ケア', value: stats.oralCare },
     { label: '朝薬', value: stats.medMorning },
     { label: '昼薬', value: stats.medLunch },
@@ -191,7 +193,7 @@ export default async function AnalyticsPage({
       {/* 実施回数 */}
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-3">ケア実施回数</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {counts.map(({ label, value }) => (
             <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
               <p className="text-xs text-gray-500 mb-1">{label}</p>
