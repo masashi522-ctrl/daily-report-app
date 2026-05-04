@@ -1,6 +1,6 @@
 'use server'
 
-import Anthropic from '@anthropic-ai/sdk'
+import Groq from 'groq-sdk'
 import { requireSession } from '@/lib/session'
 
 export interface ReportStats {
@@ -25,9 +25,9 @@ export interface ReportStats {
 export async function generateCareReport(stats: ReportStats): Promise<string> {
   await requireSession()
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
-    return '【設定エラー】ANTHROPIC_API_KEY が環境変数に設定されていません。.env.local または Vercel の環境変数を確認してください。'
+    return '【設定エラー】GROQ_API_KEY が環境変数に設定されていません。Vercel の環境変数を確認してください。'
   }
 
   const bp = stats.bpSystolicAvg != null && stats.bpDiastolicAvg != null
@@ -67,18 +67,16 @@ export async function generateCareReport(stats: ReportStats): Promise<string> {
 【申し送り事項・今後の対応】`
 
   try {
-    const client = new Anthropic({ apiKey })
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const client = new Groq({ apiKey })
+    const completion = await client.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     })
-    return message.content[0].type === 'text'
-      ? message.content[0].text
-      : 'レポートの生成に失敗しました。'
+    return completion.choices[0]?.message?.content ?? 'レポートの生成に失敗しました。'
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
-    console.error('[generateCareReport] Anthropic API error:', detail)
+    console.error('[generateCareReport] Groq API error:', detail)
     return `【APIエラー】${detail}`
   }
 }
