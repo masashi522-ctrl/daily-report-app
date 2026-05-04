@@ -46,13 +46,14 @@ function ComboNum({ listId, values, current, onChange, placeholder = '-', min, m
         placeholder={placeholder} min={min} max={max} step={step}
         value={current ?? ''}
         onChange={e => onChange(e.target.value !== '' ? +e.target.value : null)}
-        className="flex-1 min-w-0 px-2 py-2 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        style={inputStyle}
+        className="flex-1 min-w-0 px-2 py-2 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        style={{ ...inputStyle, fontSize: '16px' }}
       />
       <select
         value={current ?? ''}
         onChange={e => onChange(e.target.value !== '' ? +e.target.value : null)}
-        className="border-l border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs px-0.5 focus:outline-none cursor-pointer shrink-0 text-gray-700"
+        className="border-l border-gray-200 bg-gray-50 hover:bg-gray-100 focus:outline-none cursor-pointer shrink-0 text-gray-700"
+        style={{ fontSize: '16px', width: '44px' }}
       >
         <option value="">▼</option>
         {values.map(v => <option key={v} value={v}>{v}</option>)}
