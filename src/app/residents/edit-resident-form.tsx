@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { updateResident, generateFurigana } from './actions'
 import { FOOD_TYPE_LABELS, type Resident } from '@/types/database'
 
@@ -10,6 +10,15 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
   const action = updateResident.bind(null, resident.id)
   const [furigana, setFurigana] = useState(resident.furigana ?? '')
   const [generating, startGenerate] = useTransition()
+
+  useEffect(() => {
+    if (resident.furigana) return
+    startGenerate(async () => {
+      const result = await generateFurigana(resident.name)
+      setFurigana(prev => prev || result)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const checkedDays = resident.attendanceDays
     ? resident.attendanceDays.split(',').map(Number)
