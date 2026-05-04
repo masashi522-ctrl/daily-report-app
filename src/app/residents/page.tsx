@@ -1,6 +1,6 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
-import { FOOD_TYPE_LABELS, type FoodType, type Resident } from '@/types/database'
+import { FOOD_TYPE_LABELS, type FoodType } from '@/types/database'
 import ResidentForm from './resident-form'
 import EditResidentForm from './edit-resident-form'
 import { deleteResident, toggleActive } from './actions'
@@ -27,7 +27,9 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+          {/* ── デスクトップ: テーブル ── */}
+          <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-700 text-xs">
@@ -63,8 +65,7 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
                     </td>
                     <td className="px-3 py-2 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <a href={`/residents?edit=${r.id}`}
-                          className="text-blue-500 hover:text-blue-700 text-xs">編集</a>
+                        <a href={`/residents?edit=${r.id}`} className="text-blue-500 hover:text-blue-700 text-xs">編集</a>
                         <form action={deleteResident.bind(null, r.id)}>
                           <button className="text-red-500 hover:text-red-700 text-xs">削除</button>
                         </form>
@@ -80,6 +81,74 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
               </tbody>
             </table>
           </div>
+
+          {/* ── モバイル: カード ── */}
+          <div className="md:hidden flex flex-col gap-3">
+            {(!residents || residents.length === 0) && (
+              <div className="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-200">
+                利用者が登録されていません
+              </div>
+            )}
+            {residents?.map(r => (
+              <div key={r.id} className={`bg-white rounded-xl border shadow-sm p-4 ${editId === r.id ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
+                {/* 名前 + 状態バッジ */}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-gray-800 text-base">{r.name}</span>
+                  <form action={toggleActive.bind(null, r.id, !r.isActive)}>
+                    <button className={`text-xs px-3 py-1 rounded-full font-medium ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {r.isActive ? '在籍' : '退所'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* 詳細情報グリッド */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm mb-3">
+                  <div>
+                    <span className="text-xs text-gray-400">食事形態</span>
+                    <div className="text-gray-700 text-xs mt-0.5">
+                      {r.foodType ? r.foodType.split(',').map((t: string) => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400">利用曜日</span>
+                    <div className="text-gray-700 text-xs mt-0.5">
+                      {r.attendanceDays
+                        ? r.attendanceDays.split(',').map((d: string) => ['日','月','火','水','木','金','土'][+d]).join(' ')
+                        : '-'}
+                    </div>
+                  </div>
+                  {r.foodRestrictions && (
+                    <div className="col-span-2">
+                      <span className="text-xs text-gray-400">禁止食品</span>
+                      <div className="text-red-600 text-xs mt-0.5">{r.foodRestrictions}</div>
+                    </div>
+                  )}
+                  {r.specialCondition && (
+                    <div className="col-span-2">
+                      <span className="text-xs text-gray-400">特記事項</span>
+                      <div className="text-gray-600 text-xs mt-0.5">{r.specialCondition}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 操作ボタン */}
+                <div className="flex gap-2 pt-2 border-t border-gray-100">
+                  <a
+                    href={`/residents?edit=${r.id}`}
+                    className="flex-1 text-center text-sm py-1.5 rounded-lg bg-blue-50 text-blue-600 font-medium hover:bg-blue-100"
+                  >
+                    編集
+                  </a>
+                  <form action={deleteResident.bind(null, r.id)} className="flex-1">
+                    <button className="w-full text-sm py-1.5 rounded-lg bg-red-50 text-red-500 font-medium hover:bg-red-100">
+                      削除
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
 
         <div>
