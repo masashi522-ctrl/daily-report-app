@@ -26,6 +26,7 @@ function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; da
     medicationMorning: data.medicationMorning ?? false,
     medicationBeforeLunch: data.medicationBeforeLunch ?? false,
     medicationAfterLunch: data.medicationAfterLunch ?? false,
+    medicationBeforeEvening: data.medicationBeforeEvening ?? false,
     medicationEvening: data.medicationEvening ?? false,
     medicationNote: data.medicationNote ?? null,
     functionalTrainingStart: data.functionalTrainingStart ?? null,

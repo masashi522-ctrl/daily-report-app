@@ -504,14 +504,15 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   </div>
                 </div>
                 {/* 服薬・口腔ケア */}
-                <div className="grid grid-cols-5 gap-1 pt-2 border-t border-violet-100">
-                  <div className="col-span-5 text-[10px] font-bold text-violet-600 -mb-1">服薬・口腔ケア</div>
+                <div className="grid grid-cols-6 gap-1 pt-2 border-t border-violet-100">
+                  <div className="col-span-6 text-[10px] font-bold text-violet-600 -mb-1">服薬・口腔ケア</div>
                   {([
-                    ['medicationMorning',     '朝薬'],
-                    ['medicationBeforeLunch', '昼前'],
-                    ['medicationAfterLunch',  '昼後'],
-                    ['medicationEvening',     '夕薬'],
-                    ['oralCare',              '口腔'],
+                    ['medicationMorning',      '朝'],
+                    ['medicationBeforeLunch',  '昼前'],
+                    ['medicationAfterLunch',   '昼後'],
+                    ['medicationBeforeEvening','夕前'],
+                    ['medicationEvening',      '夕後'],
+                    ['oralCare',               '口腔'],
                   ] as const).map(([field, label]) => (
                     <label key={field} className="flex flex-col items-center gap-1 cursor-pointer">
                       <span className="text-xs text-gray-500">{label}</span>
@@ -557,7 +558,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
               <col style={{ width: '50px' }} />   {/* 入浴 */}
               <col style={{ width: '92px' }} />   {/* 食事 */}
               <col style={{ width: '100px' }} />  {/* 水分 AM+PM */}
-              <col style={{ width: '100px' }} />  {/* 服薬・口腔 */}
+              <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
               <col style={{ width: '86px' }} />   {/* 備考 */}
               <col style={{ width: '90px' }} />   {/* 特記 */}
               <col style={{ width: '58px' }} />   {/* 保存 */}
@@ -591,8 +592,9 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   <div className="flex justify-around text-[9px] font-normal opacity-70"><span>AM</span><span>PM</span></div>
                 </th>
                 <th className={thMed}>
-                  <div className="flex justify-around">
-                    <span>朝</span><span>昼前</span><span>昼後</span><span>夕</span><span>口腔</span>
+                  <div>服薬・口腔</div>
+                  <div className="flex justify-around text-[9px] font-normal opacity-70 mt-0.5">
+                    <span>朝</span><span>昼前</span><span>昼後</span><span>夕前</span><span>夕後</span><span>口腔</span>
                   </div>
                 </th>
                 <th className={thNote}>備考</th>
@@ -724,15 +726,16 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                         </select>
                       </div>
                     </td>
-                    {/* 服薬・口腔（5チェックボックス） */}
+                    {/* 服薬・口腔（6チェックボックス） */}
                     <td className={`${td} text-center`}>
                       <div className="flex justify-around items-end">
                         {([
-                          ['medicationMorning',     '朝'],
-                          ['medicationBeforeLunch', '昼前'],
-                          ['medicationAfterLunch',  '昼後'],
-                          ['medicationEvening',     '夕'],
-                          ['oralCare',              '口腔'],
+                          ['medicationMorning',      '朝'],
+                          ['medicationBeforeLunch',  '昼前'],
+                          ['medicationAfterLunch',   '昼後'],
+                          ['medicationBeforeEvening','夕前'],
+                          ['medicationEvening',      '夕後'],
+                          ['oralCare',               '口腔'],
                         ] as const).map(([field, label]) => (
                           <label key={field} className="flex flex-col items-center gap-0.5 cursor-pointer">
                             <span className="text-[9px] text-gray-500 leading-tight">{label}</span>

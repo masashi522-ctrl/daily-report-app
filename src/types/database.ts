@@ -67,6 +67,7 @@ export interface DailyRecord {
   medicationMorning: boolean
   medicationBeforeLunch: boolean
   medicationAfterLunch: boolean
+  medicationBeforeEvening: boolean
   medicationEvening: boolean
   medicationNote: string | null
   functionalTrainingStart: string | null
