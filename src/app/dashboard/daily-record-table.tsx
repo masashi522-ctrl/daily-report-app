@@ -87,11 +87,24 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const todayNum = new Date().getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
 
+  function matchesGojuuon(name: string) {
+    if (!gojuuonRow) return true
+    const row = GOJUUON_ROWS.find(r => r.label === gojuuonRow)
+    return row ? row.chars.includes(name[0]) : true
+  }
+
   const filtered = residents.filter(r => {
     const matchDay = !todayOnly || !r.attendanceDays ||
       r.attendanceDays.split(',').map(Number).includes(todayNum)
     const matchName = !filter || r.name.includes(filter)
-    return matchDay && matchName
+    return matchDay && matchName && matchesGojuuon(r.name)
+  })
+
+  // 名前ボタン用：曜日+50音は適用、テキスト検索は除外（全候補を見せる）
+  const nameButtonList = residents.filter(r => {
+    const matchDay = !todayOnly || !r.attendanceDays ||
+      r.attendanceDays.split(',').map(Number).includes(todayNum)
+    return matchDay && matchesGojuuon(r.name)
   })
 
   function getDraft(id: string): RecordDraft {
@@ -204,15 +217,10 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             >{row.label}</button>
           ))}
         </div>
-        {/* 名前ボタン（50音フィルタ適用） */}
-        <div className="flex flex-wrap gap-1 w-full">
-          {(todayOnly ? residents.filter(r => !r.attendanceDays || r.attendanceDays.split(',').map(Number).includes(todayNum)) : residents)
-            .filter(r => {
-              if (!gojuuonRow) return true
-              const row = GOJUUON_ROWS.find(row => row.label === gojuuonRow)
-              return row ? row.chars.includes(r.name[0]) : true
-            })
-            .map(r => (
+        {/* 名前ボタン（50音+曜日フィルタ適用） */}
+        {nameButtonList.length > 0 ? (
+          <div className="flex flex-wrap gap-1 w-full">
+            {nameButtonList.map(r => (
               <button key={r.id} onClick={() => setFilter(r.name === filter ? '' : r.name)}
                 className={`text-xs px-2.5 py-1 rounded-full border transition ${
                   filter === r.name
@@ -220,7 +228,10 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                     : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
                 }`}>{r.name}</button>
             ))}
-        </div>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 w-full">{gojuuonRow ? `${gojuuonRow}行の利用者はいません` : ''}</p>
+        )}
         <div className="flex gap-2 w-full justify-end items-center">
           <button
             onClick={() => window.open(`/print?date=${date}`, '_blank')}
