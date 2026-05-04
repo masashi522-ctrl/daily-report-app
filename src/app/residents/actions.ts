@@ -13,6 +13,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const name = (formData.get('name') as string)?.trim()
   if (!name) return { error: '名前は必須です' }
 
+  const furigana = (formData.get('furigana') as string)?.trim()
   const foodType = (formData.getAll('foodType') as string[]).join(',')
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
@@ -22,6 +23,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
     name,
+    furigana: furigana || null,
     foodType,
     foodRestrictions: foodRestrictions || null,
     specialCondition: specialCondition || null,
@@ -48,6 +50,7 @@ export async function updateResident(id: string, formData: FormData) {
   await requireSession()
 
   const name = formData.get('name') as string
+  const furigana = (formData.get('furigana') as string)?.trim()
   const foodType = (formData.getAll('foodType') as string[]).join(',')
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
@@ -58,6 +61,7 @@ export async function updateResident(id: string, formData: FormData) {
 
   await supabase.from('Resident').update({
     name,
+    furigana: furigana || null,
     foodType,
     foodRestrictions: foodRestrictions || null,
     specialCondition: specialCondition || null,

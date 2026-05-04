@@ -33,6 +33,7 @@ export interface Staff {
 export interface Resident {
   id: string
   name: string
+  furigana: string | null
   foodType: string
   foodRestrictions: string | null
   specialCondition: string | null

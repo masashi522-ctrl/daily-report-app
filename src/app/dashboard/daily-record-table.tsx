@@ -88,22 +88,28 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const todayNum = new Date().getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
 
-  // テーブル/カード用フィルタ（50音はここには使わない）
+  function matchRow(r: Resident) {
+    if (!gojuuonRow) return true
+    const searchChar = (r.furigana ?? r.name)[0]
+    const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
+    return row ? row.chars.includes(searchChar) : true
+  }
+
+  // テーブル/カード用フィルタ
   const filtered = residents.filter(r => {
     const matchDay = !todayOnly || !r.attendanceDays ||
       r.attendanceDays.split(',').map(Number).includes(todayNum)
-    const matchName = !appliedText || r.name.includes(appliedText)
-    return matchDay && matchName
+    const matchName = !appliedText ||
+      r.name.includes(appliedText) ||
+      (r.furigana ?? '').includes(appliedText)
+    return matchDay && matchName && matchRow(r)
   })
 
-  // 名前ボタン用：曜日+50音で絞り込む（テキスト検索は除外）
+  // 名前ボタン用：曜日+50音で絞り込む
   const nameButtonList = residents.filter(r => {
     const matchDay = !todayOnly || !r.attendanceDays ||
       r.attendanceDays.split(',').map(Number).includes(todayNum)
-    if (!matchDay) return false
-    if (!gojuuonRow) return true
-    const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
-    return row ? row.chars.includes(r.name[0]) : true
+    return matchDay && matchRow(r)
   })
 
   function applySearch() {

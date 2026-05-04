@@ -22,6 +22,7 @@ model Staff {
 model Resident {
   id               String   @id @default(cuid())
   name             String
+  furigana         String?
   foodType         FoodType @default(REGULAR)
   foodRestrictions String?
   specialCondition String?

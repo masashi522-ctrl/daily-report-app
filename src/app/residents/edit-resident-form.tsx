@@ -22,6 +22,12 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
       </div>
       <div>
+        <label className="text-xs font-medium text-gray-700 block mb-1">ふりがな <span className="text-gray-400 font-normal">（50音検索に使用）</span></label>
+        <input name="furigana" defaultValue={resident.furigana ?? ''}
+          placeholder="やまだ はなこ"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+      </div>
+      <div>
         <label className="text-xs font-medium text-gray-700 block mb-2">食事形態（複数可）</label>
         <div className="flex flex-wrap gap-x-3 gap-y-2">
           {Object.entries(FOOD_TYPE_LABELS).map(([value, label]) => (

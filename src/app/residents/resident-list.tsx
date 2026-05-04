@@ -37,11 +37,16 @@ export default function ResidentList({ residents, editId }: Props) {
   }
 
   const filtered = residents.filter(r => {
-    const matchName = !appliedText || r.name.includes(appliedText)
+    // テキスト検索：名前またはふりがなに含まれるか
+    const matchName = !appliedText ||
+      r.name.includes(appliedText) ||
+      (r.furigana ?? '').includes(appliedText)
     if (!matchName) return false
     if (!gojuuonRow) return true
+    // 50音：ふりがなの先頭文字を使用。なければ名前の先頭文字
+    const searchChar = (r.furigana ?? r.name)[0]
     const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
-    return row ? row.chars.includes(r.name[0]) : true
+    return row ? row.chars.includes(searchChar) : true
   })
 
   return (
