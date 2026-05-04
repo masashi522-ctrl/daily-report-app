@@ -84,10 +84,12 @@ export default function ResidentForm() {
         <DayCheckboxes name="bathingDays" />
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">
-          機能訓練対象日 <span className="text-gray-400 font-normal text-[11px]">（機能訓練ページに自動表示）</span>
+        <label className="text-xs font-medium text-gray-700 block mb-1">機能訓練</label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="trainingTarget" value="1" className="w-4 h-4 accent-teal-600" />
+          <span className="text-sm text-gray-700">機能訓練対象</span>
+          <span className="text-gray-400 font-normal text-[11px]">（機能訓練ページに自動表示）</span>
         </label>
-        <DayCheckboxes name="trainingDays" />
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">禁止食品・アレルギー</label>

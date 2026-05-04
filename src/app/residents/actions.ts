@@ -21,7 +21,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
   const attendanceDays = (formData.getAll('attendanceDays') as string[]).join(',')
   const bathingDays    = (formData.getAll('bathingDays')    as string[]).join(',')
-  const trainingDays   = (formData.getAll('trainingDays')   as string[]).join(',')
+  const trainingDays   = formData.get('trainingTarget') ? '1' : null
 
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
@@ -62,7 +62,7 @@ export async function updateResident(id: string, formData: FormData) {
   const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
   const attendanceDays = (formData.getAll('attendanceDays') as string[]).join(',')
   const bathingDays    = (formData.getAll('bathingDays')    as string[]).join(',')
-  const trainingDays   = (formData.getAll('trainingDays')   as string[]).join(',')
+  const trainingDays   = formData.get('trainingTarget') ? '1' : null
 
   if (!name) return
 

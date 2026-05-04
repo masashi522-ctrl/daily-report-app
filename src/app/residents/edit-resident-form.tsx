@@ -26,9 +26,8 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
   const [furigana, setFurigana] = useState(resident.furigana ?? '')
   const [generating, startGenerate] = useTransition()
 
-  const checkedDays     = resident.attendanceDays ? resident.attendanceDays.split(',').map(Number) : []
-  const checkedBathing  = resident.bathingDays    ? resident.bathingDays.split(',').map(Number)    : []
-  const checkedTraining = resident.trainingDays   ? resident.trainingDays.split(',').map(Number)   : []
+  const checkedDays      = resident.attendanceDays ? resident.attendanceDays.split(',').map(Number) : []
+  const checkedBathing   = resident.bathingDays    ? resident.bathingDays.split(',').map(Number)    : []
   const checkedFoodTypes = resident.foodType ? resident.foodType.split(',') : []
 
   useEffect(() => {
@@ -113,10 +112,14 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
         <DayCheckboxes name="bathingDays" checkedDays={checkedBathing} />
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">
-          機能訓練対象日 <span className="text-gray-400 font-normal text-[11px]">（機能訓練ページに自動表示）</span>
+        <label className="text-xs font-medium text-gray-700 block mb-1">機能訓練</label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="trainingTarget" value="1"
+            defaultChecked={!!resident.trainingDays}
+            className="w-4 h-4 accent-teal-600" />
+          <span className="text-sm text-gray-700">機能訓練対象</span>
+          <span className="text-gray-400 font-normal text-[11px]">（機能訓練ページに自動表示）</span>
         </label>
-        <DayCheckboxes name="trainingDays" checkedDays={checkedTraining} />
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">禁止食品・アレルギー</label>
