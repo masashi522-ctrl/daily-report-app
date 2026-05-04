@@ -80,10 +80,11 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [saving, setSaving] = useState<string | null>(null)
   const [savingAll, setSavingAll] = useState(false)
   const [, startTransition] = useTransition()
-  const [inputText, setInputText] = useState('')    // テキスト入力欄の現在値
-  const [appliedText, setAppliedText] = useState('') // 検索ボタンで確定した値
+  const [inputText, setInputText] = useState('')
+  const [appliedText, setAppliedText] = useState('')
   const [todayOnly, setTodayOnly] = useState(true)
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
+  const [incompleteOnly, setIncompleteOnly] = useState(false)
 
   const todayNum = new Date().getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
@@ -112,22 +113,38 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     return row ? row.chars.includes(searchChar) : true
   }
 
-  // テーブル/カード用フィルタ
-  const filtered = residents.filter(r => {
-    const matchDay = !todayOnly || !r.attendanceDays ||
-      r.attendanceDays.split(',').map(Number).includes(todayNum)
+  // 今日の曜日登録者（曜日フィルタのみ）
+  const scheduledToday = residents.filter(r =>
+    !todayOnly || !r.attendanceDays ||
+    r.attendanceDays.split(',').map(Number).includes(todayNum)
+  )
+
+  // テーブル/カード用フィルタ（名前・50音・未入力フィルタ込み）
+  const filtered = scheduledToday.filter(r => {
     const matchName = !appliedText ||
       r.name.includes(appliedText) ||
       (r.furigana ?? '').includes(appliedText)
-    return matchDay && matchName && matchRow(r)
+    if (!matchName || !matchRow(r)) return false
+    if (incompleteOnly) {
+      const d = getDraft(r.id)
+      const absent = d.isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+      return !absent && getMissing(r.id).length > 0
+    }
+    return true
   })
 
+  // カウント（曜日登録者ベース）
+  const absentCount = scheduledToday.filter(r =>
+    getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+  ).length
+  const attendingCount = scheduledToday.length - absentCount
+  const incompleteCount = scheduledToday.filter(r => {
+    const absent = getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+    return !absent && getMissing(r.id).length > 0
+  }).length
+
   // 名前ボタン用：曜日+50音で絞り込む
-  const nameButtonList = residents.filter(r => {
-    const matchDay = !todayOnly || !r.attendanceDays ||
-      r.attendanceDays.split(',').map(Number).includes(todayNum)
-    return matchDay && matchRow(r)
-  })
+  const nameButtonList = scheduledToday.filter(r => matchRow(r))
 
   function applySearch() {
     setAppliedText(inputText)
@@ -148,11 +165,15 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   }
 
   function getDraft(id: string): RecordDraft {
-    return drafts[id] ?? recordMap[id] ?? {}
+    return drafts[id] ?? recordMap[id] ?? { isAbsent: false }
   }
 
   function upd(id: string, field: string, value: unknown) {
     setDrafts(prev => ({ ...prev, [id]: { ...getDraft(id), [field]: value } }))
+  }
+
+  function updMany(id: string, fields: Partial<RecordDraft>) {
+    setDrafts(prev => ({ ...prev, [id]: { ...getDraft(id), ...fields } }))
   }
 
   function numHandler(id: string, field: string) {
@@ -222,6 +243,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     <>
       {/* 利用者絞り込み */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-wrap gap-2 items-center">
+        {/* 曜日フィルタ＋カウント */}
         <div className="flex gap-1 w-full">
           <button onClick={() => setTodayOnly(true)}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition border ${
@@ -235,6 +257,30 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             }`}>
             全利用者
           </button>
+        </div>
+        {/* 登録者数・実利用者・欠席・未入力 カウントバー */}
+        <div className="flex flex-wrap gap-2 w-full text-xs">
+          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full font-medium">
+            登録 {scheduledToday.length}名
+          </span>
+          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+            実利用 {attendingCount}名
+          </span>
+          {absentCount > 0 && (
+            <span className="px-2.5 py-1 bg-gray-200 text-gray-600 rounded-full font-medium">
+              欠席 {absentCount}名
+            </span>
+          )}
+          {incompleteCount > 0 && (
+            <button onClick={() => setIncompleteOnly(v => !v)}
+              className={`px-2.5 py-1 rounded-full font-medium transition ${
+                incompleteOnly
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+              }`}>
+              ⚠ 未入力 {incompleteCount}名{incompleteOnly ? ' ✕' : ''}
+            </button>
+          )}
         </div>
         {/* テキスト検索 + 検索ボタン */}
         <div className="flex items-center gap-2 w-full">
@@ -281,14 +327,24 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
         {/* 名前ボタン（50音タブでグループ整理、クリックで即時絞り込み） */}
         {nameButtonList.length > 0 ? (
           <div className="flex flex-wrap gap-1 w-full">
-            {nameButtonList.map(r => (
-              <button key={r.id} onClick={() => selectName(r.name)}
-                className={`text-xs px-2.5 py-1 rounded-full border transition ${
-                  appliedText === r.name
-                    ? 'bg-violet-600 text-white border-violet-600'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
-                }`}>{r.name}</button>
-            ))}
+            {nameButtonList.map(r => {
+              const absent = getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+              const incomplete = !absent && getMissing(r.id).length > 0
+              return (
+                <button key={r.id} onClick={() => selectName(r.name)}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
+                    appliedText === r.name
+                      ? 'bg-violet-600 text-white border-violet-600'
+                      : absent
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
+                  }`}>
+                  {absent && <span className="text-[9px]">欠</span>}
+                  {incomplete && !absent && <span className="text-amber-500">⚠</span>}
+                  {r.name}
+                </button>
+              )
+            })}
           </div>
         ) : (
           <p className="text-xs text-gray-400 w-full">{gojuuonRow ? `${gojuuonRow}行の利用者はいません` : ''}</p>
@@ -335,29 +391,58 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
         )}
         {filtered.map(resident => {
           const d = getDraft(resident.id)
+          const isAbsent = d.isAbsent ?? false
+          const missing = getMissing(resident.id)
+          const hasVital = d.bpSystolic != null || d.tempMorning != null
           return (
-            <div key={resident.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #ccfbf1 0%, #cffafe 100%)' }}>
+            <div key={resident.id} className={`rounded-xl border shadow-sm overflow-hidden ${isAbsent ? 'border-gray-300 opacity-70' : 'border-gray-200 bg-white'}`}>
+              <div className="px-4 py-2.5 flex items-center justify-between"
+                style={{ background: isAbsent ? '#f1f5f9' : 'linear-gradient(135deg, #ccfbf1 0%, #cffafe 100%)' }}>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-teal-900">{resident.name}</span>
-                    {(() => {
-                      const rec = getDraft(resident.id)
-                      const hasVital = rec.bpSystolic != null || rec.tempMorning != null
-                      return (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                          hasVital ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
-                        }`}>{hasVital ? 'バイタル済' : '未測定'}</span>
-                      )
-                    })()}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`font-semibold ${isAbsent ? 'text-gray-400 line-through' : 'text-teal-900'}`}>{resident.name}</span>
+                    {isAbsent ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-200 text-gray-500">欠席</span>
+                    ) : (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        hasVital ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                      }`}>{hasVital ? 'バイタル済' : '未測定'}</span>
+                    )}
+                    {!isAbsent && missing.length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                        ⚠ {missing.length}項目未入力
+                      </span>
+                    )}
                   </div>
-                  <span className="text-xs text-teal-600 bg-white/70 px-1.5 py-0.5 rounded-full border border-teal-200 mt-1 inline-block">
-                    {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
-                  </span>
-                  {resident.foodRestrictions && <div className="text-red-500 text-xs mt-0.5">{resident.foodRestrictions}</div>}
+                  {!isAbsent && (
+                    <span className="text-xs text-teal-600 bg-white/70 px-1.5 py-0.5 rounded-full border border-teal-200 mt-1 inline-block">
+                      {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
+                    </span>
+                  )}
+                  {resident.foodRestrictions && !isAbsent && <div className="text-red-500 text-xs mt-0.5">{resident.foodRestrictions}</div>}
                 </div>
-                <SaveBtn id={resident.id} />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updMany(resident.id, { isAbsent: !isAbsent, absenceReason: isAbsent ? null : d.absenceReason })}
+                    className={`text-xs px-2 py-1 rounded-lg border font-medium transition ${
+                      isAbsent ? 'bg-gray-200 text-gray-600 border-gray-300 hover:bg-gray-300' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                    }`}>
+                    {isAbsent ? '欠席中' : '欠席'}
+                  </button>
+                  <SaveBtn id={resident.id} />
+                </div>
               </div>
+              {isAbsent ? (
+                <div className="p-3 space-y-2">
+                  <p className="text-xs text-gray-400 text-center py-2">欠席中のため記録不要</p>
+                  <div>
+                    <span className="text-xs text-gray-500 mb-0.5 block">欠席理由（任意）</span>
+                    <input type="text" value={d.absenceReason ?? ''} onChange={e => upd(resident.id, 'absenceReason', e.target.value || null)}
+                      placeholder="例：発熱、家族の都合 等"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm" style={{ fontSize: '16px' }} />
+                  </div>
+                </div>
+              ) : (
               <div className="p-3 space-y-3">
                 {/* バイタル 3列グリッド */}
                 <div className="space-y-1.5">
@@ -447,6 +532,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                     className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm" />
                 </div>
               </div>
+              )}
             </div>
           )
         })}
@@ -517,25 +603,40 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             <tbody>
               {filtered.map((resident, i) => {
                 const d = getDraft(resident.id)
+                const isAbsent = d.isAbsent ?? false
                 const base = i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
                 const missing = getMissing(resident.id)
-                const rowBg = missing.length === 0 ? base
+                const rowBg = isAbsent ? 'bg-slate-100/80'
+                  : missing.length === 0 ? base
                   : missing[0] === '未記録' ? 'bg-orange-50 hover:bg-orange-100/60'
                   : 'bg-amber-50/70 hover:bg-amber-100/60'
-                return (<tr key={resident.id} className={`${rowBg} transition border-t border-gray-100`}>
+                return (<tr key={resident.id} className={`${rowBg} transition border-t border-gray-100 ${isAbsent ? 'opacity-60' : ''}`}>
                     {/* 名前 */}
                     <td className={td}>
-                      <div className="font-semibold text-gray-800 leading-tight text-[11px] truncate">{resident.name}</div>
-                      <div className="text-[9px] text-gray-400 leading-tight truncate mt-0.5">
-                        {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
-                      </div>
-                      {resident.foodRestrictions && <div className="text-red-500 text-[9px]">{resident.foodRestrictions}</div>}
-                      {missing.length > 0 && (
-                        <div title={missing.join('・')}
-                          className={`text-[9px] font-medium mt-0.5 truncate ${missing[0] === '未記録' ? 'text-orange-600' : 'text-amber-600'}`}>
-                          {missing[0] === '未記録' ? '⚠ 未記録' : `⚠ ${missing.length}項目未入力`}
-                        </div>
+                      <div className={`font-semibold leading-tight text-[11px] truncate ${isAbsent ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{resident.name}</div>
+                      {isAbsent ? (
+                        <div className="text-[9px] text-gray-400 mt-0.5">欠席</div>
+                      ) : (
+                        <>
+                          <div className="text-[9px] text-gray-400 leading-tight truncate mt-0.5">
+                            {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
+                          </div>
+                          {resident.foodRestrictions && <div className="text-red-500 text-[9px]">{resident.foodRestrictions}</div>}
+                          {missing.length > 0 && (
+                            <div title={missing.join('・')}
+                              className={`text-[9px] font-medium mt-0.5 truncate ${missing[0] === '未記録' ? 'text-orange-600' : 'text-amber-600'}`}>
+                              {missing[0] === '未記録' ? '⚠ 未記録' : `⚠ ${missing.length}項目未入力`}
+                            </div>
+                          )}
+                        </>
                       )}
+                      <button
+                        onClick={() => updMany(resident.id, { isAbsent: !isAbsent, absenceReason: isAbsent ? null : d.absenceReason })}
+                        className={`mt-1 text-[9px] px-1.5 py-0.5 rounded border font-medium transition ${
+                          isAbsent ? 'bg-gray-200 text-gray-600 border-gray-300 hover:bg-gray-300' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600'
+                        }`}>
+                        {isAbsent ? '欠席中 ✕' : '欠席'}
+                      </button>
                     </td>
                     {/* 血圧AM */}
                     <td className={td}>
