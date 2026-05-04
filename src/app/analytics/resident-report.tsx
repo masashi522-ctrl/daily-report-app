@@ -109,11 +109,13 @@ export default function ResidentReport({
 
   async function handleGenerate() {
     setGenerating(true)
+    setReport('')
     try {
       const text = await generateCareReport(stats)
       setReport(text)
-    } catch {
-      setReport('レポートの生成中にエラーが発生しました。')
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
+      setReport(`【エラー】${detail}`)
     } finally {
       setGenerating(false)
     }

@@ -25,7 +25,10 @@ export interface ReportStats {
 export async function generateCareReport(stats: ReportStats): Promise<string> {
   await requireSession()
 
-  const client = new Anthropic()
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    return '【設定エラー】ANTHROPIC_API_KEY が環境変数に設定されていません。.env.local または Vercel の環境変数を確認してください。'
+  }
 
   const bp = stats.bpSystolicAvg != null && stats.bpDiastolicAvg != null
     ? `${stats.bpSystolicAvg}/${stats.bpDiastolicAvg} mmHg`
@@ -63,11 +66,19 @@ export async function generateCareReport(stats: ReportStats): Promise<string> {
 【ケアサービスの実施状況】
 【申し送り事項・今後の対応】`
 
-  const message = await client.messages.create({
-    model: 'claude-opus-4-7',
-    max_tokens: 1500,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  return message.content[0].type === 'text' ? message.content[0].text : 'レポートの生成に失敗しました。'
+  try {
+    const client = new Anthropic({ apiKey })
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    return message.content[0].type === 'text'
+      ? message.content[0].text
+      : 'レポートの生成に失敗しました。'
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
+    console.error('[generateCareReport] Anthropic API error:', detail)
+    return `【APIエラー】${detail}`
+  }
 }
