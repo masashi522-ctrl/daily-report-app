@@ -25,10 +25,37 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
         <span className="text-sm text-gray-500">登録: {residents?.length ?? 0}名</span>
       </div>
 
+      {/*
+        モバイル: 縦1列 — フォームが上(order-1)、リストが下(order-2)
+        デスクトップ: 3列グリッド — リストが左2列(lg:order-1)、フォームが右1列(lg:order-2)
+      */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
 
-          {/* ── デスクトップ: テーブル ── */}
+        {/* ── フォーム ── モバイルで先頭、PCで右側 */}
+        <div className="order-1 lg:order-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            {editingResident ? (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-semibold text-gray-800">利用者を編集</h3>
+                  <a href="/residents" className="text-xs text-gray-400 hover:text-gray-600">✕ キャンセル</a>
+                </div>
+                <p className="text-xs text-blue-600 mb-4">{editingResident.name}</p>
+                <EditResidentForm resident={editingResident} />
+              </>
+            ) : (
+              <>
+                <h3 className="font-semibold text-gray-800 mb-4">利用者を追加</h3>
+                <ResidentForm />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── リスト ── モバイルで2番目、PCで左側(2列) */}
+        <div className="order-2 lg:order-1 lg:col-span-2">
+
+          {/* デスクトップ: テーブル */}
           <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <table className="min-w-full text-sm">
               <thead>
@@ -82,7 +109,7 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
             </table>
           </div>
 
-          {/* ── モバイル: カード ── */}
+          {/* モバイル: カード */}
           <div className="md:hidden flex flex-col gap-3">
             {(!residents || residents.length === 0) && (
               <div className="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-200">
@@ -90,8 +117,8 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
               </div>
             )}
             {residents?.map(r => (
-              <div key={r.id} className={`bg-white rounded-xl border shadow-sm p-4 ${editId === r.id ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
-                {/* 名前 + 状態バッジ */}
+              <div key={r.id} className={`bg-white rounded-xl border shadow-sm p-4 ${editId === r.id ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}>
+                {/* 名前 + 状態 */}
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-semibold text-gray-800 text-base">{r.name}</span>
                   <form action={toggleActive.bind(null, r.id, !r.isActive)}>
@@ -101,46 +128,46 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
                   </form>
                 </div>
 
-                {/* 詳細情報グリッド */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm mb-3">
+                {/* 詳細 */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-3">
                   <div>
-                    <span className="text-xs text-gray-400">食事形態</span>
-                    <div className="text-gray-700 text-xs mt-0.5">
+                    <p className="text-xs text-gray-400">食事形態</p>
+                    <p className="text-xs text-gray-700 mt-0.5">
                       {r.foodType ? r.foodType.split(',').map((t: string) => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
-                    </div>
+                    </p>
                   </div>
                   <div>
-                    <span className="text-xs text-gray-400">利用曜日</span>
-                    <div className="text-gray-700 text-xs mt-0.5">
+                    <p className="text-xs text-gray-400">利用曜日</p>
+                    <p className="text-xs text-gray-700 mt-0.5">
                       {r.attendanceDays
                         ? r.attendanceDays.split(',').map((d: string) => ['日','月','火','水','木','金','土'][+d]).join(' ')
                         : '-'}
-                    </div>
+                    </p>
                   </div>
                   {r.foodRestrictions && (
                     <div className="col-span-2">
-                      <span className="text-xs text-gray-400">禁止食品</span>
-                      <div className="text-red-600 text-xs mt-0.5">{r.foodRestrictions}</div>
+                      <p className="text-xs text-gray-400">禁止食品</p>
+                      <p className="text-xs text-red-600 mt-0.5">{r.foodRestrictions}</p>
                     </div>
                   )}
                   {r.specialCondition && (
                     <div className="col-span-2">
-                      <span className="text-xs text-gray-400">特記事項</span>
-                      <div className="text-gray-600 text-xs mt-0.5">{r.specialCondition}</div>
+                      <p className="text-xs text-gray-400">特記事項</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{r.specialCondition}</p>
                     </div>
                   )}
                 </div>
 
-                {/* 操作ボタン */}
+                {/* 操作 */}
                 <div className="flex gap-2 pt-2 border-t border-gray-100">
                   <a
                     href={`/residents?edit=${r.id}`}
-                    className="flex-1 text-center text-sm py-1.5 rounded-lg bg-blue-50 text-blue-600 font-medium hover:bg-blue-100"
+                    className="flex-1 text-center text-sm py-2 rounded-lg bg-blue-50 text-blue-600 font-medium"
                   >
                     編集
                   </a>
                   <form action={deleteResident.bind(null, r.id)} className="flex-1">
-                    <button className="w-full text-sm py-1.5 rounded-lg bg-red-50 text-red-500 font-medium hover:bg-red-100">
+                    <button className="w-full text-sm py-2 rounded-lg bg-red-50 text-red-500 font-medium">
                       削除
                     </button>
                   </form>
@@ -149,23 +176,6 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
             ))}
           </div>
 
-        </div>
-
-        <div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            {editingResident ? (
-              <>
-                <h3 className="font-semibold text-gray-800 mb-1">利用者を編集</h3>
-                <p className="text-xs text-blue-600 mb-4">{editingResident.name}</p>
-                <EditResidentForm resident={editingResident} />
-              </>
-            ) : (
-              <>
-                <h3 className="font-semibold text-gray-800 mb-4">利用者を追加</h3>
-                <ResidentForm />
-              </>
-            )}
-          </div>
         </div>
       </div>
     </div>
