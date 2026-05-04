@@ -80,8 +80,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [saving, setSaving] = useState<string | null>(null)
   const [savingAll, setSavingAll] = useState(false)
   const [, startTransition] = useTransition()
-  const [inputText, setInputText] = useState('')
-  const [appliedText, setAppliedText] = useState('')
+  const [searchText, setSearchText] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [todayOnly, setTodayOnly] = useState(true)
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [incompleteOnly, setIncompleteOnly] = useState(false)
@@ -119,12 +119,14 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     r.attendanceDays.split(',').map(Number).includes(todayNum)
   )
 
-  // テーブル/カード用フィルタ（名前・50音・未入力フィルタ込み）
+  // テーブル/カード用フィルタ（名前・50音・複数選択・未入力フィルタ込み）
   const filtered = scheduledToday.filter(r => {
-    const matchName = !appliedText ||
-      r.name.includes(appliedText) ||
-      (r.furigana ?? '').includes(appliedText)
-    if (!matchName || !matchRow(r)) return false
+    if (!matchRow(r)) return false
+    if (selectedIds.size > 0) {
+      if (!selectedIds.has(r.id)) return false
+    } else if (searchText) {
+      if (!r.name.includes(searchText) && !(r.furigana ?? '').includes(searchText)) return false
+    }
     if (incompleteOnly) {
       const d = getDraft(r.id)
       const absent = d.isAbsent ?? recordMap[r.id]?.isAbsent ?? false
@@ -143,25 +145,30 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     return !absent && getMissing(r.id).length > 0
   }).length
 
-  // 名前ボタン用：曜日+50音で絞り込む
-  const nameButtonList = scheduledToday.filter(r => matchRow(r))
+  // 名前ボタン用：曜日+50音+テキストで絞り込む
+  const nameButtonList = scheduledToday.filter(r =>
+    matchRow(r) &&
+    (!searchText || r.name.includes(searchText) || (r.furigana ?? '').includes(searchText))
+  )
 
-  function applySearch() {
-    setAppliedText(inputText)
+  function toggleResident(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      const adding = !next.has(id)
+      if (adding) next.add(id)
+      else next.delete(id)
+      if (adding) {
+        setTimeout(() => {
+          document.getElementById(`resident-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }, 60)
+      }
+      return next
+    })
   }
 
-  function clearSearch() {
-    setInputText('')
-    setAppliedText('')
-  }
-
-  function selectName(name: string) {
-    if (name === appliedText) {
-      clearSearch()
-    } else {
-      setInputText(name)
-      setAppliedText(name)
-    }
+  function clearAll() {
+    setSelectedIds(new Set())
+    setSearchText('')
   }
 
   function getDraft(id: string): RecordDraft {
@@ -282,27 +289,25 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             </button>
           )}
         </div>
-        {/* テキスト検索 + 検索ボタン */}
+        {/* テキスト検索（名前ボタン絞り込み用） */}
         <div className="flex items-center gap-2 w-full">
           <input
             type="text"
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && applySearch()}
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
             placeholder="名前で絞り込む..."
             className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
             style={{ fontSize: '16px' }}
           />
-          <button
-            onClick={applySearch}
-            className="px-3 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 whitespace-nowrap"
-          >検索</button>
-          {appliedText && (
-            <button onClick={clearSearch}
+          {(searchText || selectedIds.size > 0) && (
+            <button onClick={clearAll}
               className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2 rounded-lg hover:bg-gray-100 whitespace-nowrap">✕ クリア</button>
           )}
+          {selectedIds.size > 0 && (
+            <span className="text-xs text-violet-600 font-medium whitespace-nowrap">{selectedIds.size}名選択中</span>
+          )}
         </div>
-        {/* 50音タブ（名前ボタンの整理に使用） */}
+        {/* 50音タブ */}
         <div className="flex flex-wrap gap-1 w-full">
           <span className="text-xs text-gray-400 self-center mr-1">50音:</span>
           <button
@@ -324,23 +329,24 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             >{row.label}</button>
           ))}
         </div>
-        {/* 名前ボタン（50音タブでグループ整理、クリックで即時絞り込み） */}
+        {/* 名前ボタン（複数選択可・クリックで入力欄へジャンプ） */}
         {nameButtonList.length > 0 ? (
           <div className="flex flex-wrap gap-1 w-full">
             {nameButtonList.map(r => {
               const absent = getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
               const incomplete = !absent && getMissing(r.id).length > 0
+              const selected = selectedIds.has(r.id)
               return (
-                <button key={r.id} onClick={() => selectName(r.name)}
+                <button key={r.id} onClick={() => toggleResident(r.id)}
                   className={`text-xs px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
-                    appliedText === r.name
+                    selected
                       ? 'bg-violet-600 text-white border-violet-600'
                       : absent
                       ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
                   }`}>
                   {absent && <span className="text-[9px]">欠</span>}
-                  {incomplete && !absent && <span className="text-amber-500">⚠</span>}
+                  {incomplete && !absent && <span className={selected ? 'text-amber-200' : 'text-amber-500'}>⚠</span>}
                   {r.name}
                 </button>
               )
@@ -395,7 +401,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           const missing = getMissing(resident.id)
           const hasVital = d.bpSystolic != null || d.tempMorning != null
           return (
-            <div key={resident.id} className={`rounded-xl border shadow-sm overflow-hidden ${isAbsent ? 'border-gray-300 opacity-70' : 'border-gray-200 bg-white'}`}>
+            <div key={resident.id} id={`resident-${resident.id}`} className={`rounded-xl border shadow-sm overflow-hidden ${isAbsent ? 'border-gray-300 opacity-70' : 'border-gray-200 bg-white'}`}>
               <div className="px-4 py-2.5 flex items-center justify-between"
                 style={{ background: isAbsent ? '#f1f5f9' : 'linear-gradient(135deg, #ccfbf1 0%, #cffafe 100%)' }}>
                 <div>
@@ -477,17 +483,9 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                     <ComboNum listId="dl-fluid" values={FLUID} current={d.fluidIntakePm} onChange={v => upd(resident.id, 'fluidIntakePm', v)} min={0} max={2000} step={50} />
                   </div>
                 </div>
-                {/* 入浴・食事 */}
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-amber-100">
-                  <div className="col-span-3 text-[10px] font-bold text-amber-600 -mb-1">食事・入浴</div>
-                  <div>
-                    <span className="text-xs text-gray-500 mb-0.5 block">入浴</span>
-                    <select value={d.bathing ?? 'NOT_APPLICABLE'} onChange={e => upd(resident.id, 'bathing', e.target.value)} className={selMd}>
-                      <option value="DONE">○</option>
-                      <option value="NOT_DONE">×</option>
-                      <option value="NOT_APPLICABLE">-</option>
-                    </select>
-                  </div>
+                {/* 食事 */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-amber-100">
+                  <div className="col-span-2 text-[10px] font-bold text-amber-600 -mb-1">食事</div>
                   <div>
                     <span className="text-xs text-gray-500 mb-0.5 block">主食（割）</span>
                     <select value={d.mealMainFood ?? ''} onChange={e => upd(resident.id, 'mealMainFood', e.target.value !== '' ? +e.target.value : null)} className={selMd}>
@@ -548,14 +546,13 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           </div>
         )}
         {filtered.length > 0 && (
-          <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '1200px', width: '100%' }}>
+          <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '1150px', width: '100%' }}>
             <colgroup>
               <col style={{ width: '90px' }} />   {/* 名前 */}
-              <col style={{ width: '148px' }} />  {/* 血圧AM  : 60+gap+"/"+gap+60=136 + padding12 */}
+              <col style={{ width: '148px' }} />  {/* 血圧AM */}
               <col style={{ width: '148px' }} />  {/* 血圧PM */}
-              <col style={{ width: '112px' }} />  {/* 脈拍 AM+PM : 48+gap+48=100 + padding12 */}
+              <col style={{ width: '112px' }} />  {/* 脈拍 AM+PM */}
               <col style={{ width: '112px' }} />  {/* 体温 AM+PM */}
-              <col style={{ width: '50px' }} />   {/* 入浴 */}
               <col style={{ width: '92px' }} />   {/* 食事 */}
               <col style={{ width: '100px' }} />  {/* 水分 AM+PM */}
               <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
@@ -582,7 +579,6 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   <div>体温 ℃</div>
                   <div className="flex justify-around text-[9px] font-normal opacity-70"><span>AM</span><span>PM</span></div>
                 </th>
-                <th className={thBath}>入浴</th>
                 <th className={thMeal}>
                   <div>食事</div>
                   <div className="flex justify-around text-[9px] font-normal opacity-70"><span>主</span><span>副</span></div>
@@ -612,7 +608,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   : missing.length === 0 ? base
                   : missing[0] === '未記録' ? 'bg-orange-50 hover:bg-orange-100/60'
                   : 'bg-amber-50/70 hover:bg-amber-100/60'
-                return (<tr key={resident.id} className={`${rowBg} transition border-t border-gray-100 ${isAbsent ? 'opacity-60' : ''}`}>
+                return (<tr key={resident.id} id={`resident-${resident.id}`} className={`${rowBg} transition border-t border-gray-100 ${isAbsent ? 'opacity-60' : ''}`}>
                     {/* 名前 */}
                     <td className={td}>
                       <div className={`font-semibold leading-tight text-[11px] truncate ${isAbsent ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{resident.name}</div>
@@ -685,15 +681,6 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                           value={d.tempAfternoon ?? ''} onChange={numHandler(resident.id, 'tempAfternoon')}
                           className={numBase} style={{ ...inputStyle, width: '48px' }} />
                       </div>
-                    </td>
-                    {/* 入浴 */}
-                    <td className={`${td} text-center`}>
-                      <select value={d.bathing ?? 'NOT_APPLICABLE'} onChange={e => upd(resident.id, 'bathing', e.target.value)}
-                        className={selSm}>
-                        <option value="DONE">○</option>
-                        <option value="NOT_DONE">×</option>
-                        <option value="NOT_APPLICABLE">-</option>
-                      </select>
                     </td>
                     {/* 食事 主/副 */}
                     <td className={td}>
