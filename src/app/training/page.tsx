@@ -4,7 +4,7 @@ import { type Resident, type DailyRecord } from '@/types/database'
 import TrainingTable from './training-table'
 
 function toDateStr(d: Date) {
-  return d.toISOString().split('T')[0]
+  return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 }
 
 export default async function TrainingPage({

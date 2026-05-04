@@ -4,7 +4,7 @@ import { FOOD_TYPE_LABELS, BATHING_LABELS, type Resident, type DailyRecord } fro
 import DailyRecordTable from './daily-record-table'
 
 function toDateStr(date: Date) {
-  return date.toISOString().split('T')[0]
+  return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 }
 
 export default async function DashboardPage({
