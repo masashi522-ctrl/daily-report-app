@@ -154,16 +154,17 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   function toggleResident(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      const adding = !next.has(id)
-      if (adding) next.add(id)
-      else next.delete(id)
-      if (adding) {
-        setTimeout(() => {
-          document.getElementById(`resident-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-        }, 60)
-      }
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
+  }
+
+  function handleSearch() {
+    const firstId = Array.from(selectedIds)[0]
+    if (firstId) {
+      document.getElementById(`resident-${firstId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
   function clearAll() {
@@ -238,8 +239,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const thBase   = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b whitespace-nowrap'
   const thName   = `${thBase} bg-slate-100   text-slate-700  border-slate-200`
   const thVital  = `${thBase} bg-rose-50     text-rose-700   border-rose-100`
-  const thBath   = `${thBase} bg-cyan-50     text-cyan-700   border-cyan-100`
-  const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
+const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
   const thFluid  = `${thBase} bg-sky-50      text-sky-700    border-sky-100`
   const thMed    = `${thBase} bg-violet-50   text-violet-700 border-violet-100`
   const thNote   = `${thBase} bg-gray-50     text-gray-600   border-gray-200`
@@ -354,6 +354,14 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           </div>
         ) : (
           <p className="text-xs text-gray-400 w-full">{gojuuonRow ? `${gojuuonRow}行の利用者はいません` : ''}</p>
+        )}
+        {selectedIds.size > 0 && (
+          <button
+            onClick={handleSearch}
+            className="w-full py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 font-medium transition"
+          >
+            検索（{selectedIds.size}名選択中）→ 入力欄へ
+          </button>
         )}
         <div className="flex gap-2 w-full justify-end items-center">
           <button
