@@ -80,32 +80,49 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [saving, setSaving] = useState<string | null>(null)
   const [savingAll, setSavingAll] = useState(false)
   const [, startTransition] = useTransition()
-  const [filter, setFilter] = useState('')
+  const [inputText, setInputText] = useState('')    // テキスト入力欄の現在値
+  const [appliedText, setAppliedText] = useState('') // 検索ボタンで確定した値
   const [todayOnly, setTodayOnly] = useState(true)
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
 
   const todayNum = new Date().getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
 
-  function matchesGojuuon(name: string) {
-    if (!gojuuonRow) return true
-    const row = GOJUUON_ROWS.find(r => r.label === gojuuonRow)
-    return row ? row.chars.includes(name[0]) : true
-  }
-
+  // テーブル/カード用フィルタ（50音はここには使わない）
   const filtered = residents.filter(r => {
     const matchDay = !todayOnly || !r.attendanceDays ||
       r.attendanceDays.split(',').map(Number).includes(todayNum)
-    const matchName = !filter || r.name.includes(filter)
-    return matchDay && matchName && matchesGojuuon(r.name)
+    const matchName = !appliedText || r.name.includes(appliedText)
+    return matchDay && matchName
   })
 
-  // 名前ボタン用：曜日+50音は適用、テキスト検索は除外（全候補を見せる）
+  // 名前ボタン用：曜日+50音で絞り込む（テキスト検索は除外）
   const nameButtonList = residents.filter(r => {
     const matchDay = !todayOnly || !r.attendanceDays ||
       r.attendanceDays.split(',').map(Number).includes(todayNum)
-    return matchDay && matchesGojuuon(r.name)
+    if (!matchDay) return false
+    if (!gojuuonRow) return true
+    const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
+    return row ? row.chars.includes(r.name[0]) : true
   })
+
+  function applySearch() {
+    setAppliedText(inputText)
+  }
+
+  function clearSearch() {
+    setInputText('')
+    setAppliedText('')
+  }
+
+  function selectName(name: string) {
+    if (name === appliedText) {
+      clearSearch()
+    } else {
+      setInputText(name)
+      setAppliedText(name)
+    }
+  }
 
   function getDraft(id: string): RecordDraft {
     return drafts[id] ?? recordMap[id] ?? {}
@@ -187,17 +204,29 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             全利用者
           </button>
         </div>
-        <div className="flex items-center gap-2 flex-1 min-w-[160px]">
-          <input type="text" value={filter} onChange={e => setFilter(e.target.value)}
+        {/* テキスト検索 + 検索ボタン */}
+        <div className="flex items-center gap-2 w-full">
+          <input
+            type="text"
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && applySearch()}
             placeholder="名前で絞り込む..."
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
-          {filter && (
-            <button onClick={() => setFilter('')}
-              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100">✕</button>
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+            style={{ fontSize: '16px' }}
+          />
+          <button
+            onClick={applySearch}
+            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 whitespace-nowrap"
+          >検索</button>
+          {appliedText && (
+            <button onClick={clearSearch}
+              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2 rounded-lg hover:bg-gray-100 whitespace-nowrap">✕ クリア</button>
           )}
         </div>
-        {/* 50音行タブ */}
+        {/* 50音タブ（名前ボタンの整理に使用） */}
         <div className="flex flex-wrap gap-1 w-full">
+          <span className="text-xs text-gray-400 self-center mr-1">50音:</span>
           <button
             onClick={() => setGojuuonRow(null)}
             className={`text-xs px-2 py-1 rounded border transition font-medium ${
@@ -217,13 +246,13 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             >{row.label}</button>
           ))}
         </div>
-        {/* 名前ボタン（50音+曜日フィルタ適用） */}
+        {/* 名前ボタン（50音タブでグループ整理、クリックで即時絞り込み） */}
         {nameButtonList.length > 0 ? (
           <div className="flex flex-wrap gap-1 w-full">
             {nameButtonList.map(r => (
-              <button key={r.id} onClick={() => setFilter(r.name === filter ? '' : r.name)}
+              <button key={r.id} onClick={() => selectName(r.name)}
                 className={`text-xs px-2.5 py-1 rounded-full border transition ${
-                  filter === r.name
+                  appliedText === r.name
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
                 }`}>{r.name}</button>
