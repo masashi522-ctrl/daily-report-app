@@ -62,6 +62,19 @@ function ComboNum({ listId, values, current, onChange, placeholder = '-', min, m
   )
 }
 
+const GOJUUON_ROWS = [
+  { label: 'あ', chars: 'あいうえおアイウエオ' },
+  { label: 'か', chars: 'かきくけこカキクケコがぎぐげごガギグゲゴ' },
+  { label: 'さ', chars: 'さしすせそサシスセソざじずぜぞザジズゼゾ' },
+  { label: 'た', chars: 'たちつてとタチツテトだぢづでどダヂヅデド' },
+  { label: 'な', chars: 'なにぬねのナニヌネノ' },
+  { label: 'は', chars: 'はひふへほハヒフヘホばびぶべぼバビブベボぱぴぷぺぽパピプペポ' },
+  { label: 'ま', chars: 'まみむめもマミムメモ' },
+  { label: 'や', chars: 'やゆよヤユヨ' },
+  { label: 'ら', chars: 'らりるれろラリルレロ' },
+  { label: 'わ', chars: 'わをんワヲン' },
+]
+
 export default function DailyRecordTable({ residents, recordMap, date }: Props) {
   const [drafts, setDrafts] = useState<Record<string, RecordDraft>>({})
   const [saving, setSaving] = useState<string | null>(null)
@@ -69,6 +82,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [, startTransition] = useTransition()
   const [filter, setFilter] = useState('')
   const [todayOnly, setTodayOnly] = useState(true)
+  const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
 
   const todayNum = new Date().getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
@@ -169,8 +183,35 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
               className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100">✕</button>
           )}
         </div>
+        {/* 50音行タブ */}
+        <div className="flex flex-wrap gap-1 w-full">
+          <button
+            onClick={() => setGojuuonRow(null)}
+            className={`text-xs px-2 py-1 rounded border transition font-medium ${
+              gojuuonRow === null
+                ? 'bg-gray-700 text-white border-gray-700'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+            }`}
+          >全</button>
+          {GOJUUON_ROWS.map(row => (
+            <button key={row.label}
+              onClick={() => setGojuuonRow(gojuuonRow === row.label ? null : row.label)}
+              className={`text-xs px-2 py-1 rounded border transition ${
+                gojuuonRow === row.label
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+              }`}
+            >{row.label}</button>
+          ))}
+        </div>
+        {/* 名前ボタン（50音フィルタ適用） */}
         <div className="flex flex-wrap gap-1 w-full">
           {(todayOnly ? residents.filter(r => !r.attendanceDays || r.attendanceDays.split(',').map(Number).includes(todayNum)) : residents)
+            .filter(r => {
+              if (!gojuuonRow) return true
+              const row = GOJUUON_ROWS.find(row => row.label === gojuuonRow)
+              return row ? row.chars.includes(r.name[0]) : true
+            })
             .map(r => (
               <button key={r.id} onClick={() => setFilter(r.name === filter ? '' : r.name)}
                 className={`text-xs px-2.5 py-1 rounded-full border transition ${
@@ -259,8 +300,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>体温<br /><span className="text-[10px] text-gray-400">℃</span></span>
-                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="36.0" />
-                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="36.0" />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>水分<br /><span className="text-[10px] text-gray-400">ml</span></span>
