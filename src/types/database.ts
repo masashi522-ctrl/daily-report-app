@@ -77,6 +77,15 @@ export interface DailyRecord {
   eyeDrops: string | null
   insulin: string | null
   specialNotes: string | null
+  // 入浴詳細
+  bathingSkipReason: string | null
+  bathingSkipDetail: string | null
+  bathingNote: string | null
+  // 機能訓練
+  trainingDone: boolean
+  trainingSkipReason: string | null
+  trainingSkipDetail: string | null
+  trainingNote: string | null
   createdAt: string
   updatedAt: string
 }

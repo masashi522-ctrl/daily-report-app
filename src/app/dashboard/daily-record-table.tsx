@@ -320,10 +320,21 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           const d = getDraft(resident.id)
           return (
             <div key={resident.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)' }}>
+              <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #ccfbf1 0%, #cffafe 100%)' }}>
                 <div>
-                  <span className="font-semibold text-violet-900">{resident.name}</span>
-                  <span className="ml-2 text-xs text-violet-600 bg-white/70 px-1.5 py-0.5 rounded-full border border-violet-200">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-teal-900">{resident.name}</span>
+                    {(() => {
+                      const rec = getDraft(resident.id)
+                      const hasVital = rec.bpSystolic != null || rec.tempMorning != null
+                      return (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                          hasVital ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                        }`}>{hasVital ? 'バイタル済' : '未測定'}</span>
+                      )
+                    })()}
+                  </div>
+                  <span className="text-xs text-teal-600 bg-white/70 px-1.5 py-0.5 rounded-full border border-teal-200 mt-1 inline-block">
                     {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
                   </span>
                   {resident.foodRestrictions && <div className="text-red-500 text-xs mt-0.5">{resident.foodRestrictions}</div>}
@@ -494,7 +505,17 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   <tr key={resident.id} className={`${base} hover:bg-violet-50/50 transition border-t border-gray-100`}>
                     {/* 名前 */}
                     <td className={td}>
-                      <div className="font-semibold text-gray-800 leading-tight text-[11px] truncate">{resident.name}</div>
+                      <div className="flex items-center gap-1">
+                        {(() => {
+                          const rec = getDraft(resident.id)
+                          const hasVital = rec.bpSystolic != null || rec.tempMorning != null
+                          return (
+                            <span title={hasVital ? 'バイタル済' : 'バイタル未'}
+                              className={`shrink-0 w-2 h-2 rounded-full ${hasVital ? 'bg-emerald-400' : 'bg-gray-300'}`} />
+                          )
+                        })()}
+                        <div className="font-semibold text-gray-800 leading-tight text-[11px] truncate">{resident.name}</div>
+                      </div>
                       <div className="text-[9px] text-gray-400 leading-tight truncate mt-0.5">
                         {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
                       </div>

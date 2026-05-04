@@ -68,6 +68,15 @@ model DailyRecord {
 
   specialNotes String?
 
+  bathingSkipReason String?
+  bathingSkipDetail String?
+  bathingNote       String?
+
+  trainingDone       Boolean @default(false)
+  trainingSkipReason String?
+  trainingSkipDetail String?
+  trainingNote       String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
