@@ -40,6 +40,8 @@ export interface Resident {
   isActive: boolean
   sortOrder: number
   attendanceDays: string | null
+  bathingDays: string | null
+  trainingDays: string | null
   createdAt: string
   updatedAt: string
 }

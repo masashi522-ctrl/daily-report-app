@@ -6,10 +6,30 @@ import { FOOD_TYPE_LABELS, type Resident } from '@/types/database'
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
 
+function DayCheckboxes({ name, checkedDays }: { name: string; checkedDays: number[] }) {
+  return (
+    <div className="flex gap-1.5">
+      {DAYS.map((day, i) => (
+        <label key={i} className={`flex flex-col items-center gap-1 cursor-pointer select-none ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-700'}`}>
+          <span className="text-xs font-medium">{day}</span>
+          <input type="checkbox" name={name} value={i}
+            defaultChecked={checkedDays.includes(i)}
+            className="w-4 h-4 accent-teal-600" />
+        </label>
+      ))}
+    </div>
+  )
+}
+
 export default function EditResidentForm({ resident }: { resident: Resident }) {
   const action = updateResident.bind(null, resident.id)
   const [furigana, setFurigana] = useState(resident.furigana ?? '')
   const [generating, startGenerate] = useTransition()
+
+  const checkedDays     = resident.attendanceDays ? resident.attendanceDays.split(',').map(Number) : []
+  const checkedBathing  = resident.bathingDays    ? resident.bathingDays.split(',').map(Number)    : []
+  const checkedTraining = resident.trainingDays   ? resident.trainingDays.split(',').map(Number)   : []
+  const checkedFoodTypes = resident.foodType ? resident.foodType.split(',') : []
 
   useEffect(() => {
     if (resident.furigana) return
@@ -19,13 +39,6 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const checkedDays = resident.attendanceDays
-    ? resident.attendanceDays.split(',').map(Number)
-    : []
-  const checkedFoodTypes = resident.foodType
-    ? resident.foodType.split(',')
-    : []
 
   function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
     const name = e.target.value.trim()
@@ -54,7 +67,7 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
         <label className="text-xs font-medium text-gray-700 block mb-1">名前 *</label>
         <input name="name" required defaultValue={resident.name}
           onBlur={handleNameBlur}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">
@@ -65,16 +78,15 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
             <input name="furigana" placeholder="やまだ はなこ"
               value={furigana}
               onChange={e => setFurigana(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 pr-16" />
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 pr-16" />
             {generating && (
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">生成中...</span>
             )}
           </div>
-          <button
-            onClick={handleRegenerate}
-            disabled={generating}
-            className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 whitespace-nowrap disabled:opacity-40"
-          >再生成</button>
+          <button onClick={handleRegenerate} disabled={generating}
+            className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-teal-400 hover:text-teal-600 whitespace-nowrap disabled:opacity-40">
+            再生成
+          </button>
         </div>
       </div>
       <div>
@@ -84,7 +96,7 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
             <label key={value} className="flex items-center gap-1.5 cursor-pointer">
               <input type="checkbox" name="foodType" value={value}
                 defaultChecked={checkedFoodTypes.includes(value)}
-                className="w-4 h-4 accent-blue-600" />
+                className="w-4 h-4 accent-teal-600" />
               <span className="text-sm text-gray-700">{label}</span>
             </label>
           ))}
@@ -92,37 +104,40 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-2">利用曜日</label>
-        <div className="flex gap-1.5">
-          {DAYS.map((day, i) => (
-            <label key={i} className={`flex flex-col items-center gap-1 cursor-pointer select-none ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-700'}`}>
-              <span className="text-xs font-medium">{day}</span>
-              <input type="checkbox" name="attendanceDays" value={i}
-                defaultChecked={checkedDays.includes(i)}
-                className="w-4 h-4 accent-blue-600" />
-            </label>
-          ))}
-        </div>
+        <DayCheckboxes name="attendanceDays" checkedDays={checkedDays} />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-700 block mb-1">
+          入浴対象日 <span className="text-gray-400 font-normal text-[11px]">（入浴ページに自動表示）</span>
+        </label>
+        <DayCheckboxes name="bathingDays" checkedDays={checkedBathing} />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-700 block mb-1">
+          機能訓練対象日 <span className="text-gray-400 font-normal text-[11px]">（機能訓練ページに自動表示）</span>
+        </label>
+        <DayCheckboxes name="trainingDays" checkedDays={checkedTraining} />
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">禁止食品・アレルギー</label>
         <input name="foodRestrictions" defaultValue={resident.foodRestrictions ?? ''}
           placeholder="例: 甲殻類、納豆禁"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">特記事項</label>
         <textarea name="specialCondition" rows={2} defaultValue={resident.specialCondition ?? ''}
           placeholder="例: インスリン、SpO2測定"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none" />
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">表示順</label>
         <input name="sortOrder" type="number" defaultValue={resident.sortOrder}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
       </div>
       <div className="flex gap-2 mt-1">
         <button type="submit"
-          className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 transition">
+          className="flex-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition">
           更新する
         </button>
         <a href="/residents"

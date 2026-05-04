@@ -88,6 +88,23 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const todayNum = new Date().getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
 
+  // 必須項目（備考・特記事項を除く）の未入力チェック
+  const REQUIRED: { key: keyof RecordDraft; label: string }[] = [
+    { key: 'bpSystolic',    label: '血圧収縮AM' },
+    { key: 'bpDiastolic',   label: '血圧拡張AM' },
+    { key: 'pulse',         label: '脈拍' },
+    { key: 'tempMorning',   label: '体温AM' },
+    { key: 'mealMainFood',  label: '主食' },
+    { key: 'mealSideFood',  label: '主菜' },
+    { key: 'fluidIntakeAm', label: '水分AM' },
+  ]
+  function getMissing(id: string): string[] {
+    const d = getDraft(id)
+    const hasRecord = !!recordMap[id]
+    if (!hasRecord) return ['未記録']
+    return REQUIRED.filter(f => (d as Record<string, unknown>)[f.key] == null).map(f => f.label)
+  }
+
   function matchRow(r: Resident) {
     if (!gojuuonRow) return true
     const searchChar = (r.furigana ?? r.name)[0]
@@ -501,25 +518,24 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
               {filtered.map((resident, i) => {
                 const d = getDraft(resident.id)
                 const base = i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
-                return (
-                  <tr key={resident.id} className={`${base} hover:bg-violet-50/50 transition border-t border-gray-100`}>
+                const missing = getMissing(resident.id)
+                const rowBg = missing.length === 0 ? base
+                  : missing[0] === '未記録' ? 'bg-orange-50 hover:bg-orange-100/60'
+                  : 'bg-amber-50/70 hover:bg-amber-100/60'
+                return (<tr key={resident.id} className={`${rowBg} transition border-t border-gray-100`}>
                     {/* 名前 */}
                     <td className={td}>
-                      <div className="flex items-center gap-1">
-                        {(() => {
-                          const rec = getDraft(resident.id)
-                          const hasVital = rec.bpSystolic != null || rec.tempMorning != null
-                          return (
-                            <span title={hasVital ? 'バイタル済' : 'バイタル未'}
-                              className={`shrink-0 w-2 h-2 rounded-full ${hasVital ? 'bg-emerald-400' : 'bg-gray-300'}`} />
-                          )
-                        })()}
-                        <div className="font-semibold text-gray-800 leading-tight text-[11px] truncate">{resident.name}</div>
-                      </div>
+                      <div className="font-semibold text-gray-800 leading-tight text-[11px] truncate">{resident.name}</div>
                       <div className="text-[9px] text-gray-400 leading-tight truncate mt-0.5">
                         {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
                       </div>
                       {resident.foodRestrictions && <div className="text-red-500 text-[9px]">{resident.foodRestrictions}</div>}
+                      {missing.length > 0 && (
+                        <div title={missing.join('・')}
+                          className={`text-[9px] font-medium mt-0.5 truncate ${missing[0] === '未記録' ? 'text-orange-600' : 'text-amber-600'}`}>
+                          {missing[0] === '未記録' ? '⚠ 未記録' : `⚠ ${missing.length}項目未入力`}
+                        </div>
+                      )}
                     </td>
                     {/* 血圧AM */}
                     <td className={td}>
@@ -640,8 +656,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                     <td className={`${td} text-center`}>
                       <SaveBtn id={resident.id} />
                     </td>
-                  </tr>
-                )
+                  </tr>)
               })}
             </tbody>
           </table>

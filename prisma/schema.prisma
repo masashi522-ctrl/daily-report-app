@@ -28,6 +28,8 @@ model Resident {
   specialCondition String?
   isActive         Boolean  @default(true)
   sortOrder        Int      @default(0)
+  bathingDays      String?
+  trainingDays     String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
