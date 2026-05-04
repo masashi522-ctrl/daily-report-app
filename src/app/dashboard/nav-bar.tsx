@@ -12,15 +12,8 @@ const NAV_ITEMS = [
   { href: '/dashboard/staff', label: 'スタッフ',   mobileLabel: 'スタッフ', icon: UserCog },
 ]
 
-function useActive(href: string, exact?: boolean) {
-  const pathname = usePathname()
-  if (exact) return pathname === href
-  return pathname.startsWith(href)
-}
-
 export function DesktopNav() {
   const pathname = usePathname()
-
   return (
     <nav className="hidden sm:flex items-center gap-1">
       {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
@@ -29,8 +22,8 @@ export function DesktopNav() {
           <Link key={href} href={href}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               active
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-blue-100 hover:bg-blue-600 hover:text-white'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-purple-100 hover:bg-white/20 hover:text-white'
             }`}
           >
             <Icon size={14} strokeWidth={active ? 2.5 : 1.8} />
@@ -44,17 +37,16 @@ export function DesktopNav() {
 
 export function MobileNav() {
   const pathname = usePathname()
-
   return (
-    <nav className="sm:hidden flex border-t border-blue-600">
+    <nav className="sm:hidden flex border-t border-purple-400/40">
       {NAV_ITEMS.map(({ href, mobileLabel, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href)
         return (
           <Link key={href} href={href}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-all ${
               active
-                ? 'bg-white text-blue-700'
-                : 'text-blue-200 hover:bg-blue-600 hover:text-white'
+                ? 'bg-white/95 text-purple-700'
+                : 'text-purple-100 hover:bg-white/15 hover:text-white'
             }`}
           >
             <Icon size={17} strokeWidth={active ? 2.5 : 1.8} />

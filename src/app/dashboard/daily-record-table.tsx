@@ -175,8 +175,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
       <button onClick={() => handleSave(id)} disabled={saving === id || savingAll}
         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
           saving === id        ? 'bg-gray-200 text-gray-400' :
-          isSaved && !isDirty ? 'bg-green-100 text-green-700 border border-green-300' :
-                                'bg-blue-600 text-white hover:bg-blue-700'
+          isSaved && !isDirty ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' :
+                                'bg-violet-600 text-white hover:bg-violet-700'
         }`}>
         {saving === id ? '保存中...' : isSaved && !isDirty ? '済' : '保存'}
       </button>
@@ -189,7 +189,16 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const selSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-xs text-gray-700 w-full'
   const vRow  = 'grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 items-center'
   const vLbl  = 'text-xs text-gray-500 leading-tight'
-  const th = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b border-gray-200 bg-blue-50 text-gray-700 whitespace-nowrap'
+  // テーブルヘッダー：カテゴリ別カラー
+  const thBase   = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b whitespace-nowrap'
+  const thName   = `${thBase} bg-slate-100   text-slate-700  border-slate-200`
+  const thVital  = `${thBase} bg-rose-50     text-rose-700   border-rose-100`
+  const thBath   = `${thBase} bg-cyan-50     text-cyan-700   border-cyan-100`
+  const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
+  const thFluid  = `${thBase} bg-sky-50      text-sky-700    border-sky-100`
+  const thMed    = `${thBase} bg-violet-50   text-violet-700 border-violet-100`
+  const thNote   = `${thBase} bg-gray-50     text-gray-600   border-gray-200`
+  const thSave   = `${thBase} bg-emerald-50  text-emerald-700 border-emerald-100`
   const td = 'px-1.5 py-1.5 align-middle'
 
   return (
@@ -199,13 +208,13 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
         <div className="flex gap-1 w-full">
           <button onClick={() => setTodayOnly(true)}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition border ${
-              todayOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
+              todayOnly ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400'
             }`}>
             {DAY_LABELS[todayNum]}曜日の利用者
           </button>
           <button onClick={() => setTodayOnly(false)}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition border ${
-              !todayOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
+              !todayOnly ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400'
             }`}>
             全利用者
           </button>
@@ -223,7 +232,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           />
           <button
             onClick={applySearch}
-            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 whitespace-nowrap"
+            className="px-3 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 whitespace-nowrap"
           >検索</button>
           {appliedText && (
             <button onClick={clearSearch}
@@ -237,8 +246,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
             onClick={() => setGojuuonRow(null)}
             className={`text-xs px-2 py-1 rounded border transition font-medium ${
               gojuuonRow === null
-                ? 'bg-gray-700 text-white border-gray-700'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                ? 'bg-violet-700 text-white border-violet-700'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-violet-400'
             }`}
           >全</button>
           {GOJUUON_ROWS.map(row => (
@@ -246,8 +255,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
               onClick={() => setGojuuonRow(gojuuonRow === row.label ? null : row.label)}
               className={`text-xs px-2 py-1 rounded border transition ${
                 gojuuonRow === row.label
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-500 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+                  ? 'bg-violet-600 text-white border-violet-600'
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-violet-400 hover:text-violet-600'
               }`}
             >{row.label}</button>
           ))}
@@ -259,8 +268,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
               <button key={r.id} onClick={() => selectName(r.name)}
                 className={`text-xs px-2.5 py-1 rounded-full border transition ${
                   appliedText === r.name
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+                    ? 'bg-violet-600 text-white border-violet-600'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
                 }`}>{r.name}</button>
             ))}
           </div>
@@ -311,10 +320,10 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
           const d = getDraft(resident.id)
           return (
             <div key={resident.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="bg-blue-50 px-4 py-2.5 flex items-center justify-between">
+              <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)' }}>
                 <div>
-                  <span className="font-semibold text-gray-800">{resident.name}</span>
-                  <span className="ml-2 text-xs text-gray-500 bg-white px-1.5 py-0.5 rounded-full border border-gray-200">
+                  <span className="font-semibold text-violet-900">{resident.name}</span>
+                  <span className="ml-2 text-xs text-violet-600 bg-white/70 px-1.5 py-0.5 rounded-full border border-violet-200">
                     {resident.foodType ? resident.foodType.split(',').map(t => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
                   </span>
                   {resident.foodRestrictions && <div className="text-red-500 text-xs mt-0.5">{resident.foodRestrictions}</div>}
@@ -325,9 +334,9 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                 {/* バイタル 3列グリッド */}
                 <div className="space-y-1.5">
                   <div className={vRow}>
-                    <div />
-                    <div className="text-xs font-bold text-blue-600 text-center bg-blue-50 rounded py-0.5">AM</div>
-                    <div className="text-xs font-bold text-indigo-600 text-center bg-indigo-50 rounded py-0.5">PM</div>
+                    <div className="text-xs font-bold text-rose-600">バイタル</div>
+                    <div className="text-xs font-bold text-rose-600 text-center bg-rose-50 rounded py-0.5">AM</div>
+                    <div className="text-xs font-bold text-rose-500 text-center bg-rose-50/60 rounded py-0.5">PM</div>
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>収縮期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
@@ -356,7 +365,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   </div>
                 </div>
                 {/* 入浴・食事 */}
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-amber-100">
+                  <div className="col-span-3 text-[10px] font-bold text-amber-600 -mb-1">食事・入浴</div>
                   <div>
                     <span className="text-xs text-gray-500 mb-0.5 block">入浴</span>
                     <select value={d.bathing ?? 'NOT_APPLICABLE'} onChange={e => upd(resident.id, 'bathing', e.target.value)} className={selMd}>
@@ -381,7 +391,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   </div>
                 </div>
                 {/* 服薬・口腔ケア */}
-                <div className="grid grid-cols-5 gap-1 pt-2 border-t border-gray-100">
+                <div className="grid grid-cols-5 gap-1 pt-2 border-t border-violet-100">
+                  <div className="col-span-5 text-[10px] font-bold text-violet-600 -mb-1">服薬・口腔ケア</div>
                   {([
                     ['medicationMorning',     '朝薬'],
                     ['medicationBeforeLunch', '昼前'],
@@ -398,7 +409,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                   ))}
                 </div>
                 {/* 備考・特記 */}
-                <div className="space-y-2 pt-2 border-t border-gray-100">
+                <div className="space-y-2 pt-2 border-t border-gray-200">
+                  <div className="text-[10px] font-bold text-gray-500">備考・特記</div>
                   <input type="text" value={d.oralCareNote ?? ''} onChange={e => upd(resident.id, 'oralCareNote', e.target.value)}
                     placeholder="備考"
                     className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm" />
@@ -437,41 +449,41 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
               <col style={{ width: '58px' }} />   {/* 保存 */}
             </colgroup>
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className={th}>名前</th>
-                <th className={th}>
+              <tr>
+                <th className={thName}>名前</th>
+                <th className={thVital}>
                   <div>血圧 AM</div>
-                  <div className="text-[9px] font-normal text-gray-400">収縮 / 拡張</div>
+                  <div className="text-[9px] font-normal opacity-70">収縮 / 拡張</div>
                 </th>
-                <th className={th}>
+                <th className={thVital}>
                   <div>血圧 PM</div>
-                  <div className="text-[9px] font-normal text-gray-400">収縮 / 拡張</div>
+                  <div className="text-[9px] font-normal opacity-70">収縮 / 拡張</div>
                 </th>
-                <th className={th}>
+                <th className={thVital}>
                   <div>脈拍</div>
-                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
+                  <div className="flex justify-around text-[9px] font-normal opacity-70"><span>AM</span><span>PM</span></div>
                 </th>
-                <th className={th}>
+                <th className={thVital}>
                   <div>体温 ℃</div>
-                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
+                  <div className="flex justify-around text-[9px] font-normal opacity-70"><span>AM</span><span>PM</span></div>
                 </th>
-                <th className={th}>入浴</th>
-                <th className={th}>
+                <th className={thBath}>入浴</th>
+                <th className={thMeal}>
                   <div>食事</div>
-                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>主</span><span>副</span></div>
+                  <div className="flex justify-around text-[9px] font-normal opacity-70"><span>主</span><span>副</span></div>
                 </th>
-                <th className={th}>
+                <th className={thFluid}>
                   <div>水分 ml</div>
-                  <div className="flex justify-around text-[9px] font-normal text-gray-400"><span>AM</span><span>PM</span></div>
+                  <div className="flex justify-around text-[9px] font-normal opacity-70"><span>AM</span><span>PM</span></div>
                 </th>
-                <th className={th}>
+                <th className={thMed}>
                   <div className="flex justify-around">
                     <span>朝</span><span>昼前</span><span>昼後</span><span>夕</span><span>口腔</span>
                   </div>
                 </th>
-                <th className={th}>備考</th>
-                <th className={th}>特記事項</th>
-                <th className={th}>保存</th>
+                <th className={thNote}>備考</th>
+                <th className={thNote}>特記事項</th>
+                <th className={thSave}>保存</th>
               </tr>
             </thead>
             <tbody>
@@ -479,7 +491,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
                 const d = getDraft(resident.id)
                 const base = i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
                 return (
-                  <tr key={resident.id} className={`${base} hover:bg-blue-50/40 transition border-t border-gray-100`}>
+                  <tr key={resident.id} className={`${base} hover:bg-violet-50/50 transition border-t border-gray-100`}>
                     {/* 名前 */}
                     <td className={td}>
                       <div className="font-semibold text-gray-800 leading-tight text-[11px] truncate">{resident.name}</div>
