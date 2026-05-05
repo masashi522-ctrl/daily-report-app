@@ -92,9 +92,13 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   // 必須項目（備考・特記事項を除く）の未入力チェック
   const REQUIRED: { key: keyof RecordDraft; label: string }[] = [
     { key: 'bpSystolic',    label: '血圧収縮AM' },
+    { key: 'bpSystolicPm',  label: '血圧収縮PM' },
     { key: 'bpDiastolic',   label: '血圧拡張AM' },
-    { key: 'pulse',         label: '脈拍' },
+    { key: 'bpDiastolicPm', label: '血圧拡張PM' },
+    { key: 'pulse',         label: '脈拍AM' },
+    { key: 'pulsePm',       label: '脈拍PM' },
     { key: 'tempMorning',   label: '体温AM' },
+    { key: 'tempAfternoon', label: '体温PM' },
     { key: 'mealMainFood',  label: '主食' },
     { key: 'mealSideFood',  label: '主菜' },
     { key: 'fluidIntakeAm', label: '水分AM' },
