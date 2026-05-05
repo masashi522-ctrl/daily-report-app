@@ -99,7 +99,14 @@ function buildSheet(
   aiRehab: string,
 ) {
   const ws = wb.addWorksheet(sheetSafeName(resident.name), {
-    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    pageSetup: {
+      paperSize: 11,  // A5
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
+    },
   })
 
   const [yr, mo, dy] = date.split('-').map(Number)
@@ -110,25 +117,25 @@ function buildSheet(
   const catH = cat ? parseInt(cat.split('-')[0]) : 0
   const endTime = startTime && catH > 0 ? addHoursToTime(startTime, catH) : ''
 
-  // ── 列幅（A-O 15列、テンプレートに合わせた比率で拡大） ──────────
+  // ── 列幅（A-O 15列、A5用に調整） ───────────────────────────────
   // A:B = section/am-pm label  C = 担当者  D = spacer
   // E:G = 時間  H:J = 体温  K:M = 血圧  N:O = 脈拍
   ws.columns = [
-    { width: 7   },  // A
-    { width: 5   },  // B
-    { width: 8   },  // C  担当者ドロップダウン
-    { width: 3   },  // D  スペーサー
-    { width: 5.5 },  // E
-    { width: 5.5 },  // F
-    { width: 5.5 },  // G
-    { width: 5.5 },  // H
-    { width: 5.5 },  // I
-    { width: 5.5 },  // J
-    { width: 6.5 },  // K
-    { width: 5.5 },  // L
-    { width: 5.5 },  // M
-    { width: 7   },  // N
-    { width: 7   },  // O
+    { width: 5   },  // A
+    { width: 4   },  // B
+    { width: 6   },  // C  担当者ドロップダウン
+    { width: 2   },  // D  スペーサー
+    { width: 4.5 },  // E
+    { width: 4.5 },  // F
+    { width: 4.5 },  // G
+    { width: 4.5 },  // H
+    { width: 4.5 },  // I
+    { width: 4.5 },  // J
+    { width: 5   },  // K
+    { width: 4.5 },  // L
+    { width: 4.5 },  // M
+    { width: 5.5 },  // N
+    { width: 5.5 },  // O
   ]
 
   // ── ヘルパー ────────────────────────────────────────────────────
@@ -183,89 +190,89 @@ function buildSheet(
   let r = 1
 
   // ━━━ Row 1: タイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 28
+  ws.getRow(r).height = 22
   mg(`A${r}:O${r}`, `A${r}`, 'デイサービス　連絡帳',
-    COL.titleBg, COL.titleFg, true, 15, 'center', 'middle', allB2)
+    COL.titleBg, COL.titleFg, true, 12, 'center', 'middle', allB2)
   r++
 
   // ━━━ Row 2: 利用者名 ＋ 日付 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 22
+  ws.getRow(r).height = 18
   mg(`A${r}:G${r}`, `A${r}`, resident.name + '　様',
-    COL.valBg, COL.valFg, true, 13, 'left', 'middle')
-  sc(`H${r}`, 'R',     COL.lblBg, COL.lblFg, false, 9)
-  sc(`I${r}`, reiwa,   COL.valBg, COL.valFg, false, 11)
-  sc(`J${r}`, '年',    COL.lblBg, COL.lblFg, false, 9)
-  sc(`K${r}`, mo,      COL.valBg, COL.valFg, false, 11)
-  sc(`L${r}`, '月',    COL.lblBg, COL.lblFg, false, 9)
-  sc(`M${r}`, dy,      COL.valBg, COL.valFg, false, 11)
-  sc(`N${r}`, '日',    COL.lblBg, COL.lblFg, false, 9)
-  sc(`O${r}`, DOW_JA[dow] + '曜日', COL.valBg, COL.valFg, false, 9)
+    COL.valBg, COL.valFg, true, 11, 'left', 'middle')
+  sc(`H${r}`, 'R',     COL.lblBg, COL.lblFg, false, 8)
+  sc(`I${r}`, reiwa,   COL.valBg, COL.valFg, false, 9)
+  sc(`J${r}`, '年',    COL.lblBg, COL.lblFg, false, 8)
+  sc(`K${r}`, mo,      COL.valBg, COL.valFg, false, 9)
+  sc(`L${r}`, '月',    COL.lblBg, COL.lblFg, false, 8)
+  sc(`M${r}`, dy,      COL.valBg, COL.valFg, false, 9)
+  sc(`N${r}`, '日',    COL.lblBg, COL.lblFg, false, 8)
+  sc(`O${r}`, DOW_JA[dow] + '曜日', COL.valBg, COL.valFg, false, 8)
   r++
 
   // ━━━ Row 3: サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 18
+  ws.getRow(r).height = 15
   mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間 / 時間区分》',
-    COL.lblBg, COL.lblFg, false, 8, 'left')
-  mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 10)
-  sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 9)
-  mg(`J${r}:K${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 10)
-  sc(`L${r}`, '/', COL.lblBg, COL.lblFg, false, 9)
-  mg(`M${r}:O${r}`, `M${r}`, cat ? cat + '時間' : '---', COL.valBg, COL.valFg, false, 10)
+    COL.lblBg, COL.lblFg, false, 7, 'left')
+  mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 9)
+  sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 8)
+  mg(`J${r}:K${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 9)
+  sc(`L${r}`, '/', COL.lblBg, COL.lblFg, false, 8)
+  mg(`M${r}:O${r}`, `M${r}`, cat ? cat + '時間' : '---', COL.valBg, COL.valFg, false, 9)
   r++
 
   // ━━━ Row 4: セクションタイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  secHdr(r, 'デイサービスでのご様子', 18); r++
+  secHdr(r, 'デイサービスでのご様子', 15); r++
 
   // ━━━ Row 5: 健康チェック テーブルヘッダー ━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 16
-  mg(`A${r}:B${r}`, `A${r}`, '健康チェック', COL.lblBg, COL.lblFg, true, 8)
-  sc(`C${r}`, '担当者', COL.lblBg, COL.lblFg, false, 8)
-  sc(`D${r}`, '',       COL.lblBg, COL.lblFg, false, 8)
-  mg(`E${r}:G${r}`, `E${r}`, '時間',        COL.lblBg, COL.lblFg, false, 8)
-  mg(`H${r}:J${r}`, `H${r}`, '体温（℃）',  COL.lblBg, COL.lblFg, false, 8)
-  mg(`K${r}:M${r}`, `K${r}`, '血圧（mmHg）', COL.lblBg, COL.lblFg, false, 8)
-  mg(`N${r}:O${r}`, `N${r}`, '脈拍（/分）', COL.lblBg, COL.lblFg, false, 8)
+  ws.getRow(r).height = 14
+  mg(`A${r}:B${r}`, `A${r}`, '健康チェック', COL.lblBg, COL.lblFg, true, 7)
+  sc(`C${r}`, '担当者', COL.lblBg, COL.lblFg, false, 7)
+  sc(`D${r}`, '',       COL.lblBg, COL.lblFg, false, 7)
+  mg(`E${r}:G${r}`, `E${r}`, '時間',         COL.lblBg, COL.lblFg, false, 7)
+  mg(`H${r}:J${r}`, `H${r}`, '体温（℃）',   COL.lblBg, COL.lblFg, false, 7)
+  mg(`K${r}:M${r}`, `K${r}`, '血圧（mmHg）', COL.lblBg, COL.lblFg, false, 7)
+  mg(`N${r}:O${r}`, `N${r}`, '脈拍（/分）',  COL.lblBg, COL.lblFg, false, 7)
   r++
 
   // ━━━ Row 6: AM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const amRow = r
-  ws.getRow(r).height = 20
-  mg(`A${r}:B${r}`, `A${r}`, '午前', COL.lblBg, COL.lblFg, false, 9)
+  ws.getRow(r).height = 17
+  mg(`A${r}:B${r}`, `A${r}`, '午前', COL.lblBg, COL.lblFg, false, 8)
   sc(`D${r}`, '', COL.valBg, COL.valFg)
   const bpAmAlert = record != null &&
     ((record.bpSystolic ?? 0) >= 160 || (record.bpDiastolic ?? 0) >= 90)
   const bpAmStr = record?.bpSystolic != null
     ? `${record.bpSystolic} / ${record.bpDiastolic ?? '?'}`
     : ''
-  mg(`E${r}:G${r}`, `E${r}`, '9:30',   COL.valBg, COL.lblFg, false, 10)
+  mg(`E${r}:G${r}`, `E${r}`, '9:30',   COL.valBg, COL.lblFg, false, 9)
   mg(`H${r}:J${r}`, `H${r}`,
     record?.tempMorning != null ? String(record.tempMorning) : '',
-    COL.valBg, COL.valFg, false, 11)
+    COL.valBg, COL.valFg, false, 10)
   mg(`K${r}:M${r}`, `K${r}`, bpAmStr,
     bpAmAlert ? COL.alertBg : COL.valBg,
     bpAmAlert ? COL.alertFg : COL.valFg,
-    bpAmAlert, 11)
+    bpAmAlert, 10)
   mg(`N${r}:O${r}`, `N${r}`,
     record?.pulse != null ? String(record.pulse) : '',
-    COL.valBg, COL.valFg, false, 11)
+    COL.valBg, COL.valFg, false, 10)
   r++
 
   // ━━━ Row 7: PM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const pmRow = r
-  ws.getRow(r).height = 20
-  mg(`A${r}:B${r}`, `A${r}`, '午後', COL.lblBg, COL.lblFg, false, 9)
+  ws.getRow(r).height = 17
+  mg(`A${r}:B${r}`, `A${r}`, '午後', COL.lblBg, COL.lblFg, false, 8)
   sc(`D${r}`, '', COL.valBg, COL.valFg)
   const bpPmStr = record?.bpSystolicPm != null
     ? `${record.bpSystolicPm} / ${record.bpDiastolicPm ?? '?'}`
     : ''
-  mg(`E${r}:G${r}`, `E${r}`, '13:30', COL.valBg, COL.lblFg, false, 10)
+  mg(`E${r}:G${r}`, `E${r}`, '13:30', COL.valBg, COL.lblFg, false, 9)
   mg(`H${r}:J${r}`, `H${r}`,
     record?.tempAfternoon != null ? String(record.tempAfternoon) : '',
-    COL.valBg, COL.valFg, false, 11)
-  mg(`K${r}:M${r}`, `K${r}`, bpPmStr, COL.valBg, COL.valFg, false, 11)
+    COL.valBg, COL.valFg, false, 10)
+  mg(`K${r}:M${r}`, `K${r}`, bpPmStr, COL.valBg, COL.valFg, false, 10)
   mg(`N${r}:O${r}`, `N${r}`,
     record?.pulsePm != null ? String(record.pulsePm) : '',
-    COL.valBg, COL.valFg, false, 11)
+    COL.valBg, COL.valFg, false, 10)
   r++
 
   // 健康チェック 担当者: AM-PM 行の C列を縦マージしてドロップダウン

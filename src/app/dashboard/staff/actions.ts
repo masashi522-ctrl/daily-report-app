@@ -3,10 +3,14 @@
 import { supabase } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
+import { requireSession } from '@/lib/session'
 
 export type StaffFormState = { error?: string; success?: string } | null
 
 export async function createStaff(_prevState: StaffFormState, formData: FormData): Promise<StaffFormState> {
+  const session = await requireSession()
+  if (session.role !== 'ADMIN') return { error: '管理者のみアカウントを作成できます' }
+
   const name = (formData.get('name') as string)?.trim()
   const email = (formData.get('email') as string)?.trim()
   const password = formData.get('password') as string
@@ -31,6 +35,8 @@ export async function createStaff(_prevState: StaffFormState, formData: FormData
 }
 
 export async function deleteStaff(id: string) {
+  const session = await requireSession()
+  if (session.role !== 'ADMIN' && session.userId !== id) return
   await supabase.from('Staff').delete().eq('id', id)
   revalidatePath('/dashboard/staff')
 }

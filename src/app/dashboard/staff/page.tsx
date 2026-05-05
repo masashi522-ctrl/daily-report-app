@@ -4,14 +4,20 @@ import StaffForm from './staff-form'
 import DeleteButton from './delete-button'
 
 export default async function StaffPage() {
-  await requireSession()
+  const session = await requireSession()
+  const isAdmin = session.role === 'ADMIN'
   const { data: staffList } = await supabase.from('Staff').select('id, name, email, role, createdAt').order('createdAt')
 
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-xl font-bold text-gray-800">スタッフ管理</h2>
+      <div>
+        <h2 className="text-xl font-bold text-gray-800">スタッフ管理</h2>
+        {!isAdmin && (
+          <p className="text-xs text-gray-400 mt-1">自分のアカウントのみ削除できます</p>
+        )}
+      </div>
 
-      <StaffForm />
+      {isAdmin && <StaffForm />}
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="min-w-full text-sm">
@@ -26,7 +32,12 @@ export default async function StaffPage() {
           <tbody>
             {staffList?.map((staff, i) => (
               <tr key={staff.id} className={`border-t ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                <td className="px-4 py-3 font-medium">{staff.name}</td>
+                <td className="px-4 py-3 font-medium">
+                  {staff.name}
+                  {staff.id === session.userId && (
+                    <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 font-medium">自分</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-gray-600">{staff.email}</td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${staff.role === 'ADMIN' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
@@ -34,7 +45,9 @@ export default async function StaffPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <DeleteButton id={staff.id} name={staff.name} />
+                  {(isAdmin || staff.id === session.userId) && (
+                    <DeleteButton id={staff.id} name={staff.name} />
+                  )}
                 </td>
               </tr>
             ))}
