@@ -34,13 +34,15 @@ const inputStyle: React.CSSProperties = {
 }
 
 // モバイル用: 入力＋ドロップダウン一体型
-function ComboNum({ listId, values, current, onChange, placeholder = '-', min, max, step = 1, inputMode = 'numeric' }: {
+function ComboNum({ listId, values, current, onChange, placeholder = '-', min, max, step = 1, inputMode = 'numeric', alert = false }: {
   listId: string; values: number[]; current: number | null | undefined
   onChange: (v: number | null) => void; placeholder?: string
-  min?: number; max?: number; step?: number; inputMode?: 'numeric' | 'decimal'
+  min?: number; max?: number; step?: number; inputMode?: 'numeric' | 'decimal'; alert?: boolean
 }) {
   return (
-    <div className="flex items-stretch rounded-lg border border-gray-200 overflow-hidden focus-within:border-blue-400 transition-colors">
+    <div className={`flex items-stretch rounded-lg border overflow-hidden transition-colors ${
+      alert ? 'border-red-400 bg-red-50 focus-within:border-red-500' : 'border-gray-200 focus-within:border-blue-400'
+    }`}>
       <input
         type="number" list={listId} inputMode={inputMode}
         placeholder={placeholder} min={min} max={max} step={step}
@@ -105,6 +107,11 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     { key: 'fluidIntakeAm', label: '水分AM' },
     { key: 'fluidIntakePm', label: '水分PM' },
   ]
+  function bpAlertAm(d: RecordDraft): boolean {
+    return (d.bpSystolic != null && d.bpSystolic >= 160) ||
+           (d.bpDiastolic != null && d.bpDiastolic >= 90)
+  }
+
   function getMissing(id: string): string[] {
     const d = getDraft(id)
     const hasRecord = !!recordMap[id]
@@ -238,21 +245,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     )
   }
 
-  function ReportBtn({ id }: { id: string }) {
-    const isSaved = !!recordMap[id] || savedIds.has(id)
-    if (!isSaved) return null
-    return (
-      <a
-        href={`/api/daily-report?residentId=${id}&date=${date}`}
-        className="block px-2 py-1 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition text-center whitespace-nowrap"
-        download
-      >
-        報告書
-      </a>
-    )
-  }
-
-  // デスクトップ用: 数値入力（スピナーなし、色をinline styleで保証）
+// デスクトップ用: 数値入力（スピナーなし、色をinline styleで保証）
   const numBase = 'border border-gray-200 rounded px-1 py-0.5 text-center text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
   const selMd = 'w-full border border-gray-200 rounded-lg px-2 py-2 text-sm'
   const selSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-xs text-gray-700 w-full'
@@ -450,6 +443,11 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                         ⚠ {missing.length}項目未入力
                       </span>
                     )}
+                    {!isAbsent && bpAlertAm(d) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
+                        血圧再検
+                      </span>
+                    )}
                   </div>
                   {!isAbsent && (
                     <span className="text-xs text-teal-600 bg-white/70 px-1.5 py-0.5 rounded-full border border-teal-200 mt-1 inline-block">
@@ -467,7 +465,6 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     {isAbsent ? '欠席中' : '欠席'}
                   </button>
                   <SaveBtn id={resident.id} />
-                  <ReportBtn id={resident.id} />
                 </div>
               </div>
               {isAbsent ? (
@@ -491,12 +488,12 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>収縮期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
-                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} />
+                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} alert={d.bpSystolic != null && d.bpSystolic >= 160} />
                     <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolicPm} onChange={v => upd(resident.id, 'bpSystolicPm', v)} min={70}  max={200} />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>拡張期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
-                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolic}   onChange={v => upd(resident.id, 'bpDiastolic',   v)} min={30}  max={200} />
+                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolic}   onChange={v => upd(resident.id, 'bpDiastolic',   v)} min={30}  max={200} alert={d.bpDiastolic != null && d.bpDiastolic >= 90} />
                     <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolicPm} onChange={v => upd(resident.id, 'bpDiastolicPm', v)} min={30}  max={200} />
                   </div>
                   <div className={vRow}>
@@ -590,7 +587,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
               <col style={{ width: '86px' }} />   {/* 備考 */}
               <col style={{ width: '90px' }} />   {/* 特記 */}
-              <col style={{ width: '90px' }} />   {/* 保存/報告書 */}
+              <col style={{ width: '90px' }} />   {/* 保存 */}
             </colgroup>
             <thead>
               <tr>
@@ -627,7 +624,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                 </th>
                 <th className={thNote}>備考</th>
                 <th className={thNote}>特記事項</th>
-                <th className={thSave}>保存/報告書</th>
+                <th className={thSave}>保存</th>
               </tr>
             </thead>
             <tbody>
@@ -669,16 +666,21 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       </button>
                     </td>
                     {/* 血圧AM */}
-                    <td className={td}>
+                    <td className={`${td} ${bpAlertAm(d) && !isAbsent ? 'bg-red-50' : ''}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-bp-sys" placeholder="収縮" min={70} max={200}
                           value={d.bpSystolic ?? ''} onChange={numHandler(resident.id, 'bpSystolic')}
-                          className={numBase} style={{ ...inputStyle, width: '60px' }} />
+                          className={`${numBase} ${d.bpSystolic != null && d.bpSystolic >= 160 ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '60px', ...(d.bpSystolic != null && d.bpSystolic >= 160 ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                         <span className="text-gray-400 shrink-0">/</span>
                         <input type="number" list="dl-bp-dia" placeholder="拡張" min={30} max={200}
                           value={d.bpDiastolic ?? ''} onChange={numHandler(resident.id, 'bpDiastolic')}
-                          className={numBase} style={{ ...inputStyle, width: '60px' }} />
+                          className={`${numBase} ${d.bpDiastolic != null && d.bpDiastolic >= 90 ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '60px', ...(d.bpDiastolic != null && d.bpDiastolic >= 90 ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                       </div>
+                      {bpAlertAm(d) && !isAbsent && (
+                        <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">血圧再検</div>
+                      )}
                     </td>
                     {/* 血圧PM */}
                     <td className={td}>
@@ -775,12 +777,9 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
                         placeholder="体重・SpO2等" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
                     </td>
-                    {/* 保存/報告書 */}
+                    {/* 保存 */}
                     <td className={`${td} text-center`}>
-                      <div className="flex flex-col gap-1 items-center">
-                        <SaveBtn id={resident.id} />
-                        <ReportBtn id={resident.id} />
-                      </div>
+                      <SaveBtn id={resident.id} />
                     </td>
                   </tr>)
               })}

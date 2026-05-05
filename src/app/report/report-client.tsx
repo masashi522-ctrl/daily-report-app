@@ -85,14 +85,14 @@ export default function ReportClient({
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `報告書_${currentDate}.xlsx`
+      a.download = `連絡帳_${currentDate}.xlsx`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error(e)
-      alert('報告書の生成に失敗しました。再度お試しください。')
+      alert('連絡帳の生成に失敗しました。再度お試しください。')
     } finally {
       setLoading(false)
     }
@@ -105,7 +105,7 @@ export default function ReportClient({
       {/* ヘッダー */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h2 className="text-lg font-bold text-gray-800">報告書生成</h2>
+          <h2 className="text-lg font-bold text-gray-800">連絡帳生成</h2>
           <p className="text-sm text-gray-500">{dateLabel}・記録あり {hasRecordCount}名</p>
         </div>
         <div className="flex items-center gap-2">
@@ -245,7 +245,7 @@ export default function ReportClient({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              AIで報告書を生成中...（しばらくお待ちください）
+              AIで連絡帳を生成中...（しばらくお待ちください）
             </>
           ) : selectedIds.size === 0 ? (
             '利用者を選択してください'
@@ -254,7 +254,7 @@ export default function ReportClient({
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              {selectedIds.size}名の報告書を生成・ダウンロード
+              {selectedIds.size}名の連絡帳を生成・ダウンロード
             </>
           )}
         </button>
