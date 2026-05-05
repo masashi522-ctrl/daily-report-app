@@ -111,6 +111,23 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
         const rec = recordMap[resident.id]
         const vital = vitalSummary(rec)
         const notDone = d.bathing === 'NOT_DONE'
+        const isAbsent = rec?.isAbsent === true
+
+        if (isAbsent) {
+          return (
+            <div key={resident.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden opacity-60">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-gray-100">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-500 line-through">{resident.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500 font-medium">欠席</span>
+                  {rec?.absenceReason && (
+                    <span className="text-xs text-gray-400">{rec.absenceReason}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        }
 
         return (
           <div key={resident.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

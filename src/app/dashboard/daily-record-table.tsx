@@ -95,9 +95,6 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     { key: 'bpDiastolic',   label: '血圧拡張AM' },
     { key: 'pulse',         label: '脈拍' },
     { key: 'tempMorning',   label: '体温AM' },
-    { key: 'mealMainFood',  label: '主食' },
-    { key: 'mealSideFood',  label: '主菜' },
-    { key: 'fluidIntakeAm', label: '水分AM' },
   ]
   function getMissing(id: string): string[] {
     const d = getDraft(id)
