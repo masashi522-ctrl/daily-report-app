@@ -39,7 +39,6 @@ export default async function ReportPage({
   return (
     <ReportClient
       residents={(residents ?? []) as Resident[]}
-      recordedIds={recordedIds}
       date={today}
     />
   )
