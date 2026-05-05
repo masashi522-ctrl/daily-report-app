@@ -132,11 +132,12 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-medium text-gray-700 block mb-1">サービス提供開始時間</label>
-          <select name="serviceStartTime" defaultValue={resident.serviceStartTime ?? ''}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
-            <option value="">未設定</option>
-            {SERVICE_START_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <input name="serviceStartTime" list="start-times-edit"
+            defaultValue={resident.serviceStartTime ?? ''} placeholder="例: 9:30"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+          <datalist id="start-times-edit">
+            {SERVICE_START_TIMES.map(t => <option key={t} value={t} />)}
+          </datalist>
         </div>
         <div>
           <label className="text-xs font-medium text-gray-700 block mb-1">提供時間区分（時間）</label>
