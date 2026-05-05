@@ -37,7 +37,6 @@ async function generateAIText(
   const trainingTime = record.functionalTrainingStart
     ? record.functionalTrainingStart + '-' + (record.functionalTrainingEnd ?? '')
     : ''
-
   const context = [
     '利用者名: ' + resident.name,
     resident.careLevel ? '要介護区分: ' + resident.careLevel : '',
@@ -59,19 +58,13 @@ async function generateAIText(
     client.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       max_tokens: 400,
-      messages: [{
-        role: 'user',
-        content: 'あなたはデイサービスの介護記録担当スタッフです。以下の当日記録をもとに「日中のご様子・連絡事項」欄の文章を自然な介護記録文体で３〜５文で作成してください。文章のみ出力してください。\n\n' + context,
-      }],
+      messages: [{ role: 'user', content: 'あなたはデイサービスの介護記録担当スタッフです。以下の当日記録をもとに「日中のご様子・連絡事項」欄の文章を自然な介護記録文体で３〜５文で作成してください。文章のみ出力してください。\n\n' + context }],
     }),
     record.trainingDone
       ? client.chat.completions.create({
           model: 'llama-3.3-70b-versatile',
           max_tokens: 200,
-          messages: [{
-            role: 'user',
-            content: 'あなたはデイサービスの機能訓練担当スタッフです。以下の訓練記録をもとに「リハビリからの連絡事項」欄の文章を自然な記録文体で１〜２文で作成してください。文章のみ出力してください。\n\n' + context,
-          }],
+          messages: [{ role: 'user', content: 'あなたはデイサービスの機能訓練担当スタッフです。以下の訓練記録をもとに「リハビリからの連絡事項」欄の文章を自然な記録文体で１〜２文で作成してください。文章のみ出力してください。\n\n' + context }],
         })
       : Promise.resolve(null),
   ])
@@ -82,41 +75,24 @@ async function generateAIText(
   }
 }
 
-// ─── カラーパレット ────────────────────────────────────────────────
-const C = {
-  hdrBg:    '0F766E',   // teal-700
-  hdrFg:    'FFFFFF',
-  subBg:    'CCFBF1',   // teal-100
-  subFg:    '134E4A',   // teal-900
-  vitalHdr: 'FECDD3',   // rose-200
-  vitalBg:  'FFF1F2',   // rose-50
-  vitalFg:  '9F1239',   // rose-800
-  mealHdr:  'FDE68A',   // amber-200
-  mealBg:   'FFFBEB',   // amber-50
-  mealFg:   '92400E',   // amber-800
-  medHdr:   'DDD6FE',   // violet-200
-  medBg:    'F5F3FF',   // violet-50
-  medFg:    '3730A3',   // violet-800
-  trainHdr: 'BBF7D0',   // green-200
-  trainBg:  'F0FDF4',   // green-50
-  trainFg:  '166534',   // green-800
-  notesHdr: 'E2E8F0',   // slate-200
-  notesBg:  'F8FAFC',   // slate-50
-  notesFg:  '0F172A',   // slate-900
-  alertBg:  'FEE2E2',   // red-100
-  alertFg:  'DC2626',   // red-600
-  border:   'CBD5E1',   // slate-300
-  label:    '64748B',   // slate-500
-  value:    '0F172A',   // slate-900
-  white:    'FFFFFF',
-  svcBg:    'EFF6FF',   // blue-50
-  svcFg:    '1E40AF',   // blue-800
+// ─── カラー定義（2色のみ） ────────────────────────────────────────
+// ・タイトルのみティール、以降はすべてグレー系
+const COL = {
+  titleBg:  '0F766E',  // teal-700（タイトル行のみ）
+  titleFg:  'FFFFFF',
+  hdrBg:    'E5E7EB',  // gray-200（セクションヘッダー）
+  hdrFg:    '1F2937',  // gray-800
+  lblBg:    'F9FAFB',  // gray-50（ラベル列）
+  lblFg:    '374151',  // gray-700
+  valBg:    'FFFFFF',
+  valFg:    '111827',  // gray-900
+  alertBg:  'FEE2E2',  // red-100（血圧再検のみ）
+  alertFg:  'B91C1C',  // red-700
+  border:   'D1D5DB',  // gray-300
+  noteFg:   '6B7280',  // gray-500（空欄ガイドテキスト）
 }
 
-type FillColor = { argb: string }
-const a = (hex: string): FillColor => ({ argb: 'FF' + hex })
-
-const FONT_NAME = 'メイリオ'
+const FONT = 'メイリオ'
 
 function buildSheet(
   wb: ExcelJS.Workbook,
@@ -127,305 +103,310 @@ function buildSheet(
   aiRehab: string,
 ) {
   const ws = wb.addWorksheet(sheetSafeName(resident.name), {
-    pageSetup: {
-      paperSize: 9,
-      orientation: 'portrait',
-      fitToPage: true,
-      fitToWidth: 1,
-      fitToHeight: 0,
-    },
+    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   })
 
-  const [y, m, d] = date.split('-').map(Number)
+  const [yr, mo, dy] = date.split('-').map(Number)
   const dow = new Date(date + 'T00:00:00').getDay()
-  const reiwa = y - 2018
-
-  const startTime = resident.serviceStartTime ?? '9:30'
+  const reiwa = yr - 2018
+  const startTime = resident.serviceStartTime ?? ''
   const cat = resident.serviceTimeCategory ?? ''
   const catH = cat ? parseInt(cat.split('-')[0]) : 0
-  const endTime = catH > 0 ? addHoursToTime(startTime, catH) : '---'
+  const endTime = startTime && catH > 0 ? addHoursToTime(startTime, catH) : ''
 
-  // ── カラム幅 ──────────────────────────────────────────────────────
-  // A=sp  B=label  C=val  D=sp  E=label  F=val  G=sp  H=label  I=val  J=sp  K=label  L=val  M=sp
+  // ── 列幅（テンプレートに合わせてA-O 15列）────────────────────────
+  // A-D: 名前エリア  E-G: 時間  H-J: 体温  K-M: 血圧  N-O: 脈拍
   ws.columns = [
-    { width: 1.2 },   // A spacer
-    { width: 10 },    // B label-1
-    { width: 13 },    // C value-1
-    { width: 1.2 },   // D spacer
-    { width: 10 },    // E label-2
-    { width: 13 },    // F value-2
-    { width: 1.2 },   // G spacer
-    { width: 10 },    // H label-3
-    { width: 13 },    // I value-3
-    { width: 1.2 },   // J spacer
-    { width: 10 },    // K label-4
-    { width: 13 },    // L value-4
-    { width: 1.2 },   // M spacer
+    { width: 6  },  // A
+    { width: 5  },  // B
+    { width: 7  },  // C 担当者
+    { width: 2  },  // D
+    { width: 7  },  // E 時間
+    { width: 4  },  // F
+    { width: 2  },  // G
+    { width: 7  },  // H 体温
+    { width: 4  },  // I
+    { width: 2  },  // J
+    { width: 9  },  // K 血圧
+    { width: 4  },  // L
+    { width: 2  },  // M
+    { width: 6  },  // N 脈拍
+    { width: 6  },  // O
   ]
 
-  // ── 罫線・スタイルヘルパー ────────────────────────────────────────
-  const thin   = { style: 'thin'   as const, color: a(C.border) }
-  const medium = { style: 'medium' as const, color: a(C.hdrBg) }
-  const allB   = { top: thin, bottom: thin, left: thin, right: thin }
+  // ── ヘルパー ────────────────────────────────────────────────────
+  type BS = { style: ExcelJS.BorderStyle; color: { argb: string } }
+  const a = (hex: string) => ({ argb: 'FF' + hex })
+  const thin:   BS = { style: 'thin',   color: a(COL.border) }
+  const medium: BS = { style: 'medium', color: a(COL.titleBg) }
+  const allT = { top: thin, bottom: thin, left: thin, right: thin }
+  const allM = { top: medium, bottom: medium, left: medium, right: medium }
 
-  type CellAddr = string
-  type BorderSide = { style: ExcelJS.BorderStyle; color: FillColor }
-  type BorderSpec = { top?: BorderSide; bottom?: BorderSide; left?: BorderSide; right?: BorderSide } | null
-  type StyleOpts = {
-    bg?: string; fg?: string; bold?: boolean; size?: number; italic?: boolean
-    hAlign?: ExcelJS.Alignment['horizontal']
-    vAlign?: ExcelJS.Alignment['vertical']
-    wrap?: boolean; border?: BorderSpec
-  }
-
-  function sc(addr: CellAddr, value: string | number | null, opts: StyleOpts = {}) {
-    const {
-      bg = C.white, fg = C.value, bold = false, size = 9, italic = false,
-      hAlign = 'left', vAlign = 'middle', wrap = false, border = allB,
-    } = opts
+  function sc(
+    addr: string,
+    value: string | number | null,
+    bg = COL.valBg,
+    fg = COL.valFg,
+    bold = false,
+    size = 9,
+    hAlign: ExcelJS.Alignment['horizontal'] = 'center',
+    vAlign: ExcelJS.Alignment['vertical'] = 'middle',
+    border: { top?: BS; bottom?: BS; left?: BS; right?: BS } | null = allT,
+    wrap = false,
+  ) {
     const cell = ws.getCell(addr)
     if (value !== null) cell.value = value
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: a(bg) }
-    cell.font  = { name: FONT_NAME, size, bold, italic, color: a(fg) }
+    cell.font = { name: FONT, size, bold, color: a(fg) }
     cell.alignment = { horizontal: hAlign, vertical: vAlign, wrapText: wrap }
     if (border) cell.border = border
     return cell
   }
 
-  function merge(range: string, addr: CellAddr, value: string | number | null, opts: StyleOpts = {}) {
+  function mg(range: string, addr: string, value: string | number | null,
+    bg = COL.valBg, fg = COL.valFg, bold = false, size = 9,
+    hAlign: ExcelJS.Alignment['horizontal'] = 'center',
+    vAlign: ExcelJS.Alignment['vertical'] = 'middle',
+    border: { top?: BS; bottom?: BS; left?: BS; right?: BS } | null = allT,
+    wrap = false,
+  ) {
     ws.mergeCells(range)
-    return sc(addr, value, opts)
+    return sc(addr, value, bg, fg, bold, size, hAlign, vAlign, border, wrap)
   }
 
-  function spacerFill(addr: CellAddr, bg: string) {
-    const cell = ws.getCell(addr)
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: a(bg) }
-  }
-
-  // セクションヘッダー (A=アクセント縦線, B-M=タイトル)
-  function sectionRow(row: number, label: string, hdr: string, fg: string, rowH = 19) {
-    ws.getRow(row).height = rowH
-    spacerFill(`A${row}`, fg)
-    merge(`B${row}:M${row}`, `B${row}`, '  ' + label, {
-      bg: hdr, fg, bold: true, size: 9, hAlign: 'left',
-      border: { top: { style: 'medium', color: a(fg) }, bottom: thin, left: thin, right: thin },
-    })
-  }
-
-  // ラベル + 値 セル
-  function lv(row: number, lCol: string, vCol: string, label: string, value: string,
-              lBg: string, lFg: string, vBg = C.white, vFg = C.value, vSize = 10) {
-    sc(`${lCol}${row}`, label, { bg: lBg, fg: lFg, size: 8, hAlign: 'right', vAlign: 'middle', border: allB })
-    sc(`${vCol}${row}`, value, { bg: vBg, fg: vFg, size: vSize, hAlign: 'center', vAlign: 'middle', border: allB })
+  // セクションヘッダー行（テンプレートのラベル列スタイル）
+  function sectionLbl(row: number, mergeRange: string, addr: string, label: string, h = 18) {
+    ws.getRow(row).height = h
+    mg(mergeRange, addr, label, COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
   }
 
   let r = 1
 
-  // ━━━ 1. タイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 34
-  merge(`A${r}:M${r}`, `A${r}`, 'デイサービス　連絡帳', {
-    bg: C.hdrBg, fg: C.hdrFg, bold: true, size: 16, hAlign: 'center', border: null,
-  })
+  // ━━━ Row1: タイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ws.getRow(r).height = 28
+  mg(`A${r}:O${r}`, `A${r}`, 'デイサービス　連絡帳',
+    COL.titleBg, COL.titleFg, true, 15, 'center', 'middle', allM)
   r++
 
-  // ━━━ 2. 利用者名 ＋ 日付 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 26
-  spacerFill(`A${r}`, C.subBg)
-  merge(`B${r}:G${r}`, `B${r}`, resident.name + '　様', {
-    bg: C.subBg, fg: C.subFg, bold: true, size: 14, hAlign: 'center',
-    border: { top: medium, bottom: thin, left: medium, right: thin },
-  })
-  merge(`H${r}:M${r}`, `H${r}`, `令和${reiwa}年　${m}月　${d}日（${DOW_JA[dow]}曜日）`, {
-    bg: C.subBg, fg: C.subFg, size: 11, hAlign: 'center',
-    border: { top: medium, bottom: thin, left: thin, right: medium },
-  })
+  // ━━━ Row2: 利用者名 ＋ 日付 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ws.getRow(r).height = 22
+  mg(`A${r}:G${r}`, `A${r}`, resident.name + '　様',
+    COL.valBg, COL.valFg, true, 13, 'left', 'middle', allT)
+  sc(`H${r}`, 'R', COL.lblBg, COL.lblFg, false, 9)
+  sc(`I${r}`, reiwa, COL.valBg, COL.valFg, false, 11)
+  sc(`J${r}`, '年', COL.lblBg, COL.lblFg, false, 9)
+  sc(`K${r}`, mo, COL.valBg, COL.valFg, false, 11)
+  sc(`L${r}`, '月', COL.lblBg, COL.lblFg, false, 9)
+  sc(`M${r}`, dy, COL.valBg, COL.valFg, false, 11)
+  sc(`N${r}`, '日', COL.lblBg, COL.lblFg, false, 9)
+  sc(`O${r}`, DOW_JA[dow] + '曜日', COL.valBg, COL.valFg, false, 9)
   r++
 
-  // ━━━ 3. サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row3: サービス時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 18
-  spacerFill(`A${r}`, C.svcBg)
-  merge(`B${r}:C${r}`, `B${r}`, 'サービス提供時間', {
-    bg: C.svcBg, fg: C.svcFg, size: 8, hAlign: 'right',
-  })
-  merge(`E${r}:M${r}`, `E${r}`, `${startTime}　～　${endTime}　（${cat ? cat + '時間' : '未設定'}）`, {
-    bg: C.white, fg: C.value, size: 10, hAlign: 'left',
-  })
+  mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間 / 時間区分》',
+    COL.lblBg, COL.lblFg, false, 8, 'left', 'middle', allT)
+  mg(`G${r}:H${r}`, `G${r}`, startTime || '---',
+    COL.valBg, COL.valFg, false, 10, 'center', 'middle', allT)
+  sc(`I${r}`, '～', COL.lblBg, COL.lblFg)
+  mg(`J${r}:K${r}`, `J${r}`, endTime || '---',
+    COL.valBg, COL.valFg, false, 10)
+  sc(`L${r}`, '/', COL.lblBg, COL.lblFg)
+  mg(`M${r}:O${r}`, `M${r}`, cat ? cat + '時間' : '---',
+    COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ── 区切り ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 6; r++
+  // ━━━ Row4: セクションタイトル「デイサービスでのご様子」━━━━━━━━━
+  ws.getRow(r).height = 18
+  mg(`A${r}:O${r}`, `A${r}`, 'デイサービスでのご様子',
+    COL.hdrBg, COL.hdrFg, true, 10, 'center', 'middle', allT)
+  r++
 
-  // ━━━ 4. バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  sectionRow(r, '■ バイタル', C.vitalHdr, C.vitalFg); r++
-
-  // バイタル テーブルヘッダー
+  // ━━━ Row5: 健康チェック ヘッダー ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 16
-  ;[
-    [`B${r}:C${r}`, `B${r}`, '測定時間'],
-    [`E${r}:F${r}`, `E${r}`, '体温（℃）'],
-    [`H${r}:I${r}`, `H${r}`, '血圧（mmHg）'],
-    [`K${r}:L${r}`, `K${r}`, '脈拍（/分）'],
-  ].forEach(([range, addr, label]) =>
-    merge(range as string, addr as string, label as string, {
-      bg: C.vitalBg, fg: C.vitalFg, bold: true, size: 8, hAlign: 'center',
-    })
-  )
+  mg(`A${r}:B${r}`, `A${r}`, '健康チェック', COL.lblBg, COL.lblFg, true, 8, 'center')
+  sc(`C${r}`, '担当者', COL.lblBg, COL.lblFg, false, 8)
+  sc(`D${r}`, '', COL.lblBg, COL.lblFg)
+  mg(`E${r}:G${r}`, `E${r}`, '時間', COL.lblBg, COL.lblFg, false, 8)
+  mg(`H${r}:J${r}`, `H${r}`, '体温（℃）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`K${r}:M${r}`, `K${r}`, '血圧（mmHg）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`N${r}:O${r}`, `N${r}`, '脈拍（/分）', COL.lblBg, COL.lblFg, false, 8)
   r++
 
-  // AM バイタル
+  // ━━━ Row6: AM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
   const bpAmAlert = record != null &&
-    ((record.bpSystolic != null && record.bpSystolic >= 160) ||
-     (record.bpDiastolic != null && record.bpDiastolic >= 90))
+    ((record.bpSystolic ?? 0) >= 160 || (record.bpDiastolic ?? 0) >= 90)
   const bpAmStr = record?.bpSystolic != null
-    ? `${record.bpSystolic}　/　${record.bpDiastolic ?? '?'}`
-    : '　---　'
-
-  merge(`B${r}:C${r}`, `B${r}`, '午前　9:30', { bg: C.vitalBg, fg: C.vitalFg, hAlign: 'center', size: 9 })
-  merge(`E${r}:F${r}`, `E${r}`, record?.tempMorning != null ? String(record.tempMorning) : '---',
-    { bg: C.white, fg: C.value, hAlign: 'center', size: 11 })
-  merge(`H${r}:I${r}`, `H${r}`, bpAmStr,
-    { bg: bpAmAlert ? C.alertBg : C.white, fg: bpAmAlert ? C.alertFg : C.value, bold: bpAmAlert, hAlign: 'center', size: 11 })
-  merge(`K${r}:L${r}`, `K${r}`, record?.pulse != null ? String(record.pulse) : '---',
-    { bg: C.white, fg: C.value, hAlign: 'center', size: 11 })
-  if (bpAmAlert) {
-    // 右端に再検マーク
-    const alertNote = ws.getCell(`L${r}`)
-    alertNote.note = '⚠ 血圧再検'
-  }
+    ? `${record.bpSystolic} / ${record.bpDiastolic ?? '?'}`
+    : ''
+  mg(`A${r}:B${r}`, `A${r}`, '午前', COL.lblBg, COL.lblFg, false, 9)
+  sc(`C${r}`, '', COL.valBg, COL.valFg)  // 担当者（手書き）
+  sc(`D${r}`, '', COL.valBg, COL.valFg)
+  mg(`E${r}:G${r}`, `E${r}`, '9:30', COL.valBg, COL.lblFg, false, 9)
+  mg(`H${r}:J${r}`, `H${r}`,
+    record?.tempMorning != null ? String(record.tempMorning) : '',
+    COL.valBg, COL.valFg, false, 11)
+  mg(`K${r}:M${r}`, `K${r}`, bpAmStr,
+    bpAmAlert ? COL.alertBg : COL.valBg,
+    bpAmAlert ? COL.alertFg : COL.valFg,
+    bpAmAlert, 11)
+  mg(`N${r}:O${r}`, `N${r}`,
+    record?.pulse != null ? String(record.pulse) : '',
+    COL.valBg, COL.valFg, false, 11)
   r++
 
-  // PM バイタル
+  // ━━━ Row7: PM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
   const bpPmStr = record?.bpSystolicPm != null
-    ? `${record.bpSystolicPm}　/　${record.bpDiastolicPm ?? '?'}`
-    : '　---　'
-
-  merge(`B${r}:C${r}`, `B${r}`, '午後　13:30', { bg: C.vitalBg, fg: C.vitalFg, hAlign: 'center', size: 9 })
-  merge(`E${r}:F${r}`, `E${r}`, record?.tempAfternoon != null ? String(record.tempAfternoon) : '---',
-    { bg: C.white, fg: C.value, hAlign: 'center', size: 11 })
-  merge(`H${r}:I${r}`, `H${r}`, bpPmStr,
-    { bg: C.white, fg: C.value, hAlign: 'center', size: 11 })
-  merge(`K${r}:L${r}`, `K${r}`, record?.pulsePm != null ? String(record.pulsePm) : '---',
-    { bg: C.white, fg: C.value, hAlign: 'center', size: 11 })
+    ? `${record.bpSystolicPm} / ${record.bpDiastolicPm ?? '?'}`
+    : ''
+  mg(`A${r}:B${r}`, `A${r}`, '午後', COL.lblBg, COL.lblFg, false, 9)
+  sc(`C${r}`, '', COL.valBg, COL.valFg)
+  sc(`D${r}`, '', COL.valBg, COL.valFg)
+  mg(`E${r}:G${r}`, `E${r}`, '13:30', COL.valBg, COL.lblFg, false, 9)
+  mg(`H${r}:J${r}`, `H${r}`,
+    record?.tempAfternoon != null ? String(record.tempAfternoon) : '',
+    COL.valBg, COL.valFg, false, 11)
+  mg(`K${r}:M${r}`, `K${r}`, bpPmStr, COL.valBg, COL.valFg, false, 11)
+  mg(`N${r}:O${r}`, `N${r}`,
+    record?.pulsePm != null ? String(record.pulsePm) : '',
+    COL.valBg, COL.valFg, false, 11)
   r++
 
-  // ── 区切り ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 6; r++
-
-  // ━━━ 5. 食事・水分 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  sectionRow(r, '■ 食事・水分', C.mealHdr, C.mealFg); r++
-
+  // ━━━ Row8: 食事・水分量 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
-  const totalFluid = (record?.fluidIntakeAm ?? 0) + (record?.fluidIntakePm ?? 0)
-  lv(r, 'B', 'C', '主食', record?.mealMainFood != null ? record.mealMainFood + '割' : '---', C.mealBg, C.mealFg)
-  lv(r, 'E', 'F', '副食', record?.mealSideFood != null ? record.mealSideFood + '割' : '---', C.mealBg, C.mealFg)
-  lv(r, 'H', 'I', '水分 AM', record?.fluidIntakeAm != null ? record.fluidIntakeAm + 'ml' : '---', C.mealBg, C.mealFg)
-  lv(r, 'K', 'L', '水分 PM', record?.fluidIntakePm != null ? record.fluidIntakePm + 'ml' : '---', C.mealBg, C.mealFg)
+  mg(`A${r}:D${r}`, `A${r}`, '食事・水分量', COL.lblBg, COL.lblFg, true, 8, 'center')
+  mg(`E${r}:F${r}`, `E${r}`, '（主食）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`G${r}:H${r}`, `G${r}`,
+    record?.mealMainFood != null ? String(record.mealMainFood) + '割' : '',
+    COL.valBg, COL.valFg, false, 11)
+  sc(`I${r}`, '（副食）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`J${r}:K${r}`, `J${r}`,
+    record?.mealSideFood != null ? String(record.mealSideFood) + '割' : '',
+    COL.valBg, COL.valFg, false, 11)
+  mg(`L${r}:M${r}`, `L${r}`, '（水分量）約', COL.lblBg, COL.lblFg, false, 8)
+  mg(`N${r}:O${r}`, `N${r}`,
+    (() => {
+      const total = (record?.fluidIntakeAm ?? 0) + (record?.fluidIntakePm ?? 0)
+      return total > 0 ? String(total) + 'ml' : ''
+    })(),
+    COL.valBg, COL.valFg, false, 11)
   r++
 
-  ws.getRow(r).height = 18
-  merge(`B${r}:C${r}`, `B${r}`, '水分合計',  { bg: C.mealBg, fg: C.mealFg, size: 8, hAlign: 'right' })
-  merge(`E${r}:F${r}`, `E${r}`, totalFluid + 'ml', { bg: C.mealBg, fg: C.mealFg, bold: true, size: 10, hAlign: 'center' })
-  r++
-
-  // ── 区切り ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 6; r++
-
-  // ━━━ 6. 入浴・口腔ケア ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const bathingBg = C.subBg
-  const bathingFg = C.subFg
-  sectionRow(r, '■ 入浴・口腔ケア', bathingBg, bathingFg); r++
-
+  // ━━━ Row9: 入浴・口腔ケア ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
-  const bathing = record ? bathingLabel(record.bathing, record.bathingSkipReason) : '---'
-  const bFg = record?.bathing === 'DONE' ? '065F46' : C.value  // emerald if done
-  lv(r, 'B', 'C', '入浴', bathing, C.subBg, C.subFg, record?.bathing === 'DONE' ? 'ECFDF5' : C.white, bFg)
-  lv(r, 'E', 'F', '口腔ケア', record?.oralCare ? '実施' : (record ? '未実施' : '---'),
-    C.subBg, C.subFg, record?.oralCare ? 'ECFDF5' : C.white, record?.oralCare ? '065F46' : C.value)
+  mg(`A${r}:D${r}`, `A${r}`, '入　浴', COL.lblBg, COL.lblFg, true, 8, 'center')
+  mg(`E${r}:H${r}`, `E${r}`,
+    record ? bathingLabel(record.bathing, record.bathingSkipReason) : '',
+    COL.valBg, COL.valFg, false, 10, 'left')
+  mg(`I${r}:L${r}`, `I${r}`, '口腔ケア', COL.lblBg, COL.lblFg, false, 8)
+  mg(`M${r}:O${r}`, `M${r}`,
+    record ? (record.oralCare ? '実施' : '未実施') : '',
+    COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ── 区切り ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 6; r++
-
-  // ━━━ 7. 服薬 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  sectionRow(r, '■ 服薬', C.medHdr, C.medFg); r++
-
+  // ━━━ Row10: 服薬 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
   const lunchMed = record?.medicationBeforeLunch || record?.medicationAfterLunch
-  const medItems: [string, boolean | null | undefined][] = [
-    ['朝', record?.medicationMorning],
-    ['昼前', record?.medicationBeforeLunch],
-    ['昼後', record?.medicationAfterLunch],
-    ['夕前', record?.medicationBeforeEvening],
-    ['夕後', record?.medicationEvening],
-  ]
-  const medSummary = medItems
-    .map(([lbl, val]) => `${lbl}: ${val ? '有' : (record ? '無' : '---')}`)
-    .join('　　')
-  merge(`B${r}:M${r}`, `B${r}`, medSummary, {
-    bg: C.medBg, fg: C.medFg, size: 10, hAlign: 'center',
-  })
+  mg(`A${r}:D${r}`, `A${r}`, '服　薬', COL.lblBg, COL.lblFg, true, 8, 'center')
+  sc(`E${r}`, '（朝）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`F${r}:G${r}`, `F${r}`,
+    record ? (record.medicationMorning ? '有' : '無') : '',
+    COL.valBg, COL.valFg, false, 10)
+  sc(`H${r}`, '（昼）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`I${r}:J${r}`, `I${r}`,
+    record ? (lunchMed ? '有' : '無') : '',
+    COL.valBg, COL.valFg, false, 10)
+  sc(`K${r}`, '（夕）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`L${r}:O${r}`, `L${r}`,
+    record ? (record.medicationEvening ? '有' : '無') : '',
+    COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ── 区切り ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 6; r++
-
-  // ━━━ 8. 機能訓練 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  sectionRow(r, '■ 機能訓練', C.trainHdr, C.trainFg); r++
-
+  // ━━━ Row11: 排便・排尿 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
-  let trainingVal = record ? (record.trainingDone ? '実施' : '未実施') : '---'
-  if (record?.trainingDone && record.functionalTrainingStart) {
-    trainingVal += '　' + record.functionalTrainingStart
-    if (record.functionalTrainingEnd) trainingVal += '　～　' + record.functionalTrainingEnd
-  }
-  lv(r, 'B', 'C', '機能訓練', '', C.trainBg, C.trainFg)
-  merge(`E${r}:M${r}`, `E${r}`, trainingVal, {
-    bg: record?.trainingDone ? 'ECFDF5' : C.white,
-    fg: record?.trainingDone ? '065F46' : C.value,
-    size: 10, hAlign: 'left',
-  })
+  mg(`A${r}:D${r}`, `A${r}`, '排便・排尿', COL.lblBg, COL.lblFg, true, 8, 'center')
+  mg(`E${r}:F${r}`, `E${r}`, '排　便', COL.lblBg, COL.lblFg, false, 8)
+  mg(`G${r}:H${r}`, `G${r}`, '', COL.valBg, COL.valFg, false, 10)  // 手書き
+  mg(`I${r}:J${r}`, `I${r}`, '', COL.valBg, COL.valFg, false, 10)
+  mg(`K${r}:L${r}`, `K${r}`, '排 尿', COL.lblBg, COL.lblFg, false, 8)
+  mg(`M${r}:O${r}`, `M${r}`, '', COL.valBg, COL.valFg, false, 10)  // 手書き
   r++
 
-  // 特記事項 (record があれば)
-  if (record?.specialNotes) {
-    ws.getRow(r).height = 18
-    lv(r, 'B', 'C', '特記事項', '', C.trainBg, C.trainFg)
-    merge(`E${r}:M${r}`, `E${r}`, record.specialNotes, { bg: C.white, fg: C.value, size: 9, hAlign: 'left' })
+  // ━━━ Row12-14: 機能訓練 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const trainingItems = [
+    { label: '上下肢・体幹運動', start: record?.trainingDone ? (record.functionalTrainingStart ?? '') : '', end: record?.trainingDone ? (record.functionalTrainingEnd ?? '') : '' },
+    { label: '　歩行訓練',       start: '', end: '' },
+    { label: '　認知機能訓練',   start: '', end: '' },
+  ]
+  const trainStartRow = r
+  trainingItems.forEach((item, i) => {
+    ws.getRow(r).height = 20
+    if (i === 0) {
+      // 機能訓練ラベルは3行にまたがる
+    }
+    if (i === 0) {
+      mg(`A${trainStartRow}:B${trainStartRow + 2}`, `A${trainStartRow}`, '機能訓練',
+        COL.lblBg, COL.lblFg, true, 8, 'center')
+      sc(`C${trainStartRow}`, '担当者', COL.lblBg, COL.lblFg, false, 8)
+    }
+    // 種別ラベル
+    mg(`F${r}:I${r}`, `F${r}`, item.label, COL.lblBg, COL.lblFg, false, 9, 'left')
+    // 開始時刻
+    mg(`J${r}:K${r}`, `J${r}`, item.start,
+      item.start ? COL.valBg : COL.valBg, COL.valFg, false, 10)
+    sc(`L${r}`, item.start || item.end ? '～' : '', COL.lblBg, COL.lblFg, false, 9)
+    sc(`M${r}`, '', COL.lblBg, COL.lblFg)
+    // 終了時刻
+    mg(`N${r}:O${r}`, `N${r}`, item.end, COL.valBg, COL.valFg, false, 10)
     r++
-  }
-
-  // ── 区切り ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 8; r++
-
-  // ━━━ 9. 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  sectionRow(r, '■ 日中のご様子・連絡事項', C.notesHdr, C.notesFg, 20); r++
-
-  ws.getRow(r).height = 80
-  merge(`A${r}:M${r}`, `A${r}`, aiDaily || '（記録なし）', {
-    bg: C.white, fg: C.notesFg, size: 10, hAlign: 'left', vAlign: 'top', wrap: true,
-    border: { top: thin, bottom: thin, left: thin, right: thin },
   })
+
+  // ━━━ 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ws.getRow(r).height = 18
+  mg(`A${r}:O${r}`, `A${r}`, '日中のご様子・連絡事項',
+    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
   r++
 
-  // ── 区切り ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 8; r++
-
-  // ━━━ 10. リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  sectionRow(r, '■ リハビリからの連絡事項', C.notesHdr, C.notesFg, 20); r++
-
-  ws.getRow(r).height = 50
-  merge(`A${r}:M${r}`, `A${r}`, aiRehab || '（機能訓練 未実施）', {
-    bg: C.white, fg: aiRehab ? C.notesFg : C.label, size: 10, hAlign: 'left', vAlign: 'top', wrap: true,
-    border: { top: thin, bottom: thin, left: thin, right: thin },
-  })
+  ws.getRow(r).height = 90
+  mg(`A${r}:O${r}`, `A${r}`, aiDaily,
+    COL.valBg, COL.valFg, false, 10, 'left', 'top', allT, true)
   r++
 
-  // ── フッター ──────────────────────────────────────────────────────
-  ws.getRow(r).height = 8; r++
-  ws.getRow(r).height = 16
-  merge(`A${r}:M${r}`, `A${r}`, null, { bg: C.hdrBg, fg: C.hdrFg, size: 7, border: null })
+  // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ws.getRow(r).height = 18
+  mg(`A${r}:O${r}`, `A${r}`, 'リハビリからの連絡事項',
+    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
+  r++
+
+  ws.getRow(r).height = 60
+  mg(`A${r}:O${r}`, `A${r}`, aiRehab,
+    COL.valBg, aiRehab ? COL.valFg : COL.noteFg, false, 10, 'left', 'top', allT, true)
+  r++
+
+  // ━━━ 看護からの連絡事項（手書き欄）━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ws.getRow(r).height = 18
+  mg(`A${r}:O${r}`, `A${r}`, '看護からの連絡事項',
+    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
+  r++
+  ws.getRow(r).height = 40
+  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
+  r++
+  ws.getRow(r).height = 40
+  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
+  r++
+
+  // ━━━ ご家族からの連絡事項（手書き欄）━━━━━━━━━━━━━━━━━━━━━━━━━
+  ws.getRow(r).height = 18
+  mg(`A${r}:O${r}`, `A${r}`, 'ご家族からの連絡事項',
+    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
+  r++
+  ws.getRow(r).height = 40
+  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
+  r++
+  ws.getRow(r).height = 40
+  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
 }
 
 export async function GET(request: Request) {
@@ -433,7 +414,6 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const date = searchParams.get('date') ?? ''
-
   const residentIdsParam = searchParams.get('residentIds') ?? searchParams.get('residentId') ?? ''
   const residentIds = residentIdsParam.split(',').map(s => s.trim()).filter(Boolean)
 
@@ -448,46 +428,39 @@ export async function GET(request: Request) {
 
   const residents = (allResidents ?? []) as Resident[]
   const recordMap = new Map<string, DailyRecord>()
-  for (const rec of (allRecords ?? []) as DailyRecord[]) {
-    recordMap.set(rec.residentId, rec)
-  }
+  for (const rec of (allRecords ?? []) as DailyRecord[]) recordMap.set(rec.residentId, rec)
 
-  // AI テキスト生成（記録がある利用者のみ・並列）
   const aiTexts = new Map<string, { daily: string; rehab: string }>()
   const apiKey = process.env.GROQ_API_KEY
   if (apiKey) {
     const client = new Groq({ apiKey })
     await Promise.all(
       residents
-        .filter(r => recordMap.has(r.id))
-        .map(async r => {
+        .filter(rr => recordMap.has(rr.id))
+        .map(async rr => {
           try {
-            const texts = await generateAIText(client, r, recordMap.get(r.id)!, date)
-            aiTexts.set(r.id, texts)
+            aiTexts.set(rr.id, await generateAIText(client, rr, recordMap.get(rr.id)!, date))
           } catch (err) {
-            console.error('[daily-report] Groq error for', r.name, ':', err)
-            aiTexts.set(r.id, { daily: '', rehab: '' })
+            console.error('[daily-report] Groq error for', rr.name, ':', err)
+            aiTexts.set(rr.id, { daily: '', rehab: '' })
           }
         })
     )
   }
 
-  // ワークブック生成
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Daily Report App'
   wb.created = new Date()
 
   for (const residentId of residentIds) {
-    const resident = residents.find(r => r.id === residentId)
+    const resident = residents.find(rr => rr.id === residentId)
     if (!resident) continue
     const record = recordMap.get(residentId) ?? null
     const ai = aiTexts.get(residentId) ?? { daily: '', rehab: '' }
     buildSheet(wb, resident, record, date, ai.daily, ai.rehab)
   }
 
-  if (wb.worksheets.length === 0) {
-    return new Response('No residents found', { status: 404 })
-  }
+  if (wb.worksheets.length === 0) return new Response('No residents found', { status: 404 })
 
   const buf = await wb.xlsx.writeBuffer()
   const suffix = residentIds.length === 1
