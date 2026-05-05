@@ -98,6 +98,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     { key: 'mealMainFood',  label: '主食' },
     { key: 'mealSideFood',  label: '主菜' },
     { key: 'fluidIntakeAm', label: '水分AM' },
+    { key: 'fluidIntakePm', label: '水分PM' },
   ]
   function getMissing(id: string): string[] {
     const d = getDraft(id)
