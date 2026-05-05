@@ -26,21 +26,16 @@ type Group = { label: string; residents: Resident[] }
 
 export default function ReportClient({
   residents,
-  recordedIds,
   date,
 }: {
   residents: Resident[]
-  recordedIds: string[]
   date: string
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
-  const [currentDate, setCurrentDate] = useState(date)
 
-  const recorded = new Set(recordedIds)
-
-  const [y, m, d] = currentDate.split('-').map(Number)
-  const dow = new Date(currentDate + 'T00:00:00').getDay()
+  const [y, m, d] = date.split('-').map(Number)
+  const dow = new Date(date + 'T00:00:00').getDay()
   const dateLabel = `${y}年${m}月${d}日（${DOW[dow]}曜日）`
 
   // 要介護・要支援・未設定でグループ化
@@ -79,13 +74,13 @@ export default function ReportClient({
     setLoading(true)
     try {
       const ids = [...selectedIds].join(',')
-      const res = await fetch(`/api/daily-report?date=${currentDate}&residentIds=${ids}`)
+      const res = await fetch(`/api/daily-report?date=${date}&residentIds=${ids}`)
       if (!res.ok) throw new Error('生成に失敗しました')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `連絡帳_${currentDate}.xlsx`
+      a.download = `連絡帳_${date}.xlsx`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -98,25 +93,20 @@ export default function ReportClient({
     }
   }
 
-  const hasRecordCount = residents.filter(r => recorded.has(r.id)).length
-
   return (
     <div className="flex flex-col gap-4 max-w-2xl mx-auto">
       {/* ヘッダー */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-lg font-bold text-gray-800">連絡帳生成</h2>
-          <p className="text-sm text-gray-500">{dateLabel}・記録あり {hasRecordCount}名</p>
+          <p className="text-sm text-gray-500">{dateLabel}・利用者 {residents.length}名</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href={`/report?date=${prevDate(currentDate)}`}
-            onClick={e => { e.preventDefault(); setCurrentDate(prevDate(currentDate)) }}
+          <a href={`/report?date=${prevDate(date)}`}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</a>
           <a href="/report"
-            onClick={e => { e.preventDefault(); setCurrentDate(date) }}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</a>
-          <a href={`/report?date=${nextDate(currentDate)}`}
-            onClick={e => { e.preventDefault(); setCurrentDate(nextDate(currentDate)) }}
+          <a href={`/report?date=${nextDate(date)}`}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</a>
         </div>
       </div>
@@ -171,7 +161,6 @@ export default function ReportClient({
             <div className="divide-y divide-gray-100">
               {group.residents.map(resident => {
                 const isSelected = selectedIds.has(resident.id)
-                const hasRecord = recorded.has(resident.id)
                 const colors = careLevelColor(resident.careLevel)
 
                 return (
@@ -195,15 +184,6 @@ export default function ReportClient({
                             {resident.careLevel}
                           </span>
                         )}
-                        {hasRecord ? (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
-                            記録あり
-                          </span>
-                        ) : (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium">
-                            記録なし
-                          </span>
-                        )}
                       </div>
                       {(resident.serviceStartTime || resident.serviceTimeCategory) && (
                         <p className="text-xs text-gray-400 mt-0.5">
@@ -222,8 +202,8 @@ export default function ReportClient({
 
       {residents.length === 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400">
-          <p>利用者が登録されていません</p>
-          <a href="/residents" className="mt-2 inline-block text-teal-600 underline text-sm">利用者管理へ</a>
+          <p>この日に記録のある利用者がいません</p>
+          <a href="/dashboard" className="mt-2 inline-block text-teal-600 underline text-sm">日次記録へ</a>
         </div>
       )}
 

@@ -16,26 +16,30 @@ export default async function ReportPage({
   const params = await searchParams
   const today = params.date || toDateStr(new Date())
 
-  const { data: residents } = await supabase
-    .from('Resident')
-    .select('*')
-    .eq('isActive', true)
-    .order('sortOrder')
-    .order('name')
-
-  // その日に記録があるIDを取得（件数バッジ用）
+  // その日に記録があり欠席でない利用者IDを取得
   const { data: records } = await supabase
     .from('DailyRecord')
     .select('residentId')
     .eq('date', today)
     .eq('isAbsent', false)
 
-  const recordedIds = new Set((records ?? []).map(r => r.residentId))
+  const recordedIds = (records ?? []).map(r => r.residentId)
+
+  // 記録がある利用者のみ取得
+  const { data: residents } = recordedIds.length > 0
+    ? await supabase
+        .from('Resident')
+        .select('*')
+        .in('id', recordedIds)
+        .eq('isActive', true)
+        .order('sortOrder')
+        .order('name')
+    : { data: [] }
 
   return (
     <ReportClient
       residents={(residents ?? []) as Resident[]}
-      recordedIds={[...recordedIds]}
+      recordedIds={recordedIds}
       date={today}
     />
   )
