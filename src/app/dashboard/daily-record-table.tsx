@@ -79,6 +79,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [drafts, setDrafts] = useState<Record<string, RecordDraft>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [savingAll, setSavingAll] = useState(false)
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [, startTransition] = useTransition()
   const [searchText, setSearchText] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -201,6 +202,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     startTransition(async () => {
       await saveRecord({ ...draft, residentId, date, id: existing?.id })
       setSaving(null)
+      setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
+      setSavedIds(prev => new Set(prev).add(residentId))
     })
   }
 
@@ -215,12 +218,13 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     startTransition(async () => {
       await saveAllRecords(toSave)
       setDrafts({})
+      setSavedIds(prev => new Set([...prev, ...filtered.map(r => r.id)]))
       setSavingAll(false)
     })
   }
 
   function SaveBtn({ id }: { id: string }) {
-    const isSaved = !!recordMap[id]
+    const isSaved = !!recordMap[id] || savedIds.has(id)
     const isDirty = !!drafts[id]
     return (
       <button onClick={() => handleSave(id)} disabled={saving === id || savingAll}
