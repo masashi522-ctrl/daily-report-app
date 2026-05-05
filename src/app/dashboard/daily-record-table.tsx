@@ -238,6 +238,20 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     )
   }
 
+  function ReportBtn({ id }: { id: string }) {
+    const isSaved = !!recordMap[id] || savedIds.has(id)
+    if (!isSaved) return null
+    return (
+      <a
+        href={`/api/daily-report?residentId=${id}&date=${date}`}
+        className="block px-2 py-1 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition text-center whitespace-nowrap"
+        download
+      >
+        報告書
+      </a>
+    )
+  }
+
   // デスクトップ用: 数値入力（スピナーなし、色をinline styleで保証）
   const numBase = 'border border-gray-200 rounded px-1 py-0.5 text-center text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
   const selMd = 'w-full border border-gray-200 rounded-lg px-2 py-2 text-sm'
@@ -444,7 +458,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   )}
                   {resident.foodRestrictions && !isAbsent && <div className="text-red-500 text-xs mt-0.5">{resident.foodRestrictions}</div>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => updMany(resident.id, { isAbsent: !isAbsent, absenceReason: isAbsent ? null : d.absenceReason })}
                     className={`text-xs px-2 py-1 rounded-lg border font-medium transition ${
@@ -453,6 +467,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     {isAbsent ? '欠席中' : '欠席'}
                   </button>
                   <SaveBtn id={resident.id} />
+                  <ReportBtn id={resident.id} />
                 </div>
               </div>
               {isAbsent ? (
@@ -575,7 +590,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
               <col style={{ width: '86px' }} />   {/* 備考 */}
               <col style={{ width: '90px' }} />   {/* 特記 */}
-              <col style={{ width: '58px' }} />   {/* 保存 */}
+              <col style={{ width: '90px' }} />   {/* 保存/報告書 */}
             </colgroup>
             <thead>
               <tr>
@@ -612,7 +627,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                 </th>
                 <th className={thNote}>備考</th>
                 <th className={thNote}>特記事項</th>
-                <th className={thSave}>保存</th>
+                <th className={thSave}>保存/報告書</th>
               </tr>
             </thead>
             <tbody>
@@ -760,9 +775,12 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
                         placeholder="体重・SpO2等" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
                     </td>
-                    {/* 保存 */}
+                    {/* 保存/報告書 */}
                     <td className={`${td} text-center`}>
-                      <SaveBtn id={resident.id} />
+                      <div className="flex flex-col gap-1 items-center">
+                        <SaveBtn id={resident.id} />
+                        <ReportBtn id={resident.id} />
+                      </div>
                     </td>
                   </tr>)
               })}
