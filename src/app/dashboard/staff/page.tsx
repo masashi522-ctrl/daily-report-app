@@ -2,6 +2,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import StaffForm from './staff-form'
 import DeleteButton from './delete-button'
+import EditButton from './edit-button'
 
 export default async function StaffPage() {
   const session = await requireSession()
@@ -26,7 +27,7 @@ export default async function StaffPage() {
               <th className="px-4 py-3 text-left">名前</th>
               <th className="px-4 py-3 text-left">メールアドレス</th>
               <th className="px-4 py-3 text-left">権限</th>
-              <th className="px-4 py-3"></th>
+              <th className="px-4 py-3" colSpan={2}></th>
             </tr>
           </thead>
           <tbody>
@@ -43,6 +44,11 @@ export default async function StaffPage() {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${staff.role === 'ADMIN' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
                     {staff.role === 'ADMIN' ? '管理者' : 'スタッフ'}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {(isAdmin || staff.id === session.userId) && (
+                    <EditButton staff={staff} isAdmin={isAdmin} />
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {(isAdmin || staff.id === session.userId) && (
