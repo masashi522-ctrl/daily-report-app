@@ -30,6 +30,25 @@ export interface Staff {
   updatedAt: string
 }
 
+export const CARE_LEVEL_OPTIONS = [
+  '要支援1', '要支援2',
+  '要介護1', '要介護2', '要介護3', '要介護4', '要介護5',
+] as const
+
+export const SERVICE_START_TIMES = (() => {
+  const times: string[] = []
+  for (let h = 9; h <= 17; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      if (h === 17 && m > 0) break
+      if (h === 9 && m < 30) continue
+      times.push(`${h}:${String(m).padStart(2, '0')}`)
+    }
+  }
+  return times
+})()
+
+export const SERVICE_TIME_CATEGORIES = ['3-4', '4-5', '5-6', '6-7', '7-8', '8-9'] as const
+
 export interface Resident {
   id: string
   name: string
@@ -42,6 +61,9 @@ export interface Resident {
   attendanceDays: string | null
   bathingDays: string | null
   trainingDays: string | null
+  careLevel: string | null
+  serviceStartTime: string | null
+  serviceTimeCategory: string | null
   createdAt: string
   updatedAt: string
 }
