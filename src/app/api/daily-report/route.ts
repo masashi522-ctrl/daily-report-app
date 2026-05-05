@@ -68,30 +68,26 @@ async function generateAIText(
         })
       : Promise.resolve(null),
   ])
-
   return {
     daily: dailyRes.choices[0]?.message?.content ?? '',
     rehab: rehabRes?.choices[0]?.message?.content ?? '',
   }
 }
 
-// ─── カラー定義（2色のみ） ────────────────────────────────────────
-// ・タイトルのみティール、以降はすべてグレー系
+// ─── カラー（2色：タイトルのみティール、他グレー） ────────────────
 const COL = {
-  titleBg:  '0F766E',  // teal-700（タイトル行のみ）
+  titleBg:  '0F766E',
   titleFg:  'FFFFFF',
-  hdrBg:    'E5E7EB',  // gray-200（セクションヘッダー）
-  hdrFg:    '1F2937',  // gray-800
-  lblBg:    'F9FAFB',  // gray-50（ラベル列）
-  lblFg:    '374151',  // gray-700
+  hdrBg:    'E5E7EB',  // section header (gray-200)
+  hdrFg:    '1F2937',
+  lblBg:    'F3F4F6',  // label cell (gray-100)
+  lblFg:    '374151',
   valBg:    'FFFFFF',
-  valFg:    '111827',  // gray-900
-  alertBg:  'FEE2E2',  // red-100（血圧再検のみ）
-  alertFg:  'B91C1C',  // red-700
-  border:   'D1D5DB',  // gray-300
-  noteFg:   '6B7280',  // gray-500（空欄ガイドテキスト）
+  valFg:    '111827',
+  alertBg:  'FEE2E2',
+  alertFg:  'B91C1C',
+  border:   'D1D5DB',
 }
-
 const FONT = 'メイリオ'
 
 function buildSheet(
@@ -114,136 +110,134 @@ function buildSheet(
   const catH = cat ? parseInt(cat.split('-')[0]) : 0
   const endTime = startTime && catH > 0 ? addHoursToTime(startTime, catH) : ''
 
-  // ── 列幅（テンプレートに合わせてA-O 15列）────────────────────────
-  // A-D: 名前エリア  E-G: 時間  H-J: 体温  K-M: 血圧  N-O: 脈拍
+  // ── 列幅（A-O 15列、テンプレートに合わせた比率で拡大） ──────────
+  // A:B = section/am-pm label  C = 担当者  D = spacer
+  // E:G = 時間  H:J = 体温  K:M = 血圧  N:O = 脈拍
   ws.columns = [
-    { width: 6  },  // A
-    { width: 5  },  // B
-    { width: 7  },  // C 担当者
-    { width: 2  },  // D
-    { width: 7  },  // E 時間
-    { width: 4  },  // F
-    { width: 2  },  // G
-    { width: 7  },  // H 体温
-    { width: 4  },  // I
-    { width: 2  },  // J
-    { width: 9  },  // K 血圧
-    { width: 4  },  // L
-    { width: 2  },  // M
-    { width: 6  },  // N 脈拍
-    { width: 6  },  // O
+    { width: 7   },  // A
+    { width: 5   },  // B
+    { width: 8   },  // C  担当者ドロップダウン
+    { width: 3   },  // D  スペーサー
+    { width: 5.5 },  // E
+    { width: 5.5 },  // F
+    { width: 5.5 },  // G
+    { width: 5.5 },  // H
+    { width: 5.5 },  // I
+    { width: 5.5 },  // J
+    { width: 6.5 },  // K
+    { width: 5.5 },  // L
+    { width: 5.5 },  // M
+    { width: 7   },  // N
+    { width: 7   },  // O
   ]
 
   // ── ヘルパー ────────────────────────────────────────────────────
   type BS = { style: ExcelJS.BorderStyle; color: { argb: string } }
-  const a = (hex: string) => ({ argb: 'FF' + hex })
-  const thin:   BS = { style: 'thin',   color: a(COL.border) }
-  const medium: BS = { style: 'medium', color: a(COL.titleBg) }
-  const allT = { top: thin, bottom: thin, left: thin, right: thin }
-  const allM = { top: medium, bottom: medium, left: medium, right: medium }
+  const ac = (hex: string) => ({ argb: 'FF' + hex })
+  const thin:   BS = { style: 'thin',   color: ac(COL.border) }
+  const bold2:  BS = { style: 'medium', color: ac(COL.titleBg) }
+  const allT  = { top: thin, bottom: thin, left: thin, right: thin }
+  const allB2 = { top: bold2, bottom: bold2, left: bold2, right: bold2 }
+
+  type BorderSpec = { top?: BS; bottom?: BS; left?: BS; right?: BS } | null
+  type HAlign = ExcelJS.Alignment['horizontal']
+  type VAlign = ExcelJS.Alignment['vertical']
 
   function sc(
     addr: string,
     value: string | number | null,
-    bg = COL.valBg,
-    fg = COL.valFg,
-    bold = false,
-    size = 9,
-    hAlign: ExcelJS.Alignment['horizontal'] = 'center',
-    vAlign: ExcelJS.Alignment['vertical'] = 'middle',
-    border: { top?: BS; bottom?: BS; left?: BS; right?: BS } | null = allT,
+    bg = COL.valBg, fg = COL.valFg,
+    bold = false, size = 9,
+    h: HAlign = 'center', v: VAlign = 'middle',
+    border: BorderSpec = allT,
     wrap = false,
   ) {
     const cell = ws.getCell(addr)
     if (value !== null) cell.value = value
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: a(bg) }
-    cell.font = { name: FONT, size, bold, color: a(fg) }
-    cell.alignment = { horizontal: hAlign, vertical: vAlign, wrapText: wrap }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: ac(bg) }
+    cell.font  = { name: FONT, size, bold, color: ac(fg) }
+    cell.alignment = { horizontal: h, vertical: v, wrapText: wrap }
     if (border) cell.border = border
     return cell
   }
 
-  function mg(range: string, addr: string, value: string | number | null,
-    bg = COL.valBg, fg = COL.valFg, bold = false, size = 9,
-    hAlign: ExcelJS.Alignment['horizontal'] = 'center',
-    vAlign: ExcelJS.Alignment['vertical'] = 'middle',
-    border: { top?: BS; bottom?: BS; left?: BS; right?: BS } | null = allT,
+  function mg(
+    range: string, addr: string,
+    value: string | number | null,
+    bg = COL.valBg, fg = COL.valFg,
+    bold = false, size = 9,
+    h: HAlign = 'center', v: VAlign = 'middle',
+    border: BorderSpec = allT,
     wrap = false,
   ) {
     ws.mergeCells(range)
-    return sc(addr, value, bg, fg, bold, size, hAlign, vAlign, border, wrap)
+    return sc(addr, value, bg, fg, bold, size, h, v, border, wrap)
   }
 
-  // セクションヘッダー行（テンプレートのラベル列スタイル）
-  function sectionLbl(row: number, mergeRange: string, addr: string, label: string, h = 18) {
-    ws.getRow(row).height = h
-    mg(mergeRange, addr, label, COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
+  // セクションヘッダー（A-O 全幅）
+  function secHdr(row: number, label: string, h2 = 18) {
+    ws.getRow(row).height = h2
+    mg(`A${row}:O${row}`, `A${row}`, label, COL.hdrBg, COL.hdrFg, true, 9, 'left')
   }
 
   let r = 1
 
-  // ━━━ Row1: タイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 1: タイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 28
   mg(`A${r}:O${r}`, `A${r}`, 'デイサービス　連絡帳',
-    COL.titleBg, COL.titleFg, true, 15, 'center', 'middle', allM)
+    COL.titleBg, COL.titleFg, true, 15, 'center', 'middle', allB2)
   r++
 
-  // ━━━ Row2: 利用者名 ＋ 日付 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 2: 利用者名 ＋ 日付 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 22
   mg(`A${r}:G${r}`, `A${r}`, resident.name + '　様',
-    COL.valBg, COL.valFg, true, 13, 'left', 'middle', allT)
-  sc(`H${r}`, 'R', COL.lblBg, COL.lblFg, false, 9)
-  sc(`I${r}`, reiwa, COL.valBg, COL.valFg, false, 11)
-  sc(`J${r}`, '年', COL.lblBg, COL.lblFg, false, 9)
-  sc(`K${r}`, mo, COL.valBg, COL.valFg, false, 11)
-  sc(`L${r}`, '月', COL.lblBg, COL.lblFg, false, 9)
-  sc(`M${r}`, dy, COL.valBg, COL.valFg, false, 11)
-  sc(`N${r}`, '日', COL.lblBg, COL.lblFg, false, 9)
+    COL.valBg, COL.valFg, true, 13, 'left', 'middle')
+  sc(`H${r}`, 'R',     COL.lblBg, COL.lblFg, false, 9)
+  sc(`I${r}`, reiwa,   COL.valBg, COL.valFg, false, 11)
+  sc(`J${r}`, '年',    COL.lblBg, COL.lblFg, false, 9)
+  sc(`K${r}`, mo,      COL.valBg, COL.valFg, false, 11)
+  sc(`L${r}`, '月',    COL.lblBg, COL.lblFg, false, 9)
+  sc(`M${r}`, dy,      COL.valBg, COL.valFg, false, 11)
+  sc(`N${r}`, '日',    COL.lblBg, COL.lblFg, false, 9)
   sc(`O${r}`, DOW_JA[dow] + '曜日', COL.valBg, COL.valFg, false, 9)
   r++
 
-  // ━━━ Row3: サービス時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 3: サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 18
   mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間 / 時間区分》',
-    COL.lblBg, COL.lblFg, false, 8, 'left', 'middle', allT)
-  mg(`G${r}:H${r}`, `G${r}`, startTime || '---',
-    COL.valBg, COL.valFg, false, 10, 'center', 'middle', allT)
-  sc(`I${r}`, '～', COL.lblBg, COL.lblFg)
-  mg(`J${r}:K${r}`, `J${r}`, endTime || '---',
-    COL.valBg, COL.valFg, false, 10)
-  sc(`L${r}`, '/', COL.lblBg, COL.lblFg)
-  mg(`M${r}:O${r}`, `M${r}`, cat ? cat + '時間' : '---',
-    COL.valBg, COL.valFg, false, 10)
+    COL.lblBg, COL.lblFg, false, 8, 'left')
+  mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 10)
+  sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 9)
+  mg(`J${r}:K${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 10)
+  sc(`L${r}`, '/', COL.lblBg, COL.lblFg, false, 9)
+  mg(`M${r}:O${r}`, `M${r}`, cat ? cat + '時間' : '---', COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ━━━ Row4: セクションタイトル「デイサービスでのご様子」━━━━━━━━━
-  ws.getRow(r).height = 18
-  mg(`A${r}:O${r}`, `A${r}`, 'デイサービスでのご様子',
-    COL.hdrBg, COL.hdrFg, true, 10, 'center', 'middle', allT)
-  r++
+  // ━━━ Row 4: セクションタイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  secHdr(r, 'デイサービスでのご様子', 18); r++
 
-  // ━━━ Row5: 健康チェック ヘッダー ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 5: 健康チェック テーブルヘッダー ━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 16
-  mg(`A${r}:B${r}`, `A${r}`, '健康チェック', COL.lblBg, COL.lblFg, true, 8, 'center')
+  mg(`A${r}:B${r}`, `A${r}`, '健康チェック', COL.lblBg, COL.lblFg, true, 8)
   sc(`C${r}`, '担当者', COL.lblBg, COL.lblFg, false, 8)
-  sc(`D${r}`, '', COL.lblBg, COL.lblFg)
-  mg(`E${r}:G${r}`, `E${r}`, '時間', COL.lblBg, COL.lblFg, false, 8)
-  mg(`H${r}:J${r}`, `H${r}`, '体温（℃）', COL.lblBg, COL.lblFg, false, 8)
+  sc(`D${r}`, '',       COL.lblBg, COL.lblFg, false, 8)
+  mg(`E${r}:G${r}`, `E${r}`, '時間',        COL.lblBg, COL.lblFg, false, 8)
+  mg(`H${r}:J${r}`, `H${r}`, '体温（℃）',  COL.lblBg, COL.lblFg, false, 8)
   mg(`K${r}:M${r}`, `K${r}`, '血圧（mmHg）', COL.lblBg, COL.lblFg, false, 8)
   mg(`N${r}:O${r}`, `N${r}`, '脈拍（/分）', COL.lblBg, COL.lblFg, false, 8)
   r++
 
-  // ━━━ Row6: AM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 6: AM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const amRow = r
   ws.getRow(r).height = 20
+  mg(`A${r}:B${r}`, `A${r}`, '午前', COL.lblBg, COL.lblFg, false, 9)
+  sc(`D${r}`, '', COL.valBg, COL.valFg)
   const bpAmAlert = record != null &&
     ((record.bpSystolic ?? 0) >= 160 || (record.bpDiastolic ?? 0) >= 90)
   const bpAmStr = record?.bpSystolic != null
     ? `${record.bpSystolic} / ${record.bpDiastolic ?? '?'}`
     : ''
-  mg(`A${r}:B${r}`, `A${r}`, '午前', COL.lblBg, COL.lblFg, false, 9)
-  sc(`C${r}`, '', COL.valBg, COL.valFg)  // 担当者（手書き）
-  sc(`D${r}`, '', COL.valBg, COL.valFg)
-  mg(`E${r}:G${r}`, `E${r}`, '9:30', COL.valBg, COL.lblFg, false, 9)
+  mg(`E${r}:G${r}`, `E${r}`, '9:30',   COL.valBg, COL.lblFg, false, 10)
   mg(`H${r}:J${r}`, `H${r}`,
     record?.tempMorning != null ? String(record.tempMorning) : '',
     COL.valBg, COL.valFg, false, 11)
@@ -256,15 +250,15 @@ function buildSheet(
     COL.valBg, COL.valFg, false, 11)
   r++
 
-  // ━━━ Row7: PM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 7: PM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const pmRow = r
   ws.getRow(r).height = 20
+  mg(`A${r}:B${r}`, `A${r}`, '午後', COL.lblBg, COL.lblFg, false, 9)
+  sc(`D${r}`, '', COL.valBg, COL.valFg)
   const bpPmStr = record?.bpSystolicPm != null
     ? `${record.bpSystolicPm} / ${record.bpDiastolicPm ?? '?'}`
     : ''
-  mg(`A${r}:B${r}`, `A${r}`, '午後', COL.lblBg, COL.lblFg, false, 9)
-  sc(`C${r}`, '', COL.valBg, COL.valFg)
-  sc(`D${r}`, '', COL.valBg, COL.valFg)
-  mg(`E${r}:G${r}`, `E${r}`, '13:30', COL.valBg, COL.lblFg, false, 9)
+  mg(`E${r}:G${r}`, `E${r}`, '13:30', COL.valBg, COL.lblFg, false, 10)
   mg(`H${r}:J${r}`, `H${r}`,
     record?.tempAfternoon != null ? String(record.tempAfternoon) : '',
     COL.valBg, COL.valFg, false, 11)
@@ -274,29 +268,40 @@ function buildSheet(
     COL.valBg, COL.valFg, false, 11)
   r++
 
-  // ━━━ Row8: 食事・水分量 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 健康チェック 担当者: AM-PM 行の C列を縦マージしてドロップダウン
+  ws.mergeCells(`C${amRow}:C${pmRow}`)
+  const vitalsStaffCell = ws.getCell(`C${amRow}`)
+  vitalsStaffCell.value = ''
+  vitalsStaffCell.fill = { type: 'pattern', pattern: 'solid', fgColor: ac(COL.valBg) }
+  vitalsStaffCell.font = { name: FONT, size: 10, color: ac(COL.valFg) }
+  vitalsStaffCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  vitalsStaffCell.border = allT
+  vitalsStaffCell.dataValidation = {
+    type: 'list',
+    allowBlank: true,
+    formulae: ['"屋島,上野,尾崎"'],
+    showErrorMessage: false,
+  }
+
+  // ━━━ Row 8: 食事・水分量 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
-  mg(`A${r}:D${r}`, `A${r}`, '食事・水分量', COL.lblBg, COL.lblFg, true, 8, 'center')
-  mg(`E${r}:F${r}`, `E${r}`, '（主食）', COL.lblBg, COL.lblFg, false, 8)
-  mg(`G${r}:H${r}`, `G${r}`,
-    record?.mealMainFood != null ? String(record.mealMainFood) + '割' : '',
+  mg(`A${r}:D${r}`, `A${r}`, '食事・水分量', COL.lblBg, COL.lblFg, true, 8)
+  mg(`E${r}:F${r}`, `E${r}`, '（主食）',     COL.lblBg, COL.lblFg, false, 8)
+  sc(`G${r}`, record?.mealMainFood != null ? record.mealMainFood + '割' : '',
     COL.valBg, COL.valFg, false, 11)
-  sc(`I${r}`, '（副食）', COL.lblBg, COL.lblFg, false, 8)
-  mg(`J${r}:K${r}`, `J${r}`,
-    record?.mealSideFood != null ? String(record.mealSideFood) + '割' : '',
+  mg(`H${r}:I${r}`, `H${r}`, '（副食）',     COL.lblBg, COL.lblFg, false, 8)
+  sc(`J${r}`, record?.mealSideFood != null ? record.mealSideFood + '割' : '',
     COL.valBg, COL.valFg, false, 11)
-  mg(`L${r}:M${r}`, `L${r}`, '（水分量）約', COL.lblBg, COL.lblFg, false, 8)
+  mg(`K${r}:L${r}`, `K${r}`, '（水分量）',   COL.lblBg, COL.lblFg, false, 8)
+  sc(`M${r}`, '約', COL.lblBg, COL.lblFg, false, 8)
   mg(`N${r}:O${r}`, `N${r}`,
-    (() => {
-      const total = (record?.fluidIntakeAm ?? 0) + (record?.fluidIntakePm ?? 0)
-      return total > 0 ? String(total) + 'ml' : ''
-    })(),
+    (() => { const t = (record?.fluidIntakeAm ?? 0) + (record?.fluidIntakePm ?? 0); return t > 0 ? t + 'ml' : '' })(),
     COL.valBg, COL.valFg, false, 11)
   r++
 
-  // ━━━ Row9: 入浴・口腔ケア ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 9: 入浴・口腔ケア ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
-  mg(`A${r}:D${r}`, `A${r}`, '入　浴', COL.lblBg, COL.lblFg, true, 8, 'center')
+  mg(`A${r}:D${r}`, `A${r}`, '入　浴', COL.lblBg, COL.lblFg, true, 8)
   mg(`E${r}:H${r}`, `E${r}`,
     record ? bathingLabel(record.bathing, record.bathingSkipReason) : '',
     COL.valBg, COL.valFg, false, 10, 'left')
@@ -306,10 +311,10 @@ function buildSheet(
     COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ━━━ Row10: 服薬 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 10: 服薬 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
   const lunchMed = record?.medicationBeforeLunch || record?.medicationAfterLunch
-  mg(`A${r}:D${r}`, `A${r}`, '服　薬', COL.lblBg, COL.lblFg, true, 8, 'center')
+  mg(`A${r}:D${r}`, `A${r}`, '服　薬', COL.lblBg, COL.lblFg, true, 8)
   sc(`E${r}`, '（朝）', COL.lblBg, COL.lblFg, false, 8)
   mg(`F${r}:G${r}`, `F${r}`,
     record ? (record.medicationMorning ? '有' : '無') : '',
@@ -324,87 +329,86 @@ function buildSheet(
     COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ━━━ Row11: 排便・排尿 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 11: 排便・排尿（手書き欄） ━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
-  mg(`A${r}:D${r}`, `A${r}`, '排便・排尿', COL.lblBg, COL.lblFg, true, 8, 'center')
+  mg(`A${r}:D${r}`, `A${r}`, '排便・排尿', COL.lblBg, COL.lblFg, true, 8)
   mg(`E${r}:F${r}`, `E${r}`, '排　便', COL.lblBg, COL.lblFg, false, 8)
-  mg(`G${r}:H${r}`, `G${r}`, '', COL.valBg, COL.valFg, false, 10)  // 手書き
+  mg(`G${r}:H${r}`, `G${r}`, '', COL.valBg, COL.valFg, false, 10)
   mg(`I${r}:J${r}`, `I${r}`, '', COL.valBg, COL.valFg, false, 10)
-  mg(`K${r}:L${r}`, `K${r}`, '排 尿', COL.lblBg, COL.lblFg, false, 8)
-  mg(`M${r}:O${r}`, `M${r}`, '', COL.valBg, COL.valFg, false, 10)  // 手書き
+  mg(`K${r}:L${r}`, `K${r}`, '排　尿', COL.lblBg, COL.lblFg, false, 8)
+  mg(`M${r}:O${r}`, `M${r}`, '', COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ━━━ Row12-14: 機能訓練 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const trainingItems = [
-    { label: '上下肢・体幹運動', start: record?.trainingDone ? (record.functionalTrainingStart ?? '') : '', end: record?.trainingDone ? (record.functionalTrainingEnd ?? '') : '' },
-    { label: '　歩行訓練',       start: '', end: '' },
-    { label: '　認知機能訓練',   start: '', end: '' },
-  ]
+  // ━━━ Row 12-14: 機能訓練（3行） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const trainStartRow = r
-  trainingItems.forEach((item, i) => {
+  const trainItems = [
+    { label: '上下肢・体幹運動',
+      start: record?.trainingDone ? (record.functionalTrainingStart ?? '') : '',
+      end:   record?.trainingDone ? (record.functionalTrainingEnd   ?? '') : '' },
+    { label: '歩行訓練',    start: '', end: '' },
+    { label: '認知機能訓練', start: '', end: '' },
+  ]
+  trainItems.forEach((item, i) => {
     ws.getRow(r).height = 20
-    if (i === 0) {
-      // 機能訓練ラベルは3行にまたがる
-    }
-    if (i === 0) {
-      mg(`A${trainStartRow}:B${trainStartRow + 2}`, `A${trainStartRow}`, '機能訓練',
-        COL.lblBg, COL.lblFg, true, 8, 'center')
-      sc(`C${trainStartRow}`, '担当者', COL.lblBg, COL.lblFg, false, 8)
-    }
-    // 種別ラベル
-    mg(`F${r}:I${r}`, `F${r}`, item.label, COL.lblBg, COL.lblFg, false, 9, 'left')
-    // 開始時刻
-    mg(`J${r}:K${r}`, `J${r}`, item.start,
-      item.start ? COL.valBg : COL.valBg, COL.valFg, false, 10)
-    sc(`L${r}`, item.start || item.end ? '～' : '', COL.lblBg, COL.lblFg, false, 9)
-    sc(`M${r}`, '', COL.lblBg, COL.lblFg)
-    // 終了時刻
-    mg(`N${r}:O${r}`, `N${r}`, item.end, COL.valBg, COL.valFg, false, 10)
+    mg(`D${r}:H${r}`, `D${r}`, item.label, COL.lblBg, COL.lblFg, false, 9, 'left')
+    mg(`I${r}:J${r}`, `I${r}`, item.start, COL.valBg, COL.valFg, false, 10)
+    sc(`K${r}`, item.start || item.end ? '～' : '', COL.lblBg, COL.lblFg, false, 9)
+    sc(`L${r}`, '', COL.lblBg, COL.lblFg)
+    mg(`M${r}:O${r}`, `M${r}`, item.end, COL.valBg, COL.valFg, false, 10)
     r++
+    void i
   })
+  const trainEndRow = r - 1
 
-  // ━━━ 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 18
-  mg(`A${r}:O${r}`, `A${r}`, '日中のご様子・連絡事項',
-    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
-  r++
+  // 機能訓練 A:B 縦マージ
+  ws.mergeCells(`A${trainStartRow}:B${trainEndRow}`)
+  const trainLblCell = ws.getCell(`A${trainStartRow}`)
+  trainLblCell.value = '機能訓練'
+  trainLblCell.fill = { type: 'pattern', pattern: 'solid', fgColor: ac(COL.lblBg) }
+  trainLblCell.font = { name: FONT, size: 8, bold: true, color: ac(COL.lblFg) }
+  trainLblCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  trainLblCell.border = allT
 
+  // 機能訓練 担当者 C列縦マージ＋ドロップダウン
+  ws.mergeCells(`C${trainStartRow}:C${trainEndRow}`)
+  const trainStaffCell = ws.getCell(`C${trainStartRow}`)
+  trainStaffCell.value = ''
+  trainStaffCell.fill = { type: 'pattern', pattern: 'solid', fgColor: ac(COL.valBg) }
+  trainStaffCell.font = { name: FONT, size: 10, color: ac(COL.valFg) }
+  trainStaffCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  trainStaffCell.border = allT
+  trainStaffCell.dataValidation = {
+    type: 'list',
+    allowBlank: true,
+    formulae: ['"山根,奥田,屋島,尾崎"'],
+    showErrorMessage: false,
+  }
+
+  // ━━━ 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  secHdr(r, '日中のご様子・連絡事項', 18); r++
   ws.getRow(r).height = 90
   mg(`A${r}:O${r}`, `A${r}`, aiDaily,
     COL.valBg, COL.valFg, false, 10, 'left', 'top', allT, true)
   r++
 
-  // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 18
-  mg(`A${r}:O${r}`, `A${r}`, 'リハビリからの連絡事項',
-    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
-  r++
-
+  // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  secHdr(r, 'リハビリからの連絡事項', 18); r++
   ws.getRow(r).height = 60
   mg(`A${r}:O${r}`, `A${r}`, aiRehab,
-    COL.valBg, aiRehab ? COL.valFg : COL.noteFg, false, 10, 'left', 'top', allT, true)
+    COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, 10, 'left', 'top', allT, true)
   r++
 
-  // ━━━ 看護からの連絡事項（手書き欄）━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 18
-  mg(`A${r}:O${r}`, `A${r}`, '看護からの連絡事項',
-    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
-  r++
+  // ━━━ 看護からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  secHdr(r, '看護からの連絡事項', 18); r++
   ws.getRow(r).height = 40
-  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
-  r++
+  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
   ws.getRow(r).height = 40
-  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
-  r++
+  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
 
-  // ━━━ ご家族からの連絡事項（手書き欄）━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 18
-  mg(`A${r}:O${r}`, `A${r}`, 'ご家族からの連絡事項',
-    COL.hdrBg, COL.hdrFg, true, 9, 'left', 'middle', allT)
-  r++
+  // ━━━ ご家族からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━
+  secHdr(r, 'ご家族からの連絡事項', 18); r++
   ws.getRow(r).height = 40
-  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
-  r++
+  mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
   ws.getRow(r).height = 40
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
 }
