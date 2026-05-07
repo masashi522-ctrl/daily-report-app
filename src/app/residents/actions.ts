@@ -24,7 +24,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const trainingDays        = formData.get('trainingTarget') ? '1' : null
   const careLevel           = (formData.get('careLevel') as string) || null
   const serviceStartTime    = (formData.get('serviceStartTime') as string) || null
-  const serviceTimeCategory = (formData.get('serviceTimeCategory') as string) || null
+  const serviceEndTime = (formData.get('serviceEndTime') as string) || null
 
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
@@ -40,7 +40,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     trainingDays:        trainingDays        || null,
     careLevel,
     serviceStartTime,
-    serviceTimeCategory,
+    serviceEndTime,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })
@@ -71,7 +71,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const trainingDays        = formData.get('trainingTarget') ? '1' : null
   const careLevel           = (formData.get('careLevel') as string) || null
   const serviceStartTime    = (formData.get('serviceStartTime') as string) || null
-  const serviceTimeCategory = (formData.get('serviceTimeCategory') as string) || null
+  const serviceEndTime = (formData.get('serviceEndTime') as string) || null
 
   if (!name) return { error: '名前は必須です' }
 
@@ -87,7 +87,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     trainingDays:        trainingDays        || null,
     careLevel,
     serviceStartTime,
-    serviceTimeCategory,
+    serviceEndTime,
     updatedAt: new Date().toISOString(),
   }).eq('id', id)
 

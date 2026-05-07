@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import { addResident, generateFurigana } from './actions'
-import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES } from '@/types/database'
+import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES } from '@/types/database'
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -109,12 +109,12 @@ export default function ResidentForm() {
           </datalist>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 block mb-1">提供時間区分（時間）</label>
-          <select name="serviceTimeCategory"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
-            <option value="">未設定</option>
-            {SERVICE_TIME_CATEGORIES.map(v => <option key={v} value={v}>{v}時間</option>)}
-          </select>
+          <label className="text-xs font-medium text-gray-700 block mb-1">サービス提供終了時間</label>
+          <input name="serviceEndTime" list="end-times" placeholder="例: 16:30"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+          <datalist id="end-times">
+            {SERVICE_START_TIMES.map(t => <option key={t} value={t} />)}
+          </datalist>
         </div>
       </div>
       <div>

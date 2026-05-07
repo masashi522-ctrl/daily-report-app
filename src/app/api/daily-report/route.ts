@@ -6,11 +6,6 @@ import type { Resident, DailyRecord } from '@/types/database'
 
 const DOW_JA = ['日', '月', '火', '水', '木', '金', '土']
 
-function addHoursToTime(timeStr: string, hours: number): string {
-  const [h, mn = '0'] = timeStr.split(':')
-  const total = parseInt(h) * 60 + parseInt(mn) + hours * 60
-  return Math.floor(total / 60) + ':' + String(total % 60).padStart(2, '0')
-}
 
 function bathingLabel(bathing: string, skipReason: string | null): string {
   if (bathing === 'DONE') return '有'
@@ -113,9 +108,7 @@ function buildSheet(
   const dow = new Date(date + 'T00:00:00').getDay()
   const reiwa = yr - 2018
   const startTime = resident.serviceStartTime ?? ''
-  const cat = resident.serviceTimeCategory ?? ''
-  const catH = cat ? parseInt(cat.split('-')[0]) : 0
-  const endTime = startTime && catH > 0 ? addHoursToTime(startTime, catH) : ''
+  const endTime = resident.serviceEndTime ?? ''
 
   // ── 列幅（A-O 15列、A5用に調整） ───────────────────────────────
   // A:B = section/am-pm label  C = 担当者  D = spacer
@@ -211,13 +204,11 @@ function buildSheet(
 
   // ━━━ Row 3: サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 15
-  mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間 / 時間区分》',
+  mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間》',
     COL.lblBg, COL.lblFg, false, 7, 'left')
   mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 9)
   sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 8)
-  mg(`J${r}:K${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 9)
-  sc(`L${r}`, '/', COL.lblBg, COL.lblFg, false, 8)
-  mg(`M${r}:O${r}`, `M${r}`, cat ? cat + '時間' : '---', COL.valBg, COL.valFg, false, 9)
+  mg(`J${r}:O${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 9)
   r++
 
   // ━━━ Row 4: セクションタイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
