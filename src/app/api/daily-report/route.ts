@@ -109,6 +109,7 @@ function buildSheet(
   const reiwa = yr - 2018
   const startTime = resident.serviceStartTime ?? ''
   const endTime = resident.serviceEndTime ?? ''
+  const cat = resident.serviceTimeCategory ?? ''
 
   // ── 列幅（A-O 15列、A5用に調整） ───────────────────────────────
   // A:B = section/am-pm label  C = 担当者  D = spacer
@@ -204,11 +205,13 @@ function buildSheet(
 
   // ━━━ Row 3: サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 15
-  mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間》',
+  mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間 / 時間区分》',
     COL.lblBg, COL.lblFg, false, 7, 'left')
   mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 9)
   sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 8)
-  mg(`J${r}:O${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 9)
+  mg(`J${r}:K${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 9)
+  sc(`L${r}`, '/', COL.lblBg, COL.lblFg, false, 8)
+  mg(`M${r}:O${r}`, `M${r}`, cat ? cat + '時間' : '---', COL.valBg, COL.valFg, false, 9)
   r++
 
   // ━━━ Row 4: セクションタイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

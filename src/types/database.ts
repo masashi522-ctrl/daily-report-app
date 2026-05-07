@@ -47,6 +47,8 @@ export const SERVICE_START_TIMES = (() => {
   return times
 })()
 
+export const SERVICE_TIME_CATEGORIES = ['3-4', '4-5', '5-6', '6-7', '7-8', '8-9'] as const
+
 export interface Resident {
   id: string
   name: string
@@ -62,6 +64,7 @@ export interface Resident {
   careLevel: string | null
   serviceStartTime: string | null
   serviceEndTime: string | null
+  serviceTimeCategory: string | null
   createdAt: string
   updatedAt: string
 }

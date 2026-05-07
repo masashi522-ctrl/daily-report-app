@@ -185,10 +185,11 @@ export default function ReportClient({
                           </span>
                         )}
                       </div>
-                      {(resident.serviceStartTime || resident.serviceEndTime) && (
+                      {(resident.serviceStartTime || resident.serviceEndTime || resident.serviceTimeCategory) && (
                         <p className="text-xs text-gray-400 mt-0.5">
                           {resident.serviceStartTime && resident.serviceStartTime}
                           {resident.serviceEndTime && ` 〜 ${resident.serviceEndTime}`}
+                          {resident.serviceTimeCategory && ` ／ ${resident.serviceTimeCategory}時間`}
                         </p>
                       )}
                     </div>
