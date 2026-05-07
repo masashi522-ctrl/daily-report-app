@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useActionState, useState, useTransition, useEffect } from 'react'
 import { updateResident, generateFurigana } from './actions'
 import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, type Resident } from '@/types/database'
 
@@ -22,7 +22,8 @@ function DayCheckboxes({ name, checkedDays }: { name: string; checkedDays: numbe
 }
 
 export default function EditResidentForm({ resident }: { resident: Resident }) {
-  const action = updateResident.bind(null, resident.id)
+  const updateResidentWithId = updateResident.bind(null, resident.id)
+  const [state, action, pending] = useActionState(updateResidentWithId, null)
   const [furigana, setFurigana] = useState(resident.furigana ?? '')
   const [generating, startGenerate] = useTransition()
 
@@ -62,6 +63,11 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
 
   return (
     <form action={action} className="flex flex-col gap-3">
+      {state?.error && (
+        <div className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          {state.error}
+        </div>
+      )}
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">名前 *</label>
         <input name="name" required defaultValue={resident.name}
@@ -166,9 +172,9 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
       </div>
       <div className="flex gap-2 mt-1">
-        <button type="submit"
-          className="flex-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition">
-          更新する
+        <button type="submit" disabled={pending}
+          className="flex-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
+          {pending ? '更新中...' : '更新する'}
         </button>
         <a href="/residents"
           className="flex-1 text-center bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">

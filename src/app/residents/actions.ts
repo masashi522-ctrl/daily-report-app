@@ -57,7 +57,7 @@ export async function deleteResident(id: string) {
   revalidatePath('/residents')
 }
 
-export async function updateResident(id: string, formData: FormData) {
+export async function updateResident(id: string, prevState: ResidentFormState, formData: FormData): Promise<ResidentFormState> {
   await requireSession()
 
   const name = formData.get('name') as string
@@ -73,9 +73,9 @@ export async function updateResident(id: string, formData: FormData) {
   const serviceStartTime    = (formData.get('serviceStartTime') as string) || null
   const serviceTimeCategory = (formData.get('serviceTimeCategory') as string) || null
 
-  if (!name) return
+  if (!name) return { error: '名前は必須です' }
 
-  await supabase.from('Resident').update({
+  const { error } = await supabase.from('Resident').update({
     name,
     furigana: furigana || null,
     foodType,
@@ -90,6 +90,8 @@ export async function updateResident(id: string, formData: FormData) {
     serviceTimeCategory,
     updatedAt: new Date().toISOString(),
   }).eq('id', id)
+
+  if (error) return { error: `更新に失敗しました: ${error.message}` }
 
   revalidatePath('/residents')
   redirect('/residents')
