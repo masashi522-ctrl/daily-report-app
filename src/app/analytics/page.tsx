@@ -2,6 +2,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import ResidentReport, { type ChartData } from './resident-report'
 import type { ReportStats } from './actions'
+import AnalyticsFilter from './analytics-filter'
 
 export default async function AnalyticsPage({
   searchParams,
@@ -20,8 +21,11 @@ export default async function AnalyticsPage({
   const lastDay = new Date(year, month, 0).getDate()
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-  const { data: residents } = await supabase
-    .from('Resident').select('id, name').eq('isActive', true).order('sortOrder').order('name')
+  const { data: residentsRaw } = await supabase
+    .from('Resident').select('id, name, furigana').eq('isActive', true)
+  const residents = (residentsRaw ?? []).sort((a, b) =>
+    (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja')
+  )
 
   let query = supabase.from('DailyRecord').select('*').gte('date', from).lte('date', to)
   if (residentId) query = query.eq('residentId', residentId)
@@ -187,46 +191,13 @@ export default async function AnalyticsPage({
       <h2 className="text-xl font-bold text-gray-800">集計・分析</h2>
 
       {/* フィルター */}
-      <form className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="text-xs text-gray-600 block mb-1">利用者</label>
-          <select name="residentId" defaultValue={residentId}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
-            <option value="">全員</option>
-            {residents?.map(res => <option key={res.id} value={res.id}>{res.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-gray-600 block mb-1">年</label>
-          <input type="number" name="year" defaultValue={year} min="2020" max="2099"
-            className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label className="text-xs text-gray-600 block mb-1">月</label>
-          <select name="month" defaultValue={month}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>{i + 1}月</option>
-            ))}
-          </select>
-        </div>
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-          集計
-        </button>
-        {!residentId && (
-          <a
-            href={`/api/analytics/export?year=${year}&month=${month}`}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 flex items-center gap-1.5"
-            download
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            全員 Excel
-          </a>
-        )}
-        <span className="text-xs text-gray-400 self-center">記録 {total}件</span>
-      </form>
+      <AnalyticsFilter
+        residents={residents}
+        residentId={residentId}
+        year={year}
+        month={month}
+        total={total}
+      />
 
       {/* バイタル系グループ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
