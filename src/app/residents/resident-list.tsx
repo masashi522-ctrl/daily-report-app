@@ -50,18 +50,24 @@ export default function ResidentList({ residents, editId }: Props) {
     })
   }
 
-  const filtered = residents.filter(r => {
-    // テキスト検索：名前またはふりがなに含まれるか
-    const matchName = !appliedText ||
-      r.name.includes(appliedText) ||
-      (r.furigana ?? '').includes(appliedText)
-    if (!matchName) return false
-    if (!gojuuonRow) return true
-    // 50音：ふりがなの先頭文字を使用。なければ名前の先頭文字
-    const searchChar = (r.furigana ?? r.name)[0]
-    const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
-    return row ? row.chars.includes(searchChar) : true
-  })
+  const filtered = residents
+    .filter(r => {
+      // テキスト検索：名前またはふりがなに含まれるか
+      const matchName = !appliedText ||
+        r.name.includes(appliedText) ||
+        (r.furigana ?? '').includes(appliedText)
+      if (!matchName) return false
+      if (!gojuuonRow) return true
+      // 50音：ふりがなの先頭文字を使用。なければ名前の先頭文字
+      const searchChar = (r.furigana ?? r.name)[0]
+      const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
+      return row ? row.chars.includes(searchChar) : true
+    })
+    .sort((a, b) => {
+      const fa = a.furigana ?? a.name
+      const fb = b.furigana ?? b.name
+      return fa.localeCompare(fb, 'ja')
+    })
 
   return (
     <div className="flex flex-col gap-3">
