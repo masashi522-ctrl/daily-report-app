@@ -36,6 +36,17 @@ export default async function WeightPage({
 
   // JST 今日の日付
   const jstToday = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const thisMonthStart = jstToday.slice(0, 7) + '-01'
+  const thisMonthEnd   = jstToday
+
+  // 今月体重測定済みの利用者IDセット
+  const { data: measuredThisMonth } = await supabase
+    .from('DailyRecord')
+    .select('residentId')
+    .not('weight', 'is', null)
+    .gte('date', thisMonthStart)
+    .lte('date', thisMonthEnd)
+  const measuredIds = new Set((measuredThisMonth ?? []).map(r => r.residentId))
 
   return (
     <WeightClient
@@ -44,6 +55,7 @@ export default async function WeightPage({
       selectedResident={selectedResident}
       weightRecords={weightRecords}
       today={jstToday}
+      measuredIds={measuredIds}
     />
   )
 }

@@ -144,12 +144,14 @@ export default function WeightClient({
   selectedResident,
   weightRecords,
   today,
+  measuredIds,
 }: {
   residents: Resident[]
   selectedResidentId: string
   selectedResident: Resident | null
   weightRecords: { date: string; weight: number }[]
   today: string
+  measuredIds: Set<string>
 }) {
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [searchText, setSearchText]  = useState('')
@@ -191,9 +193,24 @@ export default function WeightClient({
     setSearchText('')
   }
 
+  const unmeasuredCount = residents.filter(r => !measuredIds.has(r.id)).length
+
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-xl font-bold text-gray-800">体重管理</h2>
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="text-xl font-bold text-gray-800">体重管理</h2>
+        {unmeasuredCount > 0 && (
+          <span className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-700 text-xs font-medium px-3 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
+            今月未測定 {unmeasuredCount}名
+          </span>
+        )}
+        {unmeasuredCount === 0 && residents.length > 0 && (
+          <span className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-medium px-3 py-1 rounded-full">
+            ✓ 全員測定済み
+          </span>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ── 利用者リスト（左） ── */}
@@ -230,17 +247,27 @@ export default function WeightClient({
             {filteredResidents.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-6">該当なし</p>
             ) : (
-              filteredResidents.map(r => (
-                <a key={r.id} href={`/weight?residentId=${r.id}`}
-                  className={`flex items-center gap-2 px-4 py-2.5 border-b last:border-0 transition text-sm ${
-                    r.id === selectedResidentId
-                      ? 'bg-teal-50 text-teal-800 font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}>
-                  <span>{r.name}</span>
-                  {r.furigana && <span className="text-[10px] text-gray-400">{r.furigana}</span>}
-                </a>
-              ))
+              filteredResidents.map(r => {
+                const unmeasured = !measuredIds.has(r.id)
+                return (
+                  <a key={r.id} href={`/weight?residentId=${r.id}`}
+                    className={`flex items-center justify-between px-4 py-2.5 border-b last:border-0 transition text-sm ${
+                      r.id === selectedResidentId
+                        ? 'bg-teal-50 text-teal-800 font-semibold'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}>
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span>{r.name}</span>
+                      {r.furigana && <span className="text-[10px] text-gray-400 truncate">{r.furigana}</span>}
+                    </span>
+                    {unmeasured && (
+                      <span className="shrink-0 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
+                        未測定
+                      </span>
+                    )}
+                  </a>
+                )
+              })
             )}
           </div>
         </div>
