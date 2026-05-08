@@ -108,8 +108,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     { key: 'fluidIntakePm', label: '水分PM' },
   ]
   function bpAlertAm(d: RecordDraft): boolean {
-    return (d.bpSystolic != null && d.bpSystolic >= 160) ||
-           (d.bpDiastolic != null && d.bpDiastolic >= 90)
+    return d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90)
   }
 
   function getMissing(id: string): string[] {
@@ -488,12 +487,12 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>収縮期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
-                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} alert={d.bpSystolic != null && d.bpSystolic >= 160} />
+                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} alert={d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90)} />
                     <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolicPm} onChange={v => upd(resident.id, 'bpSystolicPm', v)} min={70}  max={200} />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>拡張期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
-                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolic}   onChange={v => upd(resident.id, 'bpDiastolic',   v)} min={30}  max={200} alert={d.bpDiastolic != null && d.bpDiastolic >= 90} />
+                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolic}   onChange={v => upd(resident.id, 'bpDiastolic',   v)} min={30}  max={200} />
                     <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolicPm} onChange={v => upd(resident.id, 'bpDiastolicPm', v)} min={30}  max={200} />
                   </div>
                   <div className={vRow}>
@@ -670,13 +669,13 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-bp-sys" placeholder="収縮" min={70} max={200}
                           value={d.bpSystolic ?? ''} onChange={numHandler(resident.id, 'bpSystolic')}
-                          className={`${numBase} ${d.bpSystolic != null && d.bpSystolic >= 160 ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
-                          style={{ ...inputStyle, width: '60px', ...(d.bpSystolic != null && d.bpSystolic >= 160 ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
+                          className={`${numBase} ${d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '60px', ...(d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                         <span className="text-gray-400 shrink-0">/</span>
                         <input type="number" list="dl-bp-dia" placeholder="拡張" min={30} max={200}
                           value={d.bpDiastolic ?? ''} onChange={numHandler(resident.id, 'bpDiastolic')}
-                          className={`${numBase} ${d.bpDiastolic != null && d.bpDiastolic >= 90 ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
-                          style={{ ...inputStyle, width: '60px', ...(d.bpDiastolic != null && d.bpDiastolic >= 90 ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
+                          className={numBase}
+                          style={{ ...inputStyle, width: '60px' }} />
                       </div>
                       {bpAlertAm(d) && !isAbsent && (
                         <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">血圧再検</div>
