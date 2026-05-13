@@ -16,6 +16,19 @@ const SKIP_REASONS = [
   { value: 'OTHER',          label: 'その他' },
 ]
 
+const GOJUUON_ROWS = [
+  { label: 'あ', chars: 'あいうえおアイウエオ' },
+  { label: 'か', chars: 'かきくけこカキクケコがぎぐげごガギグゲゴ' },
+  { label: 'さ', chars: 'さしすせそサシスセソざじずぜぞザジズゼゾ' },
+  { label: 'た', chars: 'たちつてとタチツテトだぢづでどダヂヅデド' },
+  { label: 'な', chars: 'なにぬねのナニヌネノ' },
+  { label: 'は', chars: 'はひふへほハヒフヘホばびぶべぼバビブベボぱぴぷぺぽパピプペポ' },
+  { label: 'ま', chars: 'まみむめもマミムメモ' },
+  { label: 'や', chars: 'やゆよヤユヨ' },
+  { label: 'ら', chars: 'らりるれろラリルレロ' },
+  { label: 'わ', chars: 'わをんワヲン' },
+]
+
 interface Draft {
   trainingDone: boolean
   trainingSkipReason: string | null
@@ -36,6 +49,9 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
   const [saving, setSaving] = useState<string | null>(null)
   const [savingAll, setSavingAll] = useState(false)
   const [, startTransition] = useTransition()
+  const [searchText, setSearchText] = useState('')
+  const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   function getDraft(id: string): Draft {
     const rec = recordMap[id]
@@ -53,6 +69,36 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
     setDrafts(prev => ({ ...prev, [id]: { ...getDraft(id), ...patch } }))
   }
 
+  function matchRow(r: Resident) {
+    if (!gojuuonRow) return true
+    const firstChar = (r.furigana ?? r.name)[0]
+    const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
+    return row ? row.chars.includes(firstChar) : true
+  }
+
+  const nameButtonList = residents.filter(r =>
+    matchRow(r) &&
+    (!searchText || r.name.includes(searchText) || (r.furigana ?? '').includes(searchText))
+  )
+
+  const filtered = nameButtonList.filter(r =>
+    selectedIds.size === 0 || selectedIds.has(r.id)
+  )
+
+  function toggleResident(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function clearAll() {
+    setSelectedIds(new Set())
+    setSearchText('')
+  }
+
   function handleSave(residentId: string) {
     setSaving(residentId)
     const d = getDraft(residentId)
@@ -65,7 +111,7 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
 
   function handleSaveAll() {
     setSavingAll(true)
-    const list = residents.map(r => {
+    const list = filtered.map(r => {
       const d = getDraft(r.id)
       const rec = recordMap[r.id]
       return { residentId: r.id, date, id: rec?.id, ...d }
@@ -93,15 +139,83 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 全員保存 */}
-      <div className="flex justify-end">
-        <button onClick={handleSaveAll} disabled={savingAll}
-          className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition">
-          {savingAll ? '保存中...' : `全員保存（${residents.length}名）`}
-        </button>
+      {/* 絞り込みパネル */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-wrap gap-2 items-center">
+        {/* テキスト検索 */}
+        <div className="flex items-center gap-2 w-full">
+          <input
+            type="text"
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            placeholder="名前で絞り込む..."
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
+            style={{ fontSize: '16px' }}
+          />
+          {(searchText || selectedIds.size > 0) && (
+            <button onClick={clearAll}
+              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2 rounded-lg hover:bg-gray-100 whitespace-nowrap">✕ クリア</button>
+          )}
+          {selectedIds.size > 0 && (
+            <span className="text-xs text-teal-600 font-medium whitespace-nowrap">{selectedIds.size}名選択中</span>
+          )}
+        </div>
+        {/* 50音タブ */}
+        <div className="flex flex-wrap gap-1 w-full">
+          <span className="text-xs text-gray-400 self-center mr-1">50音:</span>
+          <button
+            onClick={() => setGojuuonRow(null)}
+            className={`text-xs px-2 py-1 rounded border transition font-medium ${
+              gojuuonRow === null
+                ? 'bg-teal-700 text-white border-teal-700'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-teal-400'
+            }`}
+          >全</button>
+          {GOJUUON_ROWS.map(row => (
+            <button key={row.label}
+              onClick={() => setGojuuonRow(gojuuonRow === row.label ? null : row.label)}
+              className={`text-xs px-2 py-1 rounded border transition ${
+                gojuuonRow === row.label
+                  ? 'bg-teal-600 text-white border-teal-600'
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-teal-400 hover:text-teal-600'
+              }`}
+            >{row.label}</button>
+          ))}
+        </div>
+        {/* 名前ボタン */}
+        {nameButtonList.length > 0 ? (
+          <div className="flex flex-wrap gap-1 w-full">
+            {nameButtonList.map(r => {
+              const isAbsent = recordMap[r.id]?.isAbsent === true
+              const selected = selectedIds.has(r.id)
+              return (
+                <button key={r.id} onClick={() => toggleResident(r.id)}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
+                    selected
+                      ? 'bg-teal-600 text-white border-teal-600'
+                      : isAbsent
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-teal-400 hover:text-teal-600'
+                  }`}>
+                  {isAbsent && <span className="text-[9px]">欠</span>}
+                  {r.name}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 w-full">{gojuuonRow ? `${gojuuonRow}行の対象者はいません` : ''}</p>
+        )}
+        {/* 全員保存 */}
+        <div className="flex justify-end w-full gap-2 items-center">
+          <p className="text-xs text-gray-400">{filtered.length}/{residents.length}名 表示中</p>
+          <button onClick={handleSaveAll} disabled={savingAll}
+            className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition">
+            {savingAll ? '保存中...' : `全員保存（${filtered.length}名）`}
+          </button>
+        </div>
       </div>
 
-      {residents.map(resident => {
+      {filtered.map(resident => {
         const d = getDraft(resident.id)
         const notDone = !d.trainingDone
         const rec = recordMap[resident.id]
@@ -236,8 +350,10 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
         )
       })}
 
-      {residents.length === 0 && (
-        <div className="text-center py-12 text-gray-400">利用者が登録されていません</div>
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-gray-400">
+          {residents.length === 0 ? '対象者が登録されていません' : '該当する対象者がいません'}
+        </div>
       )}
     </div>
   )
