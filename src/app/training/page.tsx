@@ -25,11 +25,12 @@ export default async function TrainingPage({
     .order('sortOrder')
     .order('name')
 
+  // 機能訓練対象チェックがある利用者
   const trainingResidents = (allResidents ?? []).filter((r: Resident) => !!r.trainingDays)
 
-  // trainingDays が設定されており、かつ本日の曜日が含まれている利用者のみ表示
+  // 機能訓練対象 かつ 本日の利用曜日に該当する利用者のみ表示
   const residents = trainingResidents.filter((r: Resident) =>
-    r.trainingDays!.split(',').map(Number).includes(todayDow)
+    !r.attendanceDays || r.attendanceDays.split(',').map(Number).includes(todayDow)
   )
 
   const { data: records } = await supabase
