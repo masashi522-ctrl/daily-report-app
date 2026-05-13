@@ -25,11 +25,12 @@ export default async function TrainingPage({
     .order('sortOrder')
     .order('name')
 
+  const trainingResidents = (allResidents ?? []).filter((r: Resident) => !!r.trainingDays)
+
   // trainingDays が設定されており、かつ本日の曜日が含まれている利用者のみ表示
-  const residents = (allResidents ?? []).filter((r: Resident) => {
-    if (!r.trainingDays) return false
-    return r.trainingDays.split(',').map(Number).includes(todayDow)
-  })
+  const residents = trainingResidents.filter((r: Resident) =>
+    r.trainingDays!.split(',').map(Number).includes(todayDow)
+  )
 
   const { data: records } = await supabase
     .from('DailyRecord')
@@ -62,9 +63,18 @@ export default async function TrainingPage({
 
       {residents.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center text-gray-400">
-          <p className="text-base">機能訓練対象者が登録されていません</p>
-          <p className="text-xs mt-2">利用者管理で「機能訓練対象」にチェックを入れてください</p>
-          <a href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</a>
+          {trainingResidents.length === 0 ? (
+            <>
+              <p className="text-base">機能訓練対象者が登録されていません</p>
+              <p className="text-xs mt-2">利用者管理で「機能訓練対象」にチェックを入れてください</p>
+              <a href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</a>
+            </>
+          ) : (
+            <>
+              <p className="text-base">本日（{dowLabel}曜日）の機能訓練対象者はいません</p>
+              <p className="text-xs mt-2">機能訓練対象者 {trainingResidents.length}名 のうち、{dowLabel}曜日の設定がありません</p>
+            </>
+          )}
         </div>
       ) : (
         <TrainingTable residents={residents as Resident[]} recordMap={recordMap} date={today} />
