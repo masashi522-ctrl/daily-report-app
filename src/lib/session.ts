@@ -12,6 +12,8 @@ export type SessionPayload = {
   email: string
   name: string
   role: string
+  facilityId: string
+  facilityName: string
 }
 
 export async function createSession(payload: SessionPayload) {

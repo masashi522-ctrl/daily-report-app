@@ -12,7 +12,7 @@ export default async function TrainingPage({
 }: {
   searchParams: Promise<{ date?: string }>
 }) {
-  await requireSession()
+  const session = await requireSession()
   const params = await searchParams
   const today = params.date || toDateStr(new Date())
 
@@ -22,6 +22,7 @@ export default async function TrainingPage({
     .from('Resident')
     .select('*')
     .eq('isActive', true)
+    .eq('facilityId', session.facilityId)
     .order('sortOrder')
     .order('name')
 
@@ -33,10 +34,10 @@ export default async function TrainingPage({
     !r.attendanceDays || r.attendanceDays.split(',').map(Number).includes(todayDow)
   )
 
-  const { data: records } = await supabase
-    .from('DailyRecord')
-    .select('*')
-    .eq('date', today)
+  const residentIds = residents.map(r => r.id)
+  const { data: records } = residentIds.length > 0
+    ? await supabase.from('DailyRecord').select('*').eq('date', today).in('residentId', residentIds)
+    : { data: [] }
 
   const recordMap: Record<string, DailyRecord> = {}
   for (const r of records ?? []) recordMap[r.residentId] = r

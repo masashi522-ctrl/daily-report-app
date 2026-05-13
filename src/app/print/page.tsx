@@ -34,7 +34,7 @@ export default async function PrintPage({
 }: {
   searchParams: Promise<{ date?: string }>
 }) {
-  await requireSession()
+  const session = await requireSession()
   const params = await searchParams
   const today = new Date().toISOString().split('T')[0]
   const date = params.date || today
@@ -43,13 +43,14 @@ export default async function PrintPage({
     .from('Resident')
     .select('*')
     .eq('isActive', true)
+    .eq('facilityId', session.facilityId)
     .order('sortOrder')
     .order('name')
 
-  const { data: records } = await supabase
-    .from('DailyRecord')
-    .select('*')
-    .eq('date', date)
+  const residentIds = (residents ?? []).map(r => r.id)
+  const { data: records } = residentIds.length > 0
+    ? await supabase.from('DailyRecord').select('*').eq('date', date).in('residentId', residentIds)
+    : { data: [] }
 
   const recordMap = new Map<string, DailyRecord>()
   records?.forEach(r => recordMap.set(r.residentId, r))
@@ -179,7 +180,7 @@ export default async function PrintPage({
 
         <div style={{ marginTop: '8px', fontSize: '8px', color: '#9ca3af', display: 'flex', justifyContent: 'space-between' }}>
           <span>印刷日時: {new Date().toLocaleString('ja-JP')}</span>
-          <span>げんきむらデイサービスセンター</span>
+          <span>{session.facilityName}</span>
         </div>
       </div>
     </>

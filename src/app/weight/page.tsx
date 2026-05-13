@@ -7,13 +7,14 @@ export default async function WeightPage({
 }: {
   searchParams: Promise<{ residentId?: string }>
 }) {
-  await requireSession()
+  const session = await requireSession()
   const { residentId = '' } = await searchParams
 
   const { data: residentsRaw } = await supabase
     .from('Resident')
     .select('id, name, furigana')
     .eq('isActive', true)
+    .eq('facilityId', session.facilityId)
 
   const residents = (residentsRaw ?? []).sort((a, b) =>
     (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'),

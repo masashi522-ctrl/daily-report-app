@@ -30,11 +30,19 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     return { error: 'メールアドレスまたはパスワードが正しくありません' }
   }
 
+  const { data: facility } = await supabase
+    .from('Facility')
+    .select('name')
+    .eq('id', staff.facilityId)
+    .maybeSingle()
+
   await createSession({
     userId: staff.id,
     email: staff.email,
     name: staff.name,
     role: staff.role,
+    facilityId: staff.facilityId ?? '',
+    facilityName: facility?.name ?? '',
   })
 
   redirect('/dashboard')

@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation'
 export type ResidentFormState = { error: string } | null
 
 export async function addResident(prevState: ResidentFormState, formData: FormData): Promise<ResidentFormState> {
-  await requireSession()
+  const session = await requireSession()
 
   const name = (formData.get('name') as string)?.trim()
   if (!name) return { error: '名前は必須です' }
@@ -43,6 +43,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     serviceStartTime,
     serviceEndTime,
     serviceTimeCategory,
+    facilityId: session.facilityId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })
@@ -54,13 +55,13 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
 }
 
 export async function deleteResident(id: string) {
-  await requireSession()
-  await supabase.from('Resident').delete().eq('id', id)
+  const session = await requireSession()
+  await supabase.from('Resident').delete().eq('id', id).eq('facilityId', session.facilityId)
   revalidatePath('/residents')
 }
 
 export async function updateResident(id: string, prevState: ResidentFormState, formData: FormData): Promise<ResidentFormState> {
-  await requireSession()
+  const session = await requireSession()
 
   const name = formData.get('name') as string
   const furigana = (formData.get('furigana') as string)?.trim()
@@ -93,7 +94,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     serviceEndTime,
     serviceTimeCategory,
     updatedAt: new Date().toISOString(),
-  }).eq('id', id)
+  }).eq('id', id).eq('facilityId', session.facilityId)
 
   if (error) return { error: `更新に失敗しました: ${error.message}` }
 
@@ -139,7 +140,7 @@ export async function generateAllFurigana(): Promise<{ updated: number; errors: 
 }
 
 export async function toggleActive(id: string, isActive: boolean) {
-  await requireSession()
-  await supabase.from('Resident').update({ isActive, updatedAt: new Date().toISOString() }).eq('id', id)
+  const session = await requireSession()
+  await supabase.from('Resident').update({ isActive, updatedAt: new Date().toISOString() }).eq('id', id).eq('facilityId', session.facilityId)
   revalidatePath('/residents')
 }

@@ -5,13 +5,14 @@ import EditResidentForm from './edit-resident-form'
 import ResidentList from './resident-list'
 
 export default async function ResidentsPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
-  await requireSession()
+  const session = await requireSession()
 
   const { edit: editId } = await searchParams
 
   const { data: residents } = await supabase
     .from('Resident')
     .select('*')
+    .eq('facilityId', session.facilityId)
     .order('sortOrder')
     .order('name')
 

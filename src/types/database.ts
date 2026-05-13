@@ -20,12 +20,21 @@ export const BATHING_LABELS: Record<BathingStatus, string> = {
   NOT_APPLICABLE: '-',
 }
 
+export interface Facility {
+  id: string
+  name: string
+  facilityCode: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Staff {
   id: string
   name: string
   email: string
   password: string
   role: Role
+  facilityId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -53,6 +62,7 @@ export interface Resident {
   id: string
   name: string
   furigana: string | null
+  facilityId: string | null
   foodType: string
   foodRestrictions: string | null
   specialCondition: string | null

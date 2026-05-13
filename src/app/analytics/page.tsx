@@ -9,7 +9,7 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ residentId?: string; year?: string; month?: string }>
 }) {
-  await requireSession()
+  const session = await requireSession()
   const params = await searchParams
 
   const now = new Date()
@@ -22,14 +22,20 @@ export default async function AnalyticsPage({
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
   const { data: residentsRaw } = await supabase
-    .from('Resident').select('id, name, furigana').eq('isActive', true)
+    .from('Resident').select('id, name, furigana').eq('isActive', true).eq('facilityId', session.facilityId)
   const residents = (residentsRaw ?? []).sort((a, b) =>
     (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja')
   )
+  const facilityResidentIds = residents.map(r => r.id)
 
-  let query = supabase.from('DailyRecord').select('*').gte('date', from).lte('date', to)
-  if (residentId) query = query.eq('residentId', residentId)
-  const { data: records } = await query
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let records: any[] = []
+  if (facilityResidentIds.length > 0) {
+    let query = supabase.from('DailyRecord').select('*').gte('date', from).lte('date', to).in('residentId', facilityResidentIds)
+    if (residentId) query = query.eq('residentId', residentId)
+    const { data } = await query
+    records = data ?? []
+  }
 
   function avg(arr: (number | null | undefined)[]) {
     const valid = arr.filter((v): v is number => v != null)

@@ -7,7 +7,18 @@ import EditButton from './edit-button'
 export default async function StaffPage() {
   const session = await requireSession()
   const isAdmin = session.role === 'ADMIN'
-  const { data: staffList } = await supabase.from('Staff').select('id, name, email, role, createdAt').order('createdAt')
+
+  const { data: staffList } = await supabase
+    .from('Staff')
+    .select('id, name, email, role, createdAt')
+    .eq('facilityId', session.facilityId)
+    .order('createdAt')
+
+  const { data: facility } = await supabase
+    .from('Facility')
+    .select('name, facilityCode')
+    .eq('id', session.facilityId)
+    .maybeSingle()
 
   return (
     <div className="flex flex-col gap-6">
@@ -17,6 +28,21 @@ export default async function StaffPage() {
           <p className="text-xs text-gray-400 mt-1">自分のアカウントのみ削除できます</p>
         )}
       </div>
+
+      {/* 施設コード表示（管理者のみ） */}
+      {isAdmin && facility && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
+          <div>
+            <p className="text-xs font-medium text-blue-600">施設名</p>
+            <p className="text-sm font-bold text-blue-900">{facility.name}</p>
+          </div>
+          <div className="ml-auto sm:ml-6">
+            <p className="text-xs font-medium text-blue-600">施設コード（スタッフ登録時に必要）</p>
+            <p className="text-2xl font-bold tracking-widest text-blue-800 font-mono">{facility.facilityCode}</p>
+          </div>
+          <p className="text-xs text-blue-500 w-full">このコードを新しいスタッフに共有すると、<a href="/register" className="underline" target="_blank">/register</a> から施設に紐付けて登録できます</p>
+        </div>
+      )}
 
       {isAdmin && <StaffForm />}
 

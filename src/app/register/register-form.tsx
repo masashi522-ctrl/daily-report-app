@@ -16,6 +16,14 @@ export default function RegisterForm() {
       )}
 
       <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-stone-700">施設コード</label>
+        <input name="facilityCode" type="text" required
+          className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-amber-400 focus:bg-white transition tracking-widest uppercase"
+          placeholder="XXXXXXXX" />
+        <p className="text-xs text-stone-400">管理者から受け取った8桁のコードを入力してください</p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-stone-700">名前</label>
         <input name="name" type="text" required
           className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-amber-400 focus:bg-white transition"

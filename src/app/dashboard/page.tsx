@@ -12,7 +12,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ date?: string }>
 }) {
-  await requireSession()
+  const session = await requireSession()
   const params = await searchParams
   const today = params.date || toDateStr(new Date())
 
@@ -20,13 +20,15 @@ export default async function DashboardPage({
     .from('Resident')
     .select('*')
     .eq('isActive', true)
+    .eq('facilityId', session.facilityId)
     .order('sortOrder')
     .order('name')
 
-  const { data: records } = await supabase
-    .from('DailyRecord')
-    .select('*')
-    .eq('date', today)
+  const residentIds = (residents ?? []).map(r => r.id)
+
+  const { data: records } = residentIds.length > 0
+    ? await supabase.from('DailyRecord').select('*').eq('date', today).in('residentId', residentIds)
+    : { data: [] }
 
   const recordMap = new Map<string, DailyRecord>()
   records?.forEach(r => recordMap.set(r.residentId, r))

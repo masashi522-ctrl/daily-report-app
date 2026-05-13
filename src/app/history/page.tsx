@@ -7,7 +7,7 @@ export default async function HistoryPage({
 }: {
   searchParams: Promise<{ residentId?: string; from?: string; to?: string }>
 }) {
-  await requireSession()
+  const session = await requireSession()
   const params = await searchParams
 
   const today = new Date().toISOString().split('T')[0]
@@ -17,18 +17,28 @@ export default async function HistoryPage({
   const to = params.to || today
   const residentId = params.residentId || ''
 
-  const { data: residents } = await supabase.from('Resident').select('id, name').order('name')
+  const { data: residents } = await supabase
+    .from('Resident')
+    .select('id, name')
+    .eq('facilityId', session.facilityId)
+    .order('name')
 
-  let query = supabase
-    .from('DailyRecord')
-    .select('*, Resident(name, foodType)')
-    .gte('date', from)
-    .lte('date', to)
-    .order('date', { ascending: false })
+  const facilityResidentIds = (residents ?? []).map(r => r.id)
 
-  if (residentId) query = query.eq('residentId', residentId)
-
-  const { data: records } = await query.limit(200)
+  type HistoryRecord = { id: string; date: string; Resident: { name: string; foodType: FoodType } | null; bpSystolic: number | null; bpDiastolic: number | null; bpSystolicPm: number | null; bpDiastolicPm: number | null; pulse: number | null; pulsePm: number | null; tempMorning: number | null; tempAfternoon: number | null; bathing: string; mealMainFood: number | null; mealSideFood: number | null; fluidIntakeAm: number | null; fluidIntakePm: number | null; oralCare: boolean; specialNotes: string | null }
+  let records: HistoryRecord[] = []
+  if (facilityResidentIds.length > 0) {
+    let query = supabase
+      .from('DailyRecord')
+      .select('*, Resident(name, foodType)')
+      .gte('date', from)
+      .lte('date', to)
+      .in('residentId', facilityResidentIds)
+      .order('date', { ascending: false })
+    if (residentId) query = query.eq('residentId', residentId)
+    const { data } = await query.limit(200)
+    records = (data ?? []) as HistoryRecord[]
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -79,8 +89,8 @@ export default async function HistoryPage({
             </tr>
           </thead>
           <tbody>
-            {records?.map((r, i) => {
-              const resident = r.Resident as { name: string; foodType: FoodType } | null
+            {records.map((r, i) => {
+              const resident = r.Resident
               return (
                 <tr key={r.id} className={`border-t ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                   <td className="px-3 py-1.5 text-gray-600">{r.date}</td>

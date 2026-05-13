@@ -14,7 +14,13 @@ export default function SetupForm() {
         </p>
       )}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-gray-700">名前</label>
+        <label className="text-sm font-medium text-gray-700">施設名 *</label>
+        <input name="facilityName" type="text" required
+          className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white transition"
+          placeholder="〇〇デイサービスセンター" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-gray-700">管理者名前</label>
         <input name="name" type="text" required
           className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white transition"
           placeholder="山田 太郎" />
@@ -33,7 +39,7 @@ export default function SetupForm() {
       </div>
       <button type="submit" disabled={pending}
         className="mt-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500 transition disabled:opacity-60">
-        {pending ? '作成中...' : '管理者アカウントを作成'}
+        {pending ? '作成中...' : '施設と管理者アカウントを作成'}
       </button>
     </form>
   )

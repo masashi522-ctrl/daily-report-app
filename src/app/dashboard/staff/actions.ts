@@ -21,7 +21,7 @@ export async function createStaff(_prevState: StaffFormState, formData: FormData
 
   const hash = await bcrypt.hash(password, 10)
   const now = new Date().toISOString()
-  const { error } = await supabase.from('Staff').insert({ id: crypto.randomUUID(), name, email, password: hash, role, createdAt: now, updatedAt: now })
+  const { error } = await supabase.from('Staff').insert({ id: crypto.randomUUID(), name, email, password: hash, role, facilityId: session.facilityId, createdAt: now, updatedAt: now })
 
   if (error) {
     if (error.message.includes('duplicate') || error.message.includes('unique')) {
