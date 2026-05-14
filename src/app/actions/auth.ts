@@ -32,7 +32,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
 
   const { data: facility } = await supabase
     .from('Facility')
-    .select('name')
+    .select('name, slug')
     .eq('id', staff.facilityId)
     .maybeSingle()
 
@@ -43,9 +43,10 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     role: staff.role,
     facilityId: staff.facilityId ?? '',
     facilityName: facility?.name ?? '',
+    facilitySlug: facility?.slug ?? '',
   })
 
-  redirect('/dashboard')
+  redirect(facility?.slug ? `/${facility.slug}` : '/dashboard')
 }
 
 export async function logout() {

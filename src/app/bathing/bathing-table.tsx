@@ -101,6 +101,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
     startTransition(async () => {
       await saveBathingRecord({ residentId, date, id: rec?.id, ...d })
       setSaving(null)
+      setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
   }
 
@@ -114,6 +115,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
     startTransition(async () => {
       await saveAllBathing(list)
       setSavingAll(false)
+      setDrafts({})
     })
   }
 
@@ -263,7 +265,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
             <div className="p-4 space-y-3">
               {/* バイタル詳細（折りたたみ表示） */}
               {rec && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-rose-50 rounded-lg border border-rose-100">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-rose-50 rounded-lg border border-rose-100">
                   <div>
                     <p className="text-[10px] text-rose-500 font-medium">血圧 AM</p>
                     <p className="text-sm font-semibold text-gray-800">
@@ -277,15 +279,23 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-rose-500 font-medium">脈拍</p>
+                    <p className="text-[10px] text-rose-500 font-medium">脈拍 AM / PM</p>
                     <p className="text-sm font-semibold text-gray-800">
-                      {rec.pulse != null ? `${rec.pulse} 回/分` : '-'}
+                      {rec.pulse != null ? rec.pulse : '-'}
+                      {' / '}
+                      {rec.pulsePm != null ? rec.pulsePm : '-'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-rose-500 font-medium">体温</p>
+                    <p className="text-[10px] text-rose-500 font-medium">体温 AM</p>
                     <p className="text-sm font-semibold text-gray-800">
                       {rec.tempMorning != null ? `${rec.tempMorning} ℃` : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-rose-500 font-medium">体温 PM</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {rec.tempAfternoon != null ? `${rec.tempAfternoon} ℃` : '-'}
                     </p>
                   </div>
                 </div>

@@ -14,6 +14,7 @@ export type SessionPayload = {
   role: string
   facilityId: string
   facilityName: string
+  facilitySlug: string
 }
 
 export async function createSession(payload: SessionPayload) {

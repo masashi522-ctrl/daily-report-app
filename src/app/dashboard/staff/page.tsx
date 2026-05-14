@@ -1,12 +1,19 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
+import { headers } from 'next/headers'
 import StaffForm from './staff-form'
 import DeleteButton from './delete-button'
 import EditButton from './edit-button'
+import SlugForm from './slug-form'
 
 export default async function StaffPage() {
   const session = await requireSession()
   const isAdmin = session.role === 'ADMIN'
+
+  const headersList = await headers()
+  const host = headersList.get('host') ?? ''
+  const proto = host.startsWith('localhost') ? 'http' : 'https'
+  const baseUrl = `${proto}://${host}`
 
   const { data: staffList } = await supabase
     .from('Staff')
@@ -16,7 +23,7 @@ export default async function StaffPage() {
 
   const { data: facility } = await supabase
     .from('Facility')
-    .select('name, facilityCode')
+    .select('name, facilityCode, slug')
     .eq('id', session.facilityId)
     .maybeSingle()
 
@@ -41,6 +48,32 @@ export default async function StaffPage() {
             <p className="text-2xl font-bold tracking-widest text-blue-800 font-mono">{facility.facilityCode}</p>
           </div>
           <p className="text-xs text-blue-500 w-full">このコードを新しいスタッフに共有すると、<a href="/register" className="underline" target="_blank">/register</a> から施設に紐付けて登録できます</p>
+        </div>
+      )}
+
+      {/* 専用URL設定（管理者のみ） */}
+      {isAdmin && facility && (
+        <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex flex-col gap-3">
+          <div>
+            <p className="text-sm font-semibold text-teal-800">事業所専用URL</p>
+            <p className="text-xs text-teal-600 mt-0.5">
+              スタッフがブックマークして直接アクセスできる機能訓練ページのURLです
+            </p>
+          </div>
+          {facility.slug ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <a
+                href={`/${facility.slug}`}
+                target="_blank"
+                className="text-sm font-mono font-bold text-teal-700 underline break-all"
+              >
+                {baseUrl}/{facility.slug}
+              </a>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">URLが未設定です。下のフォームで設定してください。</p>
+          )}
+          <SlugForm currentSlug={facility.slug ?? null} />
         </div>
       )}
 

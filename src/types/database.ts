@@ -24,6 +24,7 @@ export interface Facility {
   id: string
   name: string
   facilityCode: string
+  slug: string | null
   createdAt: string
   updatedAt: string
 }

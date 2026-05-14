@@ -20,6 +20,13 @@ export default function SetupForm() {
           placeholder="〇〇デイサービスセンター" />
       </div>
       <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-gray-700">事業所URL名 *</label>
+        <input name="slug" type="text" required pattern="[a-z0-9\-]{2,30}"
+          className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-mono outline-none focus:border-blue-400 focus:bg-white transition"
+          placeholder="muraday" />
+        <p className="text-xs text-gray-400">英小文字・数字・ハイフンのみ（例: muraday）</p>
+      </div>
+      <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700">管理者名前</label>
         <input name="name" type="text" required
           className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white transition"

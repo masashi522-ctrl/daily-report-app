@@ -106,6 +106,7 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
     startTransition(async () => {
       await saveTrainingRecord({ residentId, date, id: rec?.id, ...d })
       setSaving(null)
+      setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
   }
 
@@ -119,6 +120,7 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
     startTransition(async () => {
       await saveAllTraining(list)
       setSavingAll(false)
+      setDrafts({})
     })
   }
 
