@@ -3,7 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
-import { requireSession, createSession } from '@/lib/session'
+import { requireSession } from '@/lib/session'
 
 export type StaffFormState = { error?: string; success?: string } | null
 
@@ -77,27 +77,3 @@ export async function deleteStaff(id: string) {
   revalidatePath('/dashboard/staff')
 }
 
-export async function updateFacilitySlug(_prevState: StaffFormState, formData: FormData): Promise<StaffFormState> {
-  const session = await requireSession()
-  if (session.role !== 'ADMIN') return { error: '管理者のみ変更できます' }
-
-  const slug = (formData.get('slug') as string)?.trim().toLowerCase()
-  if (!slug) return { error: 'URLを入力してください' }
-  if (!/^[a-z0-9-]{2,30}$/.test(slug)) return { error: '英小文字・数字・ハイフンのみ、2〜30文字で入力してください' }
-
-  const { error } = await supabase
-    .from('Facility')
-    .update({ slug, updatedAt: new Date().toISOString() })
-    .eq('id', session.facilityId)
-
-  if (error) {
-    if (error.message.includes('duplicate') || error.message.includes('unique')) {
-      return { error: 'このURLはすでに他の施設が使用しています' }
-    }
-    return { error: '更新に失敗しました: ' + error.message }
-  }
-
-  await createSession({ ...session, facilitySlug: slug })
-  revalidatePath('/dashboard/staff')
-  return { success: `専用URL /${slug} を設定しました` }
-}
