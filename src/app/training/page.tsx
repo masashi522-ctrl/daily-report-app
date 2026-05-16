@@ -29,10 +29,28 @@ export default async function TrainingPage({
   // 機能訓練対象チェックがある利用者
   const trainingResidents = (allResidents ?? []).filter((r: Resident) => !!r.trainingDays)
 
-  // 機能訓練対象 かつ 本日の利用曜日に該当する利用者のみ表示
-  const residents = trainingResidents.filter((r: Resident) =>
+  // 機能訓練対象 かつ 本日の利用曜日に該当する利用者
+  const regularResidents = trainingResidents.filter((r: Resident) =>
     !r.attendanceDays || r.attendanceDays.split(',').map(Number).includes(todayDow)
   )
+
+  // 臨時利用者の取得
+  const allResidentIds = (allResidents ?? []).map(r => r.id)
+  const { data: tempRecords } = allResidentIds.length > 0
+    ? await supabase
+        .from('DailyRecord')
+        .select('residentId')
+        .eq('date', today)
+        .eq('isTemporaryAttendance', true)
+        .in('residentId', allResidentIds)
+    : { data: [] }
+
+  const tempIds = new Set((tempRecords ?? []).map((r: { residentId: string }) => r.residentId))
+  const temporaryResidents = (allResidents ?? []).filter((r: Resident) =>
+    tempIds.has(r.id) && !regularResidents.some(rr => rr.id === r.id)
+  )
+
+  const residents = [...regularResidents, ...temporaryResidents]
 
   const residentIds = residents.map(r => r.id)
   const { data: records } = residentIds.length > 0

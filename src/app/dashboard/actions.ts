@@ -88,3 +88,53 @@ export async function saveAllRecords(
   await Promise.all(records.map(r => saveRecord(r)))
   revalidatePath('/dashboard')
 }
+
+export async function addTemporaryAttendance({ residentId, date }: { residentId: string; date: string }) {
+  await requireSession()
+
+  const { data: rows } = await supabase
+    .from('DailyRecord').select('id').eq('date', date).eq('residentId', residentId).limit(1)
+  const existing = rows?.[0] ?? null
+
+  if (existing) {
+    await supabase.from('DailyRecord').update({ isTemporaryAttendance: true, updatedAt: new Date().toISOString() }).eq('id', existing.id)
+  } else {
+    await supabase.from('DailyRecord').insert({
+      id: crypto.randomUUID(),
+      residentId,
+      date,
+      isTemporaryAttendance: true,
+      bathing: 'NOT_APPLICABLE',
+      trainingDone: false,
+      medicationMorning: false,
+      medicationBeforeLunch: false,
+      medicationAfterLunch: false,
+      medicationBeforeEvening: false,
+      medicationEvening: false,
+      oralCare: false,
+      isAbsent: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/bathing')
+  revalidatePath('/training')
+}
+
+export async function removeTemporaryAttendance({ residentId, date }: { residentId: string; date: string }) {
+  await requireSession()
+
+  const { data: rows } = await supabase
+    .from('DailyRecord').select('id').eq('date', date).eq('residentId', residentId).limit(1)
+  const existing = rows?.[0] ?? null
+
+  if (existing) {
+    await supabase.from('DailyRecord').update({ isTemporaryAttendance: false, updatedAt: new Date().toISOString() }).eq('id', existing.id)
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/bathing')
+  revalidatePath('/training')
+}

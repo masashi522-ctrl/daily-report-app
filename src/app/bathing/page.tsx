@@ -26,11 +26,29 @@ export default async function BathingPage({
     .order('sortOrder')
     .order('name')
 
-  // bathingDays に今日の曜日が含まれる利用者だけ表示
-  const residents = (allResidents ?? []).filter((r: Resident) => {
+  // bathingDays に今日の曜日が含まれる利用者
+  const regularResidents = (allResidents ?? []).filter((r: Resident) => {
     if (!r.bathingDays) return false
     return r.bathingDays.split(',').map(Number).includes(todayDow)
   })
+
+  // 臨時利用者の取得
+  const allResidentIds = (allResidents ?? []).map(r => r.id)
+  const { data: tempRecords } = allResidentIds.length > 0
+    ? await supabase
+        .from('DailyRecord')
+        .select('residentId')
+        .eq('date', today)
+        .eq('isTemporaryAttendance', true)
+        .in('residentId', allResidentIds)
+    : { data: [] }
+
+  const tempIds = new Set((tempRecords ?? []).map((r: { residentId: string }) => r.residentId))
+  const temporaryResidents = (allResidents ?? []).filter((r: Resident) =>
+    tempIds.has(r.id) && !regularResidents.some(rr => rr.id === r.id)
+  )
+
+  const residents = [...regularResidents, ...temporaryResidents]
 
   const residentIds = residents.map(r => r.id)
   const { data: records } = residentIds.length > 0
@@ -64,7 +82,7 @@ export default async function BathingPage({
       {residents.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center text-gray-400">
           <p className="text-base">{dowLabel}曜日の入浴対象者がいません</p>
-          <p className="text-xs mt-2">利用者管理で「入浴対象日」を設定してください</p>
+          <p className="text-xs mt-2">利用者管理で「入浴対象日」を設定するか、ダッシュボードから臨時利用者を追加してください</p>
           <a href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</a>
         </div>
       ) : (

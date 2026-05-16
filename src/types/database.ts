@@ -127,6 +127,8 @@ export interface DailyRecord {
   trainingSkipReason: string | null
   trainingSkipDetail: string | null
   trainingNote: string | null
+  // 臨時利用
+  isTemporaryAttendance: boolean
   createdAt: string
   updatedAt: string
 }

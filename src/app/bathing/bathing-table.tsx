@@ -211,6 +211,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
           <div className="flex flex-wrap gap-1 w-full">
             {nameButtonList.map(r => {
               const isAbsent = localRecords[r.id]?.isAbsent === true
+              const isTemp = localRecords[r.id]?.isTemporaryAttendance === true
               const selected = selectedIds.has(r.id)
               return (
                 <button key={r.id} onClick={() => toggleResident(r.id)}
@@ -222,6 +223,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
                       : 'bg-white text-gray-600 border-gray-200 hover:border-teal-400 hover:text-teal-600'
                   }`}>
                   {isAbsent && <span className="text-[9px]">欠</span>}
+                  {isTemp && !isAbsent && <span className="text-[9px] text-orange-500">臨</span>}
                   {r.name}
                 </button>
               )
@@ -269,7 +271,12 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
             <div className="flex items-center justify-between px-4 py-2.5"
               style={{ background: 'linear-gradient(135deg, #ccfbf1 0%, #cffafe 100%)' }}>
               <div>
-                <span className="font-semibold text-teal-900">{resident.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-teal-900">{resident.name}</span>
+                  {rec?.isTemporaryAttendance && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-semibold border border-orange-200">臨時</span>
+                  )}
+                </div>
                 {vital && (
                   <p className="text-xs text-teal-700 mt-0.5">{vital}</p>
                 )}

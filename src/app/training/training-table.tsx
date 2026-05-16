@@ -208,6 +208,7 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
           <div className="flex flex-wrap gap-1 w-full">
             {nameButtonList.map(r => {
               const isAbsent = localRecords[r.id]?.isAbsent === true
+              const isTemp = localRecords[r.id]?.isTemporaryAttendance === true
               const selected = selectedIds.has(r.id)
               return (
                 <button key={r.id} onClick={() => toggleResident(r.id)}
@@ -219,6 +220,7 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
                       : 'bg-white text-gray-600 border-gray-200 hover:border-teal-400 hover:text-teal-600'
                   }`}>
                   {isAbsent && <span className="text-[9px]">欠</span>}
+                  {isTemp && !isAbsent && <span className="text-[9px] text-orange-500">臨</span>}
                   {r.name}
                 </button>
               )
@@ -266,6 +268,9 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
               style={{ background: 'linear-gradient(135deg, #ccfbf1 0%, #cffafe 100%)' }}>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-teal-900">{resident.name}</span>
+                {rec?.isTemporaryAttendance && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-semibold border border-orange-200">臨時</span>
+                )}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                   d.trainingDone ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
                 }`}>{d.trainingDone ? '実施済' : '未実施'}</span>
