@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { type Resident, type DailyRecord } from '@/types/database'
 import { saveBathingRecord, saveAllBathing } from './actions'
 
@@ -49,6 +49,8 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
   const [searchText, setSearchText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [localRecords, setLocalRecords] = useState<Record<string, DailyRecord>>(recordMap)
+  useEffect(() => { setLocalRecords(recordMap) }, [recordMap])
 
   function matchRow(r: Resident) {
     if (!gojuuonRow) return true
@@ -81,7 +83,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
   }
 
   function getDraft(id: string): Draft {
-    const rec = recordMap[id]
+    const rec = localRecords[id]
     return drafts[id] ?? {
       bathing: rec?.bathing ?? 'NOT_APPLICABLE',
       bathingSkipReason: rec?.bathingSkipReason ?? null,
@@ -97,10 +99,14 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
   function handleSave(residentId: string) {
     setSaving(residentId)
     const d = getDraft(residentId)
-    const rec = recordMap[residentId]
+    const rec = localRecords[residentId]
     startTransition(async () => {
       await saveBathingRecord({ residentId, date, id: rec?.id, ...d })
       setSaving(null)
+      setLocalRecords(prev => ({
+        ...prev,
+        [residentId]: { ...(prev[residentId] ?? {}), ...d, updatedAt: new Date().toISOString() } as DailyRecord,
+      }))
       setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
   }
@@ -109,12 +115,24 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
     setSavingAll(true)
     const list = filtered.map(r => {
       const d = getDraft(r.id)
-      const rec = recordMap[r.id]
+      const rec = localRecords[r.id]
       return { residentId: r.id, date, id: rec?.id, ...d }
     })
     startTransition(async () => {
       await saveAllBathing(list)
       setSavingAll(false)
+      const updates: Record<string, DailyRecord> = {}
+      for (const item of list) {
+        updates[item.residentId] = {
+          ...(localRecords[item.residentId] ?? {}),
+          bathing: item.bathing ?? 'NOT_APPLICABLE',
+          bathingSkipReason: item.bathingSkipReason ?? null,
+          bathingSkipDetail: item.bathingSkipDetail ?? null,
+          bathingNote: item.bathingNote ?? null,
+          updatedAt: new Date().toISOString(),
+        } as DailyRecord
+      }
+      setLocalRecords(prev => ({ ...prev, ...updates }))
       setDrafts({})
     })
   }
@@ -131,7 +149,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
 
   const SaveBtn = ({ id }: { id: string }) => {
     const isDirty = !!drafts[id]
-    const isSaved = !!recordMap[id]
+    const isSaved = !!localRecords[id]
     return (
       <button onClick={() => handleSave(id)} disabled={saving === id || savingAll}
         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -192,7 +210,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
         {nameButtonList.length > 0 ? (
           <div className="flex flex-wrap gap-1 w-full">
             {nameButtonList.map(r => {
-              const isAbsent = recordMap[r.id]?.isAbsent === true
+              const isAbsent = localRecords[r.id]?.isAbsent === true
               const selected = selectedIds.has(r.id)
               return (
                 <button key={r.id} onClick={() => toggleResident(r.id)}
@@ -224,7 +242,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
 
       {filtered.map(resident => {
         const d = getDraft(resident.id)
-        const rec = recordMap[resident.id]
+        const rec = localRecords[resident.id]
         const vital = vitalSummary(rec)
         const notDone = d.bathing === 'NOT_DONE'
         const isAbsent = rec?.isAbsent === true

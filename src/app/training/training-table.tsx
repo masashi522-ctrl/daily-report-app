@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { type Resident, type DailyRecord } from '@/types/database'
 import { saveTrainingRecord, saveAllTraining } from './actions'
 
@@ -52,9 +52,11 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
   const [searchText, setSearchText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [localRecords, setLocalRecords] = useState<Record<string, DailyRecord>>(recordMap)
+  useEffect(() => { setLocalRecords(recordMap) }, [recordMap])
 
   function getDraft(id: string): Draft {
-    const rec = recordMap[id]
+    const rec = localRecords[id]
     return drafts[id] ?? {
       trainingDone: rec?.trainingDone ?? false,
       trainingSkipReason: rec?.trainingSkipReason ?? null,
@@ -102,10 +104,14 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
   function handleSave(residentId: string) {
     setSaving(residentId)
     const d = getDraft(residentId)
-    const rec = recordMap[residentId]
+    const rec = localRecords[residentId]
     startTransition(async () => {
       await saveTrainingRecord({ residentId, date, id: rec?.id, ...d })
       setSaving(null)
+      setLocalRecords(prev => ({
+        ...prev,
+        [residentId]: { ...(prev[residentId] ?? {}), ...d, updatedAt: new Date().toISOString() } as DailyRecord,
+      }))
       setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
   }
@@ -114,19 +120,33 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
     setSavingAll(true)
     const list = filtered.map(r => {
       const d = getDraft(r.id)
-      const rec = recordMap[r.id]
+      const rec = localRecords[r.id]
       return { residentId: r.id, date, id: rec?.id, ...d }
     })
     startTransition(async () => {
       await saveAllTraining(list)
       setSavingAll(false)
+      const updates: Record<string, DailyRecord> = {}
+      for (const item of list) {
+        updates[item.residentId] = {
+          ...(localRecords[item.residentId] ?? {}),
+          trainingDone: item.trainingDone ?? false,
+          trainingSkipReason: item.trainingSkipReason ?? null,
+          trainingSkipDetail: item.trainingSkipDetail ?? null,
+          trainingNote: item.trainingNote ?? null,
+          functionalTrainingStart: item.functionalTrainingStart ?? null,
+          functionalTrainingEnd: item.functionalTrainingEnd ?? null,
+          updatedAt: new Date().toISOString(),
+        } as DailyRecord
+      }
+      setLocalRecords(prev => ({ ...prev, ...updates }))
       setDrafts({})
     })
   }
 
   const SaveBtn = ({ id }: { id: string }) => {
     const isDirty = !!drafts[id]
-    const isSaved = !!recordMap[id]
+    const isSaved = !!localRecords[id]
     return (
       <button onClick={() => handleSave(id)} disabled={saving === id || savingAll}
         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -187,7 +207,7 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
         {nameButtonList.length > 0 ? (
           <div className="flex flex-wrap gap-1 w-full">
             {nameButtonList.map(r => {
-              const isAbsent = recordMap[r.id]?.isAbsent === true
+              const isAbsent = localRecords[r.id]?.isAbsent === true
               const selected = selectedIds.has(r.id)
               return (
                 <button key={r.id} onClick={() => toggleResident(r.id)}
@@ -220,7 +240,7 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
       {filtered.map(resident => {
         const d = getDraft(resident.id)
         const notDone = !d.trainingDone
-        const rec = recordMap[resident.id]
+        const rec = localRecords[resident.id]
         const isAbsent = rec?.isAbsent === true
 
         if (isAbsent) {
