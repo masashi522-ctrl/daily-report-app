@@ -64,10 +64,10 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
     const merged = {
       ...record,
       bathing: data.bathing !== undefined ? record.bathing : existing.bathing,
-      trainingDone: data.trainingDone !== undefined ? record.trainingDone : existing.trainingDone,
-      trainingSkipReason: data.trainingSkipReason !== undefined ? record.trainingSkipReason : existing.trainingSkipReason,
-      trainingSkipDetail: data.trainingSkipDetail !== undefined ? record.trainingSkipDetail : existing.trainingSkipDetail,
-      trainingNote: data.trainingNote !== undefined ? record.trainingNote : existing.trainingNote,
+      trainingDone: data.trainingDone !== undefined ? (data.trainingDone ?? false) : existing.trainingDone,
+      trainingSkipReason: data.trainingSkipReason !== undefined ? (data.trainingSkipReason ?? null) : existing.trainingSkipReason,
+      trainingSkipDetail: data.trainingSkipDetail !== undefined ? (data.trainingSkipDetail ?? null) : existing.trainingSkipDetail,
+      trainingNote: data.trainingNote !== undefined ? (data.trainingNote ?? null) : existing.trainingNote,
     }
     await supabase.from('DailyRecord').update(merged).eq('id', existing.id)
   } else {
