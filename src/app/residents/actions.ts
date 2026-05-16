@@ -19,13 +19,14 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
   const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
-  const attendanceDays      = (formData.getAll('attendanceDays') as string[]).join(',')
-  const bathingDays         = (formData.getAll('bathingDays')    as string[]).join(',')
-  const trainingDays        = formData.get('trainingTarget') ? '1' : null
-  const careLevel           = (formData.get('careLevel') as string) || null
-  const serviceStartTime    = (formData.get('serviceStartTime') as string) || null
-  const serviceEndTime      = (formData.get('serviceEndTime') as string) || null
-  const serviceTimeCategory = (formData.get('serviceTimeCategory') as string) || null
+  const attendanceDays          = (formData.getAll('attendanceDays') as string[]).join(',')
+  const bathingDays             = (formData.getAll('bathingDays')    as string[]).join(',')
+  const trainingDays            = formData.get('trainingTarget') ? '1' : null
+  const careLevel               = (formData.get('careLevel') as string) || null
+  const serviceStartTime        = (formData.get('serviceStartTime') as string) || null
+  const serviceEndTime          = (formData.get('serviceEndTime') as string) || null
+  const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
+  const weightMeasureEveryVisit = formData.get('weightMeasureEveryVisit') === '1'
 
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
@@ -43,6 +44,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     serviceStartTime,
     serviceEndTime,
     serviceTimeCategory,
+    weightMeasureEveryVisit,
     facilityId: session.facilityId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -69,13 +71,14 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
   const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
-  const attendanceDays      = (formData.getAll('attendanceDays') as string[]).join(',')
-  const bathingDays         = (formData.getAll('bathingDays')    as string[]).join(',')
-  const trainingDays        = formData.get('trainingTarget') ? '1' : null
-  const careLevel           = (formData.get('careLevel') as string) || null
-  const serviceStartTime    = (formData.get('serviceStartTime') as string) || null
-  const serviceEndTime      = (formData.get('serviceEndTime') as string) || null
-  const serviceTimeCategory = (formData.get('serviceTimeCategory') as string) || null
+  const attendanceDays          = (formData.getAll('attendanceDays') as string[]).join(',')
+  const bathingDays             = (formData.getAll('bathingDays')    as string[]).join(',')
+  const trainingDays            = formData.get('trainingTarget') ? '1' : null
+  const careLevel               = (formData.get('careLevel') as string) || null
+  const serviceStartTime        = (formData.get('serviceStartTime') as string) || null
+  const serviceEndTime          = (formData.get('serviceEndTime') as string) || null
+  const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
+  const weightMeasureEveryVisit = formData.get('weightMeasureEveryVisit') === '1'
 
   if (!name) return { error: '名前は必須です' }
 
@@ -93,6 +96,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     serviceStartTime,
     serviceEndTime,
     serviceTimeCategory,
+    weightMeasureEveryVisit,
     updatedAt: new Date().toISOString(),
   }).eq('id', id).eq('facilityId', session.facilityId)
 

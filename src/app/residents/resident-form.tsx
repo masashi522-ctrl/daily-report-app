@@ -92,6 +92,14 @@ export default function ResidentForm() {
         </label>
       </div>
       <div>
+        <label className="text-xs font-medium text-gray-700 block mb-1">体重測定</label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="weightMeasureEveryVisit" value="1" className="w-4 h-4 accent-teal-600" />
+          <span className="text-sm text-gray-700">毎回利用時に体重測定</span>
+          <span className="text-gray-400 font-normal text-[11px]">（利用日に体重ページで強調表示）</span>
+        </label>
+      </div>
+      <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">要介護区分</label>
         <select name="careLevel"
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">

@@ -145,6 +145,7 @@ export default function WeightClient({
   weightRecords,
   today,
   measuredIds,
+  todayRequiredIds,
 }: {
   residents: Resident[]
   selectedResidentId: string
@@ -152,6 +153,7 @@ export default function WeightClient({
   weightRecords: { date: string; weight: number }[]
   today: string
   measuredIds: Set<string>
+  todayRequiredIds: Set<string>
 }) {
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [searchText, setSearchText]  = useState('')
@@ -193,12 +195,19 @@ export default function WeightClient({
     setSearchText('')
   }
 
-  const unmeasuredCount = residents.filter(r => !measuredIds.has(r.id)).length
+  const unmeasuredCount  = residents.filter(r => !measuredIds.has(r.id)).length
+  const todayRequiredCount = todayRequiredIds.size
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-xl font-bold text-gray-800">体重管理</h2>
+        {todayRequiredCount > 0 && (
+          <span className="flex items-center gap-1.5 bg-red-50 border border-red-300 text-red-700 text-xs font-medium px-3 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+            今日要測定 {todayRequiredCount}名
+          </span>
+        )}
         {unmeasuredCount > 0 && (
           <span className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-700 text-xs font-medium px-3 py-1 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
@@ -248,23 +257,30 @@ export default function WeightClient({
               <p className="text-xs text-gray-400 text-center py-6">該当なし</p>
             ) : (
               filteredResidents.map(r => {
-                const unmeasured = !measuredIds.has(r.id)
+                const needsToday  = todayRequiredIds.has(r.id)
+                const unmeasured  = !measuredIds.has(r.id)
                 return (
                   <a key={r.id} href={`/weight?residentId=${r.id}`}
                     className={`flex items-center justify-between px-4 py-2.5 border-b last:border-0 transition text-sm ${
                       r.id === selectedResidentId
                         ? 'bg-teal-50 text-teal-800 font-semibold'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        : needsToday
+                          ? 'bg-red-50 text-gray-800 hover:bg-red-100'
+                          : 'text-gray-700 hover:bg-gray-50'
                     }`}>
                     <span className="flex items-center gap-2 min-w-0">
                       <span>{r.name}</span>
                       {r.furigana && <span className="text-[10px] text-gray-400 truncate">{r.furigana}</span>}
                     </span>
-                    {unmeasured && (
+                    {needsToday ? (
+                      <span className="shrink-0 text-[10px] font-medium text-red-600 bg-red-50 border border-red-300 rounded-full px-1.5 py-0.5">
+                        今日要測定
+                      </span>
+                    ) : unmeasured ? (
                       <span className="shrink-0 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
                         未測定
                       </span>
-                    )}
+                    ) : null}
                   </a>
                 )
               })

@@ -72,6 +72,7 @@ export interface Resident {
   attendanceDays: string | null
   bathingDays: string | null
   trainingDays: string | null
+  weightMeasureEveryVisit: boolean
   careLevel: string | null
   serviceStartTime: string | null
   serviceEndTime: string | null
