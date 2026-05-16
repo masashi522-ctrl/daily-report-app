@@ -23,7 +23,7 @@ export default async function TrainingPage({
     .select('*')
     .eq('isActive', true)
     .eq('facilityId', session.facilityId)
-    .order('sortOrder')
+    .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
 
   // 機能訓練対象チェックがある利用者
