@@ -125,9 +125,11 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     return row ? row.chars.includes(searchChar) : true
   }
 
-  // 今日の曜日登録者（曜日フィルタのみ）
+  // 今日の曜日登録者（臨時利用者も含む）
   const scheduledToday = residents.filter(r =>
-    !todayOnly || !r.attendanceDays ||
+    !todayOnly ||
+    recordMap[r.id]?.isTemporaryAttendance === true ||
+    !r.attendanceDays ||
     r.attendanceDays.split(',').map(Number).includes(todayNum)
   )
 
@@ -350,6 +352,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
             {nameButtonList.map(r => {
               const absent = getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
               const incomplete = !absent && getMissing(r.id).length > 0
+              const isTemp = recordMap[r.id]?.isTemporaryAttendance === true
               const selected = selectedIds.has(r.id)
               return (
                 <button key={r.id} onClick={() => toggleResident(r.id)}
@@ -361,6 +364,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
                   }`}>
                   {absent && <span className="text-[9px]">欠</span>}
+                  {isTemp && !absent && <span className="text-[9px] text-orange-500">臨</span>}
                   {incomplete && !absent && <span className={selected ? 'text-amber-200' : 'text-amber-500'}>⚠</span>}
                   {r.name}
                 </button>
@@ -423,6 +427,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
           const isAbsent = d.isAbsent ?? false
           const missing = getMissing(resident.id)
           const hasVital = d.bpSystolic != null || d.tempMorning != null
+          const isTemp = recordMap[resident.id]?.isTemporaryAttendance === true
           return (
             <div key={resident.id} id={`resident-${resident.id}`} className={`rounded-xl border shadow-sm overflow-hidden ${isAbsent ? 'border-gray-300 opacity-70' : 'border-gray-200 bg-white'}`}>
               <div className="px-4 py-2.5 flex items-center justify-between"
@@ -430,6 +435,9 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`font-semibold ${isAbsent ? 'text-gray-400 line-through' : 'text-teal-900'}`}>{resident.name}</span>
+                    {isTemp && !isAbsent && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-semibold border border-orange-200">臨時</span>
+                    )}
                     {isAbsent ? (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-200 text-gray-500">欠席</span>
                     ) : (
@@ -630,6 +638,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               {filtered.map((resident, i) => {
                 const d = getDraft(resident.id)
                 const isAbsent = d.isAbsent ?? false
+                const isTemp = recordMap[resident.id]?.isTemporaryAttendance === true
                 const base = i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
                 const missing = getMissing(resident.id)
                 const rowBg = isAbsent ? 'bg-slate-100/80'
@@ -640,6 +649,9 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     {/* 名前 */}
                     <td className={td}>
                       <div className={`font-semibold leading-tight text-[11px] truncate ${isAbsent ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{resident.name}</div>
+                      {isTemp && !isAbsent && (
+                        <div className="text-[9px] text-orange-500 font-medium">臨時</div>
+                      )}
                       {isAbsent ? (
                         <div className="text-[9px] text-gray-400 mt-0.5">欠席</div>
                       ) : (
