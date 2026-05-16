@@ -29,19 +29,22 @@ export default async function DashboardPage({
 
   const { data: records } = residentIds.length > 0
     ? await supabase.from('DailyRecord').select('*').eq('date', today).in('residentId', residentIds)
+        .order('updatedAt', { ascending: false })
     : { data: [] }
 
   const recordMap = new Map<string, DailyRecord>()
-  records?.forEach(r => recordMap.set(r.residentId, r))
+  for (const r of records ?? []) {
+    if (!recordMap.has(r.residentId)) recordMap.set(r.residentId, r)
+  }
 
   const displayDate = new Date(today + 'T00:00:00')
   const dayNames = ['日', '月', '火', '水', '木', '金', '土']
   const todayDow = displayDate.getDay()
   const dateLabel = `${displayDate.getFullYear()}年${displayDate.getMonth() + 1}月${displayDate.getDate()}日（${dayNames[todayDow]}）`
 
-  // 本日スケジュール外（attendanceDays に今日が含まれない）の利用者 → 臨時追加候補
+  // 本日スケジュール外の利用者 → 臨時追加候補（曜日未設定 or 今日が含まれない）
   const nonScheduledResidents = (residents ?? []).filter((r: Resident) => {
-    if (!r.attendanceDays) return false
+    if (!r.attendanceDays) return true
     return !r.attendanceDays.split(',').map(Number).includes(todayDow)
   })
 

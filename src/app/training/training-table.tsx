@@ -106,11 +106,13 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
     const d = getDraft(residentId)
     const rec = localRecords[residentId]
     startTransition(async () => {
-      await saveTrainingRecord({ residentId, date, id: rec?.id, ...d })
+      const saved = await saveTrainingRecord({ residentId, date, id: rec?.id, ...d })
       setSaving(null)
       setLocalRecords(prev => ({
         ...prev,
-        [residentId]: { ...(prev[residentId] ?? {}), ...d, updatedAt: new Date().toISOString() } as DailyRecord,
+        [residentId]: saved
+          ? { ...(prev[residentId] ?? {}), ...saved } as DailyRecord
+          : { ...(prev[residentId] ?? {}), ...d, updatedAt: new Date().toISOString() } as DailyRecord,
       }))
       setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
@@ -124,20 +126,24 @@ export default function TrainingTable({ residents, recordMap, date }: Props) {
       return { residentId: r.id, date, id: rec?.id, ...d }
     })
     startTransition(async () => {
-      await saveAllTraining(list)
+      const results = await saveAllTraining(list)
       setSavingAll(false)
       const updates: Record<string, DailyRecord> = {}
-      for (const item of list) {
-        updates[item.residentId] = {
-          ...(localRecords[item.residentId] ?? {}),
-          trainingDone: item.trainingDone ?? false,
-          trainingSkipReason: item.trainingSkipReason ?? null,
-          trainingSkipDetail: item.trainingSkipDetail ?? null,
-          trainingNote: item.trainingNote ?? null,
-          functionalTrainingStart: item.functionalTrainingStart ?? null,
-          functionalTrainingEnd: item.functionalTrainingEnd ?? null,
-          updatedAt: new Date().toISOString(),
-        } as DailyRecord
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i]
+        const saved = results[i]
+        updates[item.residentId] = saved
+          ? { ...(localRecords[item.residentId] ?? {}), ...saved } as DailyRecord
+          : {
+              ...(localRecords[item.residentId] ?? {}),
+              trainingDone: item.trainingDone ?? false,
+              trainingSkipReason: item.trainingSkipReason ?? null,
+              trainingSkipDetail: item.trainingSkipDetail ?? null,
+              trainingNote: item.trainingNote ?? null,
+              functionalTrainingStart: item.functionalTrainingStart ?? null,
+              functionalTrainingEnd: item.functionalTrainingEnd ?? null,
+              updatedAt: new Date().toISOString(),
+            } as DailyRecord
       }
       setLocalRecords(prev => ({ ...prev, ...updates }))
       setDrafts({})

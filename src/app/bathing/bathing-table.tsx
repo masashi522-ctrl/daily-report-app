@@ -101,11 +101,13 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
     const d = getDraft(residentId)
     const rec = localRecords[residentId]
     startTransition(async () => {
-      await saveBathingRecord({ residentId, date, id: rec?.id, ...d })
+      const saved = await saveBathingRecord({ residentId, date, id: rec?.id, ...d })
       setSaving(null)
       setLocalRecords(prev => ({
         ...prev,
-        [residentId]: { ...(prev[residentId] ?? {}), ...d, updatedAt: new Date().toISOString() } as DailyRecord,
+        [residentId]: saved
+          ? { ...(prev[residentId] ?? {}), ...saved } as DailyRecord
+          : { ...(prev[residentId] ?? {}), ...d, updatedAt: new Date().toISOString() } as DailyRecord,
       }))
       setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
@@ -119,18 +121,22 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
       return { residentId: r.id, date, id: rec?.id, ...d }
     })
     startTransition(async () => {
-      await saveAllBathing(list)
+      const results = await saveAllBathing(list)
       setSavingAll(false)
       const updates: Record<string, DailyRecord> = {}
-      for (const item of list) {
-        updates[item.residentId] = {
-          ...(localRecords[item.residentId] ?? {}),
-          bathing: item.bathing ?? 'NOT_APPLICABLE',
-          bathingSkipReason: item.bathingSkipReason ?? null,
-          bathingSkipDetail: item.bathingSkipDetail ?? null,
-          bathingNote: item.bathingNote ?? null,
-          updatedAt: new Date().toISOString(),
-        } as DailyRecord
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i]
+        const saved = results[i]
+        updates[item.residentId] = saved
+          ? { ...(localRecords[item.residentId] ?? {}), ...saved } as DailyRecord
+          : {
+              ...(localRecords[item.residentId] ?? {}),
+              bathing: item.bathing ?? 'NOT_APPLICABLE',
+              bathingSkipReason: item.bathingSkipReason ?? null,
+              bathingSkipDetail: item.bathingSkipDetail ?? null,
+              bathingNote: item.bathingNote ?? null,
+              updatedAt: new Date().toISOString(),
+            } as DailyRecord
       }
       setLocalRecords(prev => ({ ...prev, ...updates }))
       setDrafts({})

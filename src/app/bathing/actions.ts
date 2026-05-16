@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import type { DailyRecord } from '@/types/database'
 
 export interface BathingDraft {
   residentId: string
@@ -14,7 +15,7 @@ export interface BathingDraft {
   bathingNote?: string | null
 }
 
-export async function saveBathingRecord(draft: BathingDraft) {
+export async function saveBathingRecord(draft: BathingDraft): Promise<DailyRecord | null> {
   await requireSession()
 
   const payload = {
@@ -25,42 +26,55 @@ export async function saveBathingRecord(draft: BathingDraft) {
     updatedAt: new Date().toISOString(),
   }
 
-  // Look up the existing record by date+residentId to get a reliable id
+  // Pick the most-recently-updated record to avoid acting on stale duplicates
   const { data: rows } = await supabase
     .from('DailyRecord')
     .select('id')
     .eq('date', draft.date)
     .eq('residentId', draft.residentId)
+    .order('updatedAt', { ascending: false })
     .limit(1)
   const existing = rows?.[0] ?? null
 
   if (existing) {
-    const { error } = await supabase.from('DailyRecord').update(payload).eq('id', existing.id)
+    const { data: saved, error } = await supabase
+      .from('DailyRecord')
+      .update(payload)
+      .eq('id', existing.id)
+      .select('*')
+      .single()
     if (error) console.error('[bathing UPDATE error]', error)
+    revalidatePath('/bathing')
+    return (saved as DailyRecord) ?? null
   } else {
-    const { error } = await supabase.from('DailyRecord').insert({
-      ...payload,
-      id: crypto.randomUUID(),
-      residentId: draft.residentId,
-      date: draft.date,
-      trainingDone: false,
-      medicationMorning: false,
-      medicationBeforeLunch: false,
-      medicationAfterLunch: false,
-      medicationBeforeEvening: false,
-      medicationEvening: false,
-      oralCare: false,
-      isAbsent: false,
-      createdAt: new Date().toISOString(),
-    })
+    const { data: saved, error } = await supabase
+      .from('DailyRecord')
+      .insert({
+        ...payload,
+        id: crypto.randomUUID(),
+        residentId: draft.residentId,
+        date: draft.date,
+        trainingDone: false,
+        medicationMorning: false,
+        medicationBeforeLunch: false,
+        medicationAfterLunch: false,
+        medicationBeforeEvening: false,
+        medicationEvening: false,
+        oralCare: false,
+        isAbsent: false,
+        createdAt: new Date().toISOString(),
+      })
+      .select('*')
+      .single()
     if (error) console.error('[bathing INSERT error]', error)
+    revalidatePath('/bathing')
+    return (saved as DailyRecord) ?? null
   }
-
-  revalidatePath('/bathing')
 }
 
-export async function saveAllBathing(drafts: BathingDraft[]) {
+export async function saveAllBathing(drafts: BathingDraft[]): Promise<(DailyRecord | null)[]> {
   await requireSession()
-  await Promise.all(drafts.map(saveBathingRecord))
+  const results = await Promise.all(drafts.map(saveBathingRecord))
   revalidatePath('/bathing')
+  return results
 }

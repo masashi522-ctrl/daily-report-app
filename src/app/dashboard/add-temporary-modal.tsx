@@ -13,6 +13,7 @@ interface Props {
 export default function AddTemporaryModal({ date, nonScheduledResidents, temporaryResidentIds }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
   const temporarySet = new Set(temporaryResidentIds)
@@ -21,14 +22,17 @@ export default function AddTemporaryModal({ date, nonScheduledResidents, tempora
 
   function handleAdd(residentId: string) {
     setPendingId(residentId)
+    setErrorMsg(null)
     startTransition(async () => {
-      await addTemporaryAttendance({ residentId, date })
+      const result = await addTemporaryAttendance({ residentId, date })
       setPendingId(null)
+      if (!result.success) setErrorMsg(result.error ?? '追加に失敗しました')
     })
   }
 
   function handleRemove(residentId: string) {
     setPendingId(residentId)
+    setErrorMsg(null)
     startTransition(async () => {
       await removeTemporaryAttendance({ residentId, date })
       setPendingId(null)
@@ -66,6 +70,9 @@ export default function AddTemporaryModal({ date, nonScheduledResidents, tempora
             </div>
 
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+              {errorMsg && (
+                <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">{errorMsg}</div>
+              )}
               {/* 本日追加済み */}
               {currentTemporary.length > 0 && (
                 <div>

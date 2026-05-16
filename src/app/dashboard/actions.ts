@@ -89,17 +89,25 @@ export async function saveAllRecords(
   revalidatePath('/dashboard')
 }
 
-export async function addTemporaryAttendance({ residentId, date }: { residentId: string; date: string }) {
+export async function addTemporaryAttendance({ residentId, date }: { residentId: string; date: string }): Promise<{ success: boolean; error?: string }> {
   await requireSession()
 
   const { data: rows } = await supabase
-    .from('DailyRecord').select('id').eq('date', date).eq('residentId', residentId).limit(1)
+    .from('DailyRecord').select('id').eq('date', date).eq('residentId', residentId)
+    .order('updatedAt', { ascending: false }).limit(1)
   const existing = rows?.[0] ?? null
 
   if (existing) {
-    await supabase.from('DailyRecord').update({ isTemporaryAttendance: true, updatedAt: new Date().toISOString() }).eq('id', existing.id)
+    const { error } = await supabase
+      .from('DailyRecord')
+      .update({ isTemporaryAttendance: true, updatedAt: new Date().toISOString() })
+      .eq('id', existing.id)
+    if (error) {
+      console.error('[addTemporary UPDATE error]', error)
+      return { success: false, error: error.message }
+    }
   } else {
-    await supabase.from('DailyRecord').insert({
+    const { error } = await supabase.from('DailyRecord').insert({
       id: crypto.randomUUID(),
       residentId,
       date,
@@ -116,11 +124,16 @@ export async function addTemporaryAttendance({ residentId, date }: { residentId:
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
+    if (error) {
+      console.error('[addTemporary INSERT error]', error)
+      return { success: false, error: error.message }
+    }
   }
 
   revalidatePath('/dashboard')
   revalidatePath('/bathing')
   revalidatePath('/training')
+  return { success: true }
 }
 
 export async function removeTemporaryAttendance({ residentId, date }: { residentId: string; date: string }) {

@@ -55,10 +55,13 @@ export default async function TrainingPage({
   const residentIds = residents.map(r => r.id)
   const { data: records } = residentIds.length > 0
     ? await supabase.from('DailyRecord').select('*').eq('date', today).in('residentId', residentIds)
+        .order('updatedAt', { ascending: false })
     : { data: [] }
 
   const recordMap: Record<string, DailyRecord> = {}
-  for (const r of records ?? []) recordMap[r.residentId] = r
+  for (const r of records ?? []) {
+    if (!recordMap[r.residentId]) recordMap[r.residentId] = r
+  }
 
   const [year, month, day] = today.split('-')
   const dateLabel = `${year}年${+month}月${+day}日`
