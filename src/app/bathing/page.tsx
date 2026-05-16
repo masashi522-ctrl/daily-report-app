@@ -45,7 +45,9 @@ export default async function BathingPage({
 
   const tempIds = new Set((tempRecords ?? []).map((r: { residentId: string }) => r.residentId))
   const temporaryResidents = (allResidents ?? []).filter((r: Resident) =>
-    tempIds.has(r.id) && !regularResidents.some(rr => rr.id === r.id)
+    tempIds.has(r.id) &&
+    !!r.bathingDays &&
+    !regularResidents.some(rr => rr.id === r.id)
   )
 
   const residents = [...regularResidents, ...temporaryResidents]
