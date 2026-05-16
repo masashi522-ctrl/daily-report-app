@@ -33,6 +33,14 @@ export async function saveBathingRecord(draft: BathingDraft) {
       id: crypto.randomUUID(),
       residentId: draft.residentId,
       date: draft.date,
+      trainingDone: false,
+      medicationMorning: false,
+      medicationBeforeLunch: false,
+      medicationAfterLunch: false,
+      medicationBeforeEvening: false,
+      medicationEvening: false,
+      oralCare: false,
+      isAbsent: false,
       createdAt: new Date().toISOString(),
     }, { onConflict: 'date,residentId' })
   }

@@ -37,6 +37,14 @@ export async function saveTrainingRecord(draft: TrainingDraft) {
       id: crypto.randomUUID(),
       residentId: draft.residentId,
       date: draft.date,
+      bathing: 'NOT_APPLICABLE',
+      medicationMorning: false,
+      medicationBeforeLunch: false,
+      medicationAfterLunch: false,
+      medicationBeforeEvening: false,
+      medicationEvening: false,
+      oralCare: false,
+      isAbsent: false,
       createdAt: new Date().toISOString(),
     }, { onConflict: 'date,residentId' })
   }
