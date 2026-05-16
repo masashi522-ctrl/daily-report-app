@@ -50,10 +50,33 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
 
   const record = buildRecordFields(data, session.userId)
 
-  await supabase.from('DailyRecord').upsert(
-    { ...record, id: data.id ?? crypto.randomUUID(), createdAt: new Date().toISOString() },
-    { onConflict: 'date,residentId' }
-  )
+  // Look up existing record to avoid overwriting fields managed by other pages
+  const { data: rows } = await supabase
+    .from('DailyRecord')
+    .select('id, bathing, trainingDone, trainingSkipReason, trainingSkipDetail, trainingNote')
+    .eq('date', data.date)
+    .eq('residentId', data.residentId)
+    .limit(1)
+  const existing = rows?.[0] ?? null
+
+  if (existing) {
+    // Preserve fields managed by dedicated pages unless explicitly provided
+    const merged = {
+      ...record,
+      bathing: data.bathing !== undefined ? record.bathing : existing.bathing,
+      trainingDone: data.trainingDone !== undefined ? record.trainingDone : existing.trainingDone,
+      trainingSkipReason: data.trainingSkipReason !== undefined ? record.trainingSkipReason : existing.trainingSkipReason,
+      trainingSkipDetail: data.trainingSkipDetail !== undefined ? record.trainingSkipDetail : existing.trainingSkipDetail,
+      trainingNote: data.trainingNote !== undefined ? record.trainingNote : existing.trainingNote,
+    }
+    await supabase.from('DailyRecord').update(merged).eq('id', existing.id)
+  } else {
+    await supabase.from('DailyRecord').insert({
+      ...record,
+      id: data.id ?? crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    })
+  }
 
   revalidatePath('/dashboard')
 }
@@ -62,15 +85,6 @@ export async function saveAllRecords(
   records: (Partial<DailyRecord> & { residentId: string; date: string })[]
 ) {
   if (records.length === 0) return
-  const session = await requireSession()
-  const now = new Date().toISOString()
-
-  const toUpsert = records.map(data => ({
-    ...buildRecordFields(data, session.userId),
-    id: data.id ?? crypto.randomUUID(),
-    createdAt: now,
-  }))
-
-  await supabase.from('DailyRecord').upsert(toUpsert, { onConflict: 'date,residentId' })
+  await Promise.all(records.map(r => saveRecord(r)))
   revalidatePath('/dashboard')
 }

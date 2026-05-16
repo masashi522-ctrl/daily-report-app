@@ -25,10 +25,20 @@ export async function saveBathingRecord(draft: BathingDraft) {
     updatedAt: new Date().toISOString(),
   }
 
-  if (draft.id) {
-    await supabase.from('DailyRecord').update(payload).eq('id', draft.id)
+  // Look up the existing record by date+residentId to get a reliable id
+  const { data: rows } = await supabase
+    .from('DailyRecord')
+    .select('id')
+    .eq('date', draft.date)
+    .eq('residentId', draft.residentId)
+    .limit(1)
+  const existing = rows?.[0] ?? null
+
+  if (existing) {
+    const { error } = await supabase.from('DailyRecord').update(payload).eq('id', existing.id)
+    if (error) console.error('[bathing UPDATE error]', error)
   } else {
-    await supabase.from('DailyRecord').upsert({
+    const { error } = await supabase.from('DailyRecord').insert({
       ...payload,
       id: crypto.randomUUID(),
       residentId: draft.residentId,
@@ -42,7 +52,8 @@ export async function saveBathingRecord(draft: BathingDraft) {
       oralCare: false,
       isAbsent: false,
       createdAt: new Date().toISOString(),
-    }, { onConflict: 'date,residentId' })
+    })
+    if (error) console.error('[bathing INSERT error]', error)
   }
 
   revalidatePath('/bathing')
