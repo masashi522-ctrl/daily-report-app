@@ -172,6 +172,8 @@ export default async function AnalyticsPage({
     const attendingRecs = r.filter(x => !x.isAbsent)
     const bathingCount = countOf(r.map(x => x.bathing === 'DONE'))
 
+    const weightValues = r.map(x => x.weight).filter((v): v is number => v != null && v > 0)
+
     reportStats = {
       residentName: targetName,
       year,
@@ -189,6 +191,10 @@ export default async function AnalyticsPage({
       attendanceForBathing: attendingRecs.length,
       trainingCount:  countOf(r.map(x => x.trainingDone)),
       oralCareCount:  countOf(r.map(x => x.oralCare)),
+      weightAvg:          weightValues.length ? parseFloat((weightValues.reduce((a, b) => a + b, 0) / weightValues.length).toFixed(1)) : null,
+      weightMin:          weightValues.length ? Math.min(...weightValues) : null,
+      weightMax:          weightValues.length ? Math.max(...weightValues) : null,
+      weightMeasureCount: weightValues.length,
     }
   }
 

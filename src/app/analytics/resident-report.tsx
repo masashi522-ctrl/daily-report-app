@@ -106,6 +106,7 @@ export default function ResidentReport({
   const [report, setReport] = useState('')
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   async function handleGenerate() {
     setGenerating(true)
@@ -125,6 +126,34 @@ export default function ResidentReport({
     await navigator.clipboard.writeText(report)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleWordDownload() {
+    setDownloading(true)
+    try {
+      const res = await fetch('/api/analytics/word-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportText: report,
+          residentName: stats.residentName,
+          year: stats.year,
+          month: stats.month,
+        }),
+      })
+      if (!res.ok) throw new Error('ダウンロードに失敗しました')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `月次報告書_${stats.residentName}_${stats.year}年${stats.month}月.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'エラーが発生しました')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   const hasBp   = chartData.bpSys.some(v => v != null)
@@ -188,7 +217,7 @@ export default function ResidentReport({
             ケアマネジャー向け月次報告書
             <span className="ml-2 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">AI生成</span>
           </h3>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {report && (
               <button onClick={handleCopy}
                 className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition ${
@@ -199,6 +228,20 @@ export default function ResidentReport({
                 {copied ? '✓ コピー済み' : 'コピー'}
               </button>
             )}
+            <button
+              onClick={handleWordDownload}
+              disabled={!report || downloading}
+              title={!report ? 'レポートを生成してからダウンロードできます' : ''}
+              className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition inline-flex items-center gap-1 ${
+                !report || downloading
+                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+              }`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {downloading ? 'Word生成中...' : 'Word ダウンロード'}
+            </button>
             <button onClick={handleGenerate} disabled={generating}
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
                 generating
