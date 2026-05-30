@@ -51,7 +51,10 @@ export default async function BathingPage({
   )
 
   const nonScheduledResidents = (allResidents ?? []).filter(
-    (r: Resident) => !regularResidents.some(rr => rr.id === r.id)
+    (r: Resident) =>
+      !regularResidents.some(rr => rr.id === r.id) &&
+      !!r.attendanceDays &&
+      r.attendanceDays.split(',').map(Number).includes(todayDow)
   )
   const temporaryResidentIds = Array.from(tempIds)
 
