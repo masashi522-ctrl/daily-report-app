@@ -110,6 +110,9 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   function bpAlertAm(d: RecordDraft): boolean {
     return d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90)
   }
+  function bpAlertPm(d: RecordDraft): boolean {
+    return d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90)
+  }
 
   function getMissing(id: string): string[] {
     const d = getDraft(id)
@@ -452,7 +455,12 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     )}
                     {!isAbsent && bpAlertAm(d) && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
-                        血圧再検
+                        血圧再検AM
+                      </span>
+                    )}
+                    {!isAbsent && bpAlertPm(d) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
+                        血圧再検PM
                       </span>
                     )}
                   </div>
@@ -496,7 +504,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   <div className={vRow}>
                     <span className={vLbl}>収縮期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
                     <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} alert={d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90)} />
-                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolicPm} onChange={v => upd(resident.id, 'bpSystolicPm', v)} min={70}  max={200} />
+                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolicPm} onChange={v => upd(resident.id, 'bpSystolicPm', v)} min={70}  max={200} alert={d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90)} />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>拡張期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
@@ -694,16 +702,20 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       )}
                     </td>
                     {/* 血圧PM */}
-                    <td className={td}>
+                    <td className={`${td} ${bpAlertPm(d) && !isAbsent ? 'bg-red-50' : ''}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-bp-sys" placeholder="収縮" min={70} max={200}
                           value={d.bpSystolicPm ?? ''} onChange={numHandler(resident.id, 'bpSystolicPm')}
-                          className={numBase} style={{ ...inputStyle, width: '60px' }} />
+                          className={`${numBase} ${d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '60px', ...(d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                         <span className="text-gray-400 shrink-0">/</span>
                         <input type="number" list="dl-bp-dia" placeholder="拡張" min={30} max={200}
                           value={d.bpDiastolicPm ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPm')}
                           className={numBase} style={{ ...inputStyle, width: '60px' }} />
                       </div>
+                      {bpAlertPm(d) && !isAbsent && (
+                        <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">血圧再検</div>
+                      )}
                     </td>
                     {/* 脈拍 AM/PM */}
                     <td className={td}>
