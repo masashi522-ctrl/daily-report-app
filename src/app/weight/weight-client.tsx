@@ -18,15 +18,22 @@ const GOJUUON_ROWS = [
 
 interface Resident { id: string; name: string; furigana: string | null }
 
-// ── SVG折れ線グラフ ──────────────────────────────────────────────────
-function WeightChart({ data }: { data: { label: string; weight: number | null }[] }) {
+// ── 共通SVGグラフ ─────────────────────────────────────────────────────
+function WeightChart({
+  data,
+  height = 120,
+}: {
+  data: { label: string; weight: number | null }[]
+  height?: number
+}) {
   const points = data.filter(d => d.weight != null) as { label: string; weight: number }[]
   if (points.length === 0) {
     return <div className="flex items-center justify-center h-28 text-xs text-gray-400">データなし</div>
   }
 
-  const W = 560; const H = 120
-  const PAD = { top: 12, right: 16, bottom: 28, left: 40 }
+  const W = 560
+  const H = height
+  const PAD = { top: 20, right: 16, bottom: 28, left: 44 }
   const cW = W - PAD.left - PAD.right
   const cH = H - PAD.top - PAD.bottom
   const n = data.length
@@ -35,8 +42,8 @@ function WeightChart({ data }: { data: { label: string; weight: number | null }[
   const rawMin = Math.min(...weights)
   const rawMax = Math.max(...weights)
   const span = rawMax - rawMin < 2 ? 2 : rawMax - rawMin
-  const dataMin = Math.floor(rawMin - span * 0.1)
-  const dataMax = Math.ceil(rawMax + span * 0.1)
+  const dataMin = Math.floor(rawMin - span * 0.15)
+  const dataMax = Math.ceil(rawMax + span * 0.15)
   const dataRange = dataMax - dataMin || 1
 
   const xScale = (i: number) => PAD.left + (n <= 1 ? cW / 2 : (i / (n - 1)) * cW)
@@ -52,7 +59,7 @@ function WeightChart({ data }: { data: { label: string; weight: number | null }[
   })
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 120 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }}>
       {gridVals.map((v, gi) => {
         const y = yScale(v)
         return (
@@ -67,10 +74,10 @@ function WeightChart({ data }: { data: { label: string; weight: number | null }[
       {data.map((d, i) => (
         <text key={i} x={xScale(i)} y={H - 4} textAnchor="middle" fontSize="7.5" fill="#9ca3af"
           transform={`rotate(-35, ${xScale(i)}, ${H - 4})`}>
-          {d.label.replace('年', '/').replace('月', '')}
+          {d.label}
         </text>
       ))}
-      <text x={PAD.left - 4} y={PAD.top - 2} textAnchor="end" fontSize="7" fill="#9ca3af">kg</text>
+      <text x={PAD.left - 4} y={PAD.top - 6} textAnchor="end" fontSize="7" fill="#9ca3af">kg</text>
       {pathD && (
         <path d={pathD} fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round" />
       )}
@@ -158,8 +165,43 @@ export default function WeightClient({
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [searchText, setSearchText]  = useState('')
 
+  const nowYear  = parseInt(today.slice(0, 4))
+  const nowMonth = parseInt(today.slice(5, 7))
+  const [viewYear,  setViewYear]  = useState(nowYear)
+  const [viewMonth, setViewMonth] = useState(nowMonth)
+
   const saveWeightBound = selectedResidentId ? saveWeight.bind(null, selectedResidentId) : saveWeight.bind(null, '')
   const [formState, action, pending] = useActionState(saveWeightBound, null)
+
+  // ── 月ナビ ──
+  function goPrevMonth() {
+    if (viewMonth === 1) { setViewYear(y => y - 1); setViewMonth(12) }
+    else setViewMonth(m => m - 1)
+  }
+  function goNextMonth() {
+    if (viewYear > nowYear || (viewYear === nowYear && viewMonth >= nowMonth)) return
+    if (viewMonth === 12) { setViewYear(y => y + 1); setViewMonth(1) }
+    else setViewMonth(m => m + 1)
+  }
+  const isCurrentMonth = viewYear === nowYear && viewMonth === nowMonth
+
+  // ── 選択月の日別計測値 ──
+  const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}`
+  const monthRecords = useMemo(() =>
+    weightRecords
+      .filter(r => r.date.startsWith(monthPrefix))
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    [weightRecords, monthPrefix],
+  )
+
+  // グラフ用：選択月の日別データ（測定のある日だけプロット）
+  const dailyChartData = useMemo(() =>
+    monthRecords.map(r => ({
+      label: `${parseInt(r.date.slice(8))}日`,
+      weight: r.weight,
+    })),
+    [monthRecords],
+  )
 
   // 50音フィルター
   const filteredResidents = residents.filter(r => {
@@ -172,7 +214,7 @@ export default function WeightClient({
     return true
   })
 
-  // 月次集計（直近12ヶ月）
+  // 月次集計（直近12ヶ月）— 月ごとの最終測定値
   const monthlyData = useMemo(() => {
     const byMonth = new Map<string, number>()
     for (const r of weightRecords) {
@@ -195,7 +237,7 @@ export default function WeightClient({
     setSearchText('')
   }
 
-  const unmeasuredCount  = residents.filter(r => !measuredIds.has(r.id)).length
+  const unmeasuredCount    = residents.filter(r => !measuredIds.has(r.id)).length
   const todayRequiredCount = todayRequiredIds.size
 
   return (
@@ -225,7 +267,6 @@ export default function WeightClient({
         {/* ── 利用者リスト（左） ── */}
         <div className="lg:col-span-1 flex flex-col gap-2">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-2">
-            {/* 50音タブ */}
             <div className="flex flex-wrap gap-1">
               <button type="button" onClick={() => selectRow(null)}
                 className={`text-xs px-2 py-0.5 rounded border font-medium transition ${
@@ -243,7 +284,6 @@ export default function WeightClient({
                   }`}>{row.label}</button>
               ))}
             </div>
-            {/* テキスト検索 */}
             <input type="text" value={searchText}
               onChange={e => { setSearchText(e.target.value); setGojuuonRow(null) }}
               placeholder="名前で絞り込み..."
@@ -251,14 +291,13 @@ export default function WeightClient({
             <p className="text-[10px] text-gray-400">{filteredResidents.length}/{residents.length}名</p>
           </div>
 
-          {/* 利用者ボタン一覧 */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden max-h-[60vh] overflow-y-auto">
             {filteredResidents.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-6">該当なし</p>
             ) : (
               filteredResidents.map(r => {
-                const needsToday  = todayRequiredIds.has(r.id)
-                const unmeasured  = !measuredIds.has(r.id)
+                const needsToday = todayRequiredIds.has(r.id)
+                const unmeasured = !measuredIds.has(r.id)
                 return (
                   <a key={r.id} href={`/weight?residentId=${r.id}`}
                     className={`flex items-center justify-between px-4 py-2.5 border-b last:border-0 transition text-sm ${
@@ -326,10 +365,113 @@ export default function WeightClient({
                 </form>
               </div>
 
-              {/* 月次推移グラフ */}
+              {/* ── 月別計測値 ── */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                {/* 月ナビゲーター */}
+                <div className="flex items-center justify-between mb-4">
+                  <button onClick={goPrevMonth}
+                    className="p-1.5 rounded-lg border border-gray-200 hover:border-teal-400 text-gray-500 hover:text-teal-600 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <h3 className="font-semibold text-gray-700 text-sm">
+                    {viewYear}年{viewMonth}月の計測記録
+                    {isCurrentMonth && (
+                      <span className="ml-2 text-[10px] font-normal text-teal-600 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">
+                        今月
+                      </span>
+                    )}
+                  </h3>
+                  <button onClick={goNextMonth} disabled={isCurrentMonth}
+                    className={`p-1.5 rounded-lg border transition ${
+                      isCurrentMonth
+                        ? 'border-gray-100 text-gray-300 cursor-not-allowed'
+                        : 'border-gray-200 hover:border-teal-400 text-gray-500 hover:text-teal-600'
+                    }`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                {monthRecords.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-8">この月の計測データはありません</p>
+                ) : (
+                  <>
+                    {/* 日別グラフ */}
+                    <div className="mb-4">
+                      <WeightChart data={dailyChartData} height={130} />
+                    </div>
+
+                    {/* 日別テーブル */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-xs">
+                        <thead>
+                          <tr className="text-gray-500 border-b">
+                            <th className="text-left py-1.5 pr-4 font-medium">測定日</th>
+                            <th className="text-right py-1.5 pr-4 font-medium">体重</th>
+                            <th className="text-right py-1.5 font-medium">前回比</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {monthRecords.map((r, i) => {
+                            const prevRec = weightRecords
+                              .filter(w => w.date < r.date)
+                              .at(-1)
+                            const diff = prevRec != null ? r.weight - prevRec.weight : null
+                            return (
+                              <tr key={r.date} className="border-b last:border-0 hover:bg-gray-50">
+                                <td className="py-2 pr-4 text-gray-600">
+                                  {r.date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$1年$2月$3日')}
+                                </td>
+                                <td className="py-2 pr-4 text-right font-semibold text-gray-800">
+                                  {r.weight.toFixed(1)} kg
+                                </td>
+                                <td className={`py-2 text-right font-medium ${
+                                  diff == null ? 'text-gray-300' :
+                                  diff > 0.5 ? 'text-rose-600' :
+                                  diff < -0.5 ? 'text-blue-600' : 'text-gray-500'
+                                }`}>
+                                  {diff == null ? '—' : `${diff >= 0 ? '+' : ''}${diff.toFixed(1)} kg`}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                        {monthRecords.length >= 2 && (() => {
+                          const first = monthRecords[0]
+                          const last  = monthRecords[monthRecords.length - 1]
+                          const diff  = last.weight - first.weight
+                          return (
+                            <tfoot>
+                              <tr className="border-t bg-gray-50">
+                                <td className="py-2 pr-4 text-gray-500 text-[11px]">月内変動</td>
+                                <td className="py-2 pr-4 text-right text-[11px] text-gray-500">
+                                  {first.weight.toFixed(1)} → {last.weight.toFixed(1)} kg
+                                </td>
+                                <td className={`py-2 text-right text-[11px] font-semibold ${
+                                  diff > 0.5 ? 'text-rose-600' : diff < -0.5 ? 'text-blue-600' : 'text-gray-500'
+                                }`}>
+                                  {diff >= 0 ? '+' : ''}{diff.toFixed(1)} kg
+                                </td>
+                              </tr>
+                            </tfoot>
+                          )
+                        })()}
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* 月次推移グラフ（直近12ヶ月） */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                 <h3 className="font-semibold text-gray-700 text-sm mb-3">月次推移（直近12ヶ月）</h3>
-                <WeightChart data={monthlyData} />
+                <WeightChart
+                  data={monthlyData.map(m => ({ label: `${parseInt(m.label)}月`, weight: m.weight }))}
+                  height={130}
+                />
               </div>
 
               {/* 傾向分析 */}
@@ -341,43 +483,6 @@ export default function WeightClient({
                   <p className="text-xs text-gray-400 text-center py-4">体重データがありません</p>
                 )}
               </div>
-
-              {/* 測定履歴 */}
-              {weightRecords.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                  <h3 className="font-semibold text-gray-700 text-sm mb-3">測定履歴</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-xs">
-                      <thead>
-                        <tr className="text-gray-500 border-b">
-                          <th className="text-left py-1 pr-4">測定日</th>
-                          <th className="text-right py-1">体重</th>
-                          <th className="text-right py-1 pl-4">前回比</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...weightRecords].reverse().map((r, i, arr) => {
-                          const prev = arr[i + 1]
-                          const diff = prev != null ? r.weight - prev.weight : null
-                          return (
-                            <tr key={r.date} className="border-b last:border-0 hover:bg-gray-50">
-                              <td className="py-1.5 pr-4 text-gray-600">{r.date}</td>
-                              <td className="py-1.5 text-right font-medium text-gray-800">{r.weight.toFixed(1)} kg</td>
-                              <td className={`py-1.5 text-right pl-4 font-medium ${
-                                diff == null ? 'text-gray-400' :
-                                diff > 0.5 ? 'text-rose-600' :
-                                diff < -0.5 ? 'text-blue-600' : 'text-gray-500'
-                              }`}>
-                                {diff == null ? '-' : `${diff >= 0 ? '+' : ''}${diff.toFixed(1)} kg`}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
