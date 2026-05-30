@@ -2,6 +2,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { type Resident, type DailyRecord } from '@/types/database'
 import BathingTable from './bathing-table'
+import AddTemporaryModal from '../dashboard/add-temporary-modal'
 
 function toDateStr(d: Date) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -49,6 +50,11 @@ export default async function BathingPage({
     !regularResidents.some(rr => rr.id === r.id)
   )
 
+  const nonScheduledResidents = (allResidents ?? []).filter(
+    (r: Resident) => !regularResidents.some(rr => rr.id === r.id)
+  )
+  const temporaryResidentIds = Array.from(tempIds)
+
   const residents = [...regularResidents, ...temporaryResidents]
 
   const residentIds = residents.map(r => r.id)
@@ -73,7 +79,12 @@ export default async function BathingPage({
           <h2 className="text-lg font-bold text-gray-800">入浴記録</h2>
           <p className="text-sm text-gray-500">{dateLabel}（{dowLabel}曜日）・ 入浴対象者 {residents.length}名</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <AddTemporaryModal
+            date={today}
+            nonScheduledResidents={nonScheduledResidents}
+            temporaryResidentIds={temporaryResidentIds}
+          />
           <a href={`/bathing?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()}`}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</a>
           <a href="/bathing"
@@ -86,7 +97,7 @@ export default async function BathingPage({
       {residents.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center text-gray-400">
           <p className="text-base">{dowLabel}曜日の入浴対象者がいません</p>
-          <p className="text-xs mt-2">利用者管理で「入浴対象日」を設定するか、ダッシュボードから臨時利用者を追加してください</p>
+          <p className="text-xs mt-2">利用者管理で「入浴対象日」を設定するか、上の「臨時利用者を追加」から追加してください</p>
           <a href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</a>
         </div>
       ) : (
