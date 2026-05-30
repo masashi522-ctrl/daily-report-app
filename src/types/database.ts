@@ -40,6 +40,26 @@ export interface Staff {
   updatedAt: string
 }
 
+export const BATHING_CARE_ITEMS = [
+  { key: 'EDEMA',           label: '浮腫（備考欄に記載）' },
+  { key: 'SHAVING',         label: '髭剃り' },
+  { key: 'CLOTHING_CHANGE', label: '着替え' },
+  { key: 'REHA_PAN',        label: 'リハパン交換' },
+  { key: 'PAD_CHANGE',      label: 'パット交換' },
+  { key: 'GAUZE_CHANGE',    label: 'ガーゼ交換' },
+  { key: 'OINTMENT',        label: '軟膏塗布' },
+  { key: 'COMPRESS_CHANGE', label: '湿布交換' },
+] as const
+
+export const BATHING_SPECIAL_ITEMS = [
+  { key: 'BATH_BENCH',       label: '浴槽台' },
+  { key: 'RIGHT_BATH',       label: '右側浴槽' },
+  { key: 'LEFT_BATH',        label: '左側浴槽' },
+  { key: 'PERSONAL_ITEMS',   label: '本人持参物品あり' },
+  { key: 'SHOWER_REQUESTED', label: '本人希望でシャワー浴' },
+  { key: 'SPO2_CHECK',       label: '入浴前後のSpO2（備考欄に記載）' },
+] as const
+
 export const CARE_LEVEL_OPTIONS = [
   '要支援1', '要支援2',
   '要介護1', '要介護2', '要介護3', '要介護4', '要介護5',
@@ -73,6 +93,9 @@ export interface Resident {
   bathingDays: string | null
   trainingDays: string | null
   weightMeasureEveryVisit: boolean
+  bathingCareItems: string | null
+  bathingSpecialItems: string | null
+  bathingSpecialFreeText: string | null
   careLevel: string | null
   serviceStartTime: string | null
   serviceEndTime: string | null
@@ -122,6 +145,7 @@ export interface DailyRecord {
   bathingSkipReason: string | null
   bathingSkipDetail: string | null
   bathingNote: string | null
+  bathingCareChecks: string | null
   // 機能訓練
   trainingDone: boolean
   trainingSkipReason: string | null

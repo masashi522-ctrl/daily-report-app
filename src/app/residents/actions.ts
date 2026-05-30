@@ -26,7 +26,10 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const serviceStartTime        = (formData.get('serviceStartTime') as string) || null
   const serviceEndTime          = (formData.get('serviceEndTime') as string) || null
   const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
-  const weightMeasureEveryVisit = formData.get('weightMeasureEveryVisit') === '1'
+  const weightMeasureEveryVisit  = formData.get('weightMeasureEveryVisit') === '1'
+  const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
+  const bathingSpecialItems      = (formData.getAll('bathingSpecialItems') as string[]).join(',') || null
+  const bathingSpecialFreeText   = (formData.get('bathingSpecialFreeText') as string) || null
 
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
@@ -45,6 +48,9 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     serviceEndTime,
     serviceTimeCategory,
     weightMeasureEveryVisit,
+    bathingCareItems,
+    bathingSpecialItems,
+    bathingSpecialFreeText,
     facilityId: session.facilityId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -78,7 +84,10 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const serviceStartTime        = (formData.get('serviceStartTime') as string) || null
   const serviceEndTime          = (formData.get('serviceEndTime') as string) || null
   const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
-  const weightMeasureEveryVisit = formData.get('weightMeasureEveryVisit') === '1'
+  const weightMeasureEveryVisit  = formData.get('weightMeasureEveryVisit') === '1'
+  const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
+  const bathingSpecialItems      = (formData.getAll('bathingSpecialItems') as string[]).join(',') || null
+  const bathingSpecialFreeText   = (formData.get('bathingSpecialFreeText') as string) || null
 
   if (!name) return { error: '名前は必須です' }
 
@@ -97,6 +106,9 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     serviceEndTime,
     serviceTimeCategory,
     weightMeasureEveryVisit,
+    bathingCareItems,
+    bathingSpecialItems,
+    bathingSpecialFreeText,
     updatedAt: new Date().toISOString(),
   }).eq('id', id).eq('facilityId', session.facilityId)
 

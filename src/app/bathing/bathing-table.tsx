@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { type Resident, type DailyRecord } from '@/types/database'
+import { type Resident, type DailyRecord, BATHING_CARE_ITEMS, BATHING_SPECIAL_ITEMS } from '@/types/database'
 import { saveBathingRecord, saveAllBathing } from './actions'
 
 const GOJUUON_ROWS = [
@@ -33,6 +33,7 @@ interface Draft {
   bathingSkipReason: string | null
   bathingSkipDetail: string | null
   bathingNote: string | null
+  bathingCareChecks: string[]
 }
 
 interface Props {
@@ -89,6 +90,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
       bathingSkipReason: rec?.bathingSkipReason ?? null,
       bathingSkipDetail: rec?.bathingSkipDetail ?? null,
       bathingNote: rec?.bathingNote ?? null,
+      bathingCareChecks: rec?.bathingCareChecks ? rec.bathingCareChecks.split(',') : [],
     }
   }
 
@@ -101,13 +103,16 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
     const d = getDraft(residentId)
     const rec = localRecords[residentId]
     startTransition(async () => {
-      const saved = await saveBathingRecord({ residentId, date, id: rec?.id, ...d })
+      const saved = await saveBathingRecord({
+        residentId, date, id: rec?.id, ...d,
+        bathingCareChecks: d.bathingCareChecks.join(',') || null,
+      })
       setSaving(null)
       setLocalRecords(prev => ({
         ...prev,
         [residentId]: saved
           ? { ...(prev[residentId] ?? {}), ...saved } as DailyRecord
-          : { ...(prev[residentId] ?? {}), ...d, updatedAt: new Date().toISOString() } as DailyRecord,
+          : { ...(prev[residentId] ?? {}), ...d, bathingCareChecks: d.bathingCareChecks.join(',') || null, updatedAt: new Date().toISOString() } as DailyRecord,
       }))
       setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
@@ -118,7 +123,10 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
     const list = filtered.map(r => {
       const d = getDraft(r.id)
       const rec = localRecords[r.id]
-      return { residentId: r.id, date, id: rec?.id, ...d }
+      return {
+        residentId: r.id, date, id: rec?.id, ...d,
+        bathingCareChecks: d.bathingCareChecks.join(',') || null,
+      }
     })
     startTransition(async () => {
       const results = await saveAllBathing(list)
@@ -135,8 +143,9 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
               bathingSkipReason: item.bathingSkipReason ?? null,
               bathingSkipDetail: item.bathingSkipDetail ?? null,
               bathingNote: item.bathingNote ?? null,
+              bathingCareChecks: item.bathingCareChecks ?? null,
               updatedAt: new Date().toISOString(),
-            } as DailyRecord
+            } as unknown as DailyRecord
       }
       setLocalRecords(prev => ({ ...prev, ...updates }))
       setDrafts({})
@@ -294,6 +303,30 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
             </div>
 
             <div className="p-4 space-y-3">
+              {/* 特記事項（利用者登録で設定した固定表示） */}
+              {(resident.bathingSpecialItems || resident.bathingSpecialFreeText) && (() => {
+                const items = resident.bathingSpecialItems
+                  ? BATHING_SPECIAL_ITEMS.filter(s => resident.bathingSpecialItems!.split(',').includes(s.key))
+                  : []
+                return (
+                  <div className="p-3 bg-sky-50 rounded-lg border border-sky-100">
+                    <p className="text-[10px] font-semibold text-sky-700 mb-1.5">特記事項</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map(s => (
+                        <span key={s.key} className="text-xs bg-sky-100 text-sky-800 border border-sky-200 rounded-full px-2 py-0.5 font-medium">
+                          {s.label}
+                        </span>
+                      ))}
+                      {resident.bathingSpecialFreeText && (
+                        <span className="text-xs bg-white text-gray-700 border border-sky-200 rounded-full px-2 py-0.5">
+                          {resident.bathingSpecialFreeText}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
+
               {/* バイタル詳細（折りたたみ表示） */}
               {rec && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-rose-50 rounded-lg border border-rose-100">
@@ -384,6 +417,42 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
                   />
                 </div>
               )}
+
+              {/* ケア項目チェックリスト */}
+              {resident.bathingCareItems && (() => {
+                const enabledItems = BATHING_CARE_ITEMS.filter(c =>
+                  resident.bathingCareItems!.split(',').includes(c.key)
+                )
+                if (enabledItems.length === 0) return null
+                return (
+                  <div className="p-3 bg-teal-50 rounded-lg border border-teal-100">
+                    <p className="text-[10px] font-semibold text-teal-700 mb-2">ケア項目</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2">
+                      {enabledItems.map(item => {
+                        const checked = d.bathingCareChecks.includes(item.key)
+                        return (
+                          <label key={item.key} className="flex items-center gap-1.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                const next = checked
+                                  ? d.bathingCareChecks.filter(k => k !== item.key)
+                                  : [...d.bathingCareChecks, item.key]
+                                upd(resident.id, { bathingCareChecks: next })
+                              }}
+                              className="w-4 h-4 accent-teal-600 cursor-pointer"
+                            />
+                            <span className={`text-sm ${checked ? 'text-teal-800 font-medium' : 'text-gray-600'}`}>
+                              {item.label}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* 備考 */}
               <div>

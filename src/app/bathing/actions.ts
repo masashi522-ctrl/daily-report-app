@@ -13,6 +13,7 @@ export interface BathingDraft {
   bathingSkipReason?: string | null
   bathingSkipDetail?: string | null
   bathingNote?: string | null
+  bathingCareChecks?: string | null
 }
 
 export async function saveBathingRecord(draft: BathingDraft): Promise<DailyRecord | null> {
@@ -23,6 +24,7 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<DailyRecor
     bathingSkipReason: draft.bathingSkipReason ?? null,
     bathingSkipDetail: draft.bathingSkipDetail ?? null,
     bathingNote: draft.bathingNote ?? null,
+    bathingCareChecks: draft.bathingCareChecks ?? null,
     updatedAt: new Date().toISOString(),
   }
 

@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition, useEffect } from 'react'
 import { updateResident, generateFurigana } from './actions'
-import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, type Resident } from '@/types/database'
+import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, BATHING_CARE_ITEMS, BATHING_SPECIAL_ITEMS, type Resident } from '@/types/database'
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -27,9 +27,11 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
   const [furigana, setFurigana] = useState(resident.furigana ?? '')
   const [generating, startGenerate] = useTransition()
 
-  const checkedDays      = resident.attendanceDays ? resident.attendanceDays.split(',').map(Number) : []
-  const checkedBathing   = resident.bathingDays    ? resident.bathingDays.split(',').map(Number)    : []
-  const checkedFoodTypes = resident.foodType ? resident.foodType.split(',') : []
+  const checkedDays         = resident.attendanceDays    ? resident.attendanceDays.split(',').map(Number) : []
+  const checkedBathing      = resident.bathingDays       ? resident.bathingDays.split(',').map(Number)    : []
+  const checkedFoodTypes    = resident.foodType          ? resident.foodType.split(',')                   : []
+  const checkedCareItems    = resident.bathingCareItems   ? resident.bathingCareItems.split(',')           : []
+  const checkedSpecialItems = resident.bathingSpecialItems ? resident.bathingSpecialItems.split(',')       : []
 
   useEffect(() => {
     if (resident.furigana) return
@@ -117,6 +119,49 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
         </label>
         <DayCheckboxes name="bathingDays" checkedDays={checkedBathing} />
       </div>
+      {/* 入浴ケア項目 */}
+      <div className="border border-teal-100 rounded-lg p-3 bg-teal-50/40">
+        <label className="text-xs font-semibold text-teal-800 block mb-2">
+          入浴ケア項目
+          <span className="ml-1 font-normal text-gray-400">（この利用者に必要な項目にチェック）</span>
+        </label>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {BATHING_CARE_ITEMS.map(item => (
+            <label key={item.key} className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" name="bathingCareItems" value={item.key}
+                defaultChecked={checkedCareItems.includes(item.key)}
+                className="w-4 h-4 accent-teal-600" />
+              <span className="text-sm text-gray-700">{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* 入浴特記事項 */}
+      <div className="border border-sky-100 rounded-lg p-3 bg-sky-50/40">
+        <label className="text-xs font-semibold text-sky-800 block mb-2">
+          入浴特記事項
+          <span className="ml-1 font-normal text-gray-400">（入浴記録で常に表示されます）</span>
+        </label>
+        <div className="flex flex-wrap gap-x-4 gap-y-2 mb-2">
+          {BATHING_SPECIAL_ITEMS.map(item => (
+            <label key={item.key} className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" name="bathingSpecialItems" value={item.key}
+                defaultChecked={checkedSpecialItems.includes(item.key)}
+                className="w-4 h-4 accent-sky-600" />
+              <span className="text-sm text-gray-700">{item.label}</span>
+            </label>
+          ))}
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">自由記載</label>
+          <input name="bathingSpecialFreeText"
+            defaultValue={resident.bathingSpecialFreeText ?? ''}
+            placeholder="例: 腰痛あり、お湯は低め"
+            className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sky-400" />
+        </div>
+      </div>
+
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">機能訓練</label>
         <label className="flex items-center gap-2 cursor-pointer">
