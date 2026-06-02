@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import { saveWeight } from './actions'
 
 const GOJUUON_ROWS = [
@@ -170,8 +171,18 @@ export default function WeightClient({
   const [viewYear,  setViewYear]  = useState(nowYear)
   const [viewMonth, setViewMonth] = useState(nowMonth)
 
+  const [editDate,   setEditDate]   = useState(today)
+  const [editWeight, setEditWeight] = useState('')
+
   const saveWeightBound = selectedResidentId ? saveWeight.bind(null, selectedResidentId) : saveWeight.bind(null, '')
   const [formState, action, pending] = useActionState(saveWeightBound, null)
+
+  useEffect(() => {
+    if (formState?.success) {
+      setEditDate(today)
+      setEditWeight('')
+    }
+  }, [formState?.success, today])
 
   // ── 月ナビ ──
   function goPrevMonth() {
@@ -336,34 +347,57 @@ export default function WeightClient({
           ) : (
             <>
               {/* 体重入力フォーム */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <h3 className="font-semibold text-gray-800 mb-3 text-sm">
-                  {selectedResident.name} — 体重入力
-                </h3>
-                <form action={action} className="flex flex-wrap items-end gap-3">
-                  <div>
-                    <label className="text-xs text-gray-600 block mb-1">測定日</label>
-                    <input type="date" name="date" defaultValue={today} required
-                      className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+              {(() => {
+                const isEditing = weightRecords.some(r => r.date === editDate)
+                return (
+                  <div className={`bg-white rounded-xl border shadow-sm p-4 ${isEditing ? 'border-amber-300' : 'border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-800 text-sm">
+                        {selectedResident.name} —{' '}
+                        {isEditing ? (
+                          <span className="text-amber-600">体重修正</span>
+                        ) : '体重入力'}
+                      </h3>
+                      {isEditing && (
+                        <button type="button"
+                          onClick={() => { setEditDate(today); setEditWeight('') }}
+                          className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-2.5 py-1">
+                          キャンセル
+                        </button>
+                      )}
+                    </div>
+                    <form action={action} className="flex flex-wrap items-end gap-3">
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">測定日</label>
+                        <input type="date" name="date" required
+                          value={editDate}
+                          onChange={e => setEditDate(e.target.value)}
+                          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">体重（kg）</label>
+                        <input type="number" name="weight" step="0.1" min="20" max="200"
+                          placeholder="例: 62.5"
+                          value={editWeight}
+                          onChange={e => setEditWeight(e.target.value)}
+                          className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                      </div>
+                      <button type="submit" disabled={pending}
+                        className={`px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 ${
+                          isEditing ? 'bg-amber-500 hover:bg-amber-600' : 'bg-teal-600 hover:bg-teal-700'
+                        }`}>
+                        {pending ? '保存中...' : isEditing ? '修正する' : '保存'}
+                      </button>
+                      {formState?.error && (
+                        <p className="text-xs text-red-600 w-full">{formState.error}</p>
+                      )}
+                      {formState?.success && (
+                        <p className="text-xs text-emerald-600 w-full">✓ 保存しました</p>
+                      )}
+                    </form>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-600 block mb-1">体重（kg）</label>
-                    <input type="number" name="weight" step="0.1" min="20" max="200"
-                      placeholder="例: 62.5"
-                      className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
-                  </div>
-                  <button type="submit" disabled={pending}
-                    className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50">
-                    {pending ? '保存中...' : '保存'}
-                  </button>
-                  {formState?.error && (
-                    <p className="text-xs text-red-600 w-full">{formState.error}</p>
-                  )}
-                  {formState?.success && (
-                    <p className="text-xs text-emerald-600 w-full">✓ 保存しました</p>
-                  )}
-                </form>
-              </div>
+                )
+              })()}
 
               {/* ── 月別計測値 ── */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
@@ -411,7 +445,8 @@ export default function WeightClient({
                           <tr className="text-gray-500 border-b">
                             <th className="text-left py-1.5 pr-4 font-medium">測定日</th>
                             <th className="text-right py-1.5 pr-4 font-medium">体重</th>
-                            <th className="text-right py-1.5 font-medium">前回比</th>
+                            <th className="text-right py-1.5 pr-4 font-medium">前回比</th>
+                            <th className="py-1.5"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -420,20 +455,33 @@ export default function WeightClient({
                               .filter(w => w.date < r.date)
                               .at(-1)
                             const diff = prevRec != null ? r.weight - prevRec.weight : null
+                            const isThisRowEditing = editDate === r.date
                             return (
-                              <tr key={r.date} className="border-b last:border-0 hover:bg-gray-50">
+                              <tr key={r.date} className={`border-b last:border-0 ${isThisRowEditing ? 'bg-amber-50' : 'hover:bg-gray-50'}`}>
                                 <td className="py-2 pr-4 text-gray-600">
                                   {r.date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$1年$2月$3日')}
                                 </td>
                                 <td className="py-2 pr-4 text-right font-semibold text-gray-800">
                                   {r.weight.toFixed(1)} kg
                                 </td>
-                                <td className={`py-2 text-right font-medium ${
+                                <td className={`py-2 pr-4 text-right font-medium ${
                                   diff == null ? 'text-gray-300' :
                                   diff > 0.5 ? 'text-rose-600' :
                                   diff < -0.5 ? 'text-blue-600' : 'text-gray-500'
                                 }`}>
                                   {diff == null ? '—' : `${diff >= 0 ? '+' : ''}${diff.toFixed(1)} kg`}
+                                </td>
+                                <td className="py-2 text-right">
+                                  <button type="button"
+                                    onClick={() => { setEditDate(r.date); setEditWeight(r.weight.toFixed(1)) }}
+                                    className={`p-1 rounded transition ${
+                                      isThisRowEditing
+                                        ? 'text-amber-600'
+                                        : 'text-gray-300 hover:text-amber-500'
+                                    }`}
+                                    title="修正">
+                                    <Pencil size={13} />
+                                  </button>
                                 </td>
                               </tr>
                             )
@@ -450,11 +498,12 @@ export default function WeightClient({
                                 <td className="py-2 pr-4 text-right text-[11px] text-gray-500">
                                   {first.weight.toFixed(1)} → {last.weight.toFixed(1)} kg
                                 </td>
-                                <td className={`py-2 text-right text-[11px] font-semibold ${
+                                <td className={`py-2 pr-4 text-right text-[11px] font-semibold ${
                                   diff > 0.5 ? 'text-rose-600' : diff < -0.5 ? 'text-blue-600' : 'text-gray-500'
                                 }`}>
                                   {diff >= 0 ? '+' : ''}{diff.toFixed(1)} kg
                                 </td>
+                                <td></td>
                               </tr>
                             </tfoot>
                           )
