@@ -58,3 +58,19 @@ export async function saveWeight(
   revalidatePath('/weight')
   return { success: true }
 }
+
+export async function deleteWeight(residentId: string, date: string): Promise<{ error?: string }> {
+  await requireSession()
+  if (!residentId || !date) return { error: '無効なリクエストです' }
+
+  const { error } = await supabase
+    .from('DailyRecord')
+    .update({ weight: null, updatedAt: new Date().toISOString() })
+    .eq('residentId', residentId)
+    .eq('date', date)
+
+  if (error) return { error: `削除に失敗しました: ${error.message}` }
+
+  revalidatePath('/weight')
+  return {}
+}

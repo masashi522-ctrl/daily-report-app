@@ -1,8 +1,8 @@
 'use client'
 
 import { useActionState, useEffect, useMemo, useState } from 'react'
-import { Pencil } from 'lucide-react'
-import { saveWeight } from './actions'
+import { Pencil, Trash2 } from 'lucide-react'
+import { saveWeight, deleteWeight } from './actions'
 
 const GOJUUON_ROWS = [
   { label: 'あ', chars: 'あいうえおアイウエオ' },
@@ -171,8 +171,10 @@ export default function WeightClient({
   const [viewYear,  setViewYear]  = useState(nowYear)
   const [viewMonth, setViewMonth] = useState(nowMonth)
 
-  const [editDate,   setEditDate]   = useState(today)
-  const [editWeight, setEditWeight] = useState('')
+  const [editDate,     setEditDate]     = useState(today)
+  const [editWeight,   setEditWeight]   = useState('')
+  const [deletingDate, setDeletingDate] = useState<string | null>(null)
+  const [deleteError,  setDeleteError]  = useState<string | null>(null)
 
   const saveWeightBound = selectedResidentId ? saveWeight.bind(null, selectedResidentId) : saveWeight.bind(null, '')
   const [formState, action, pending] = useActionState(saveWeightBound, null)
@@ -438,6 +440,10 @@ export default function WeightClient({
                       <WeightChart data={dailyChartData} height={130} />
                     </div>
 
+                    {deleteError && (
+                      <p className="text-xs text-red-600 mb-2">{deleteError}</p>
+                    )}
+
                     {/* 日別テーブル */}
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-xs">
@@ -472,16 +478,43 @@ export default function WeightClient({
                                   {diff == null ? '—' : `${diff >= 0 ? '+' : ''}${diff.toFixed(1)} kg`}
                                 </td>
                                 <td className="py-2 text-right">
-                                  <button type="button"
-                                    onClick={() => { setEditDate(r.date); setEditWeight(r.weight.toFixed(1)) }}
-                                    className={`p-1 rounded transition ${
-                                      isThisRowEditing
-                                        ? 'text-amber-600'
-                                        : 'text-gray-300 hover:text-amber-500'
-                                    }`}
-                                    title="修正">
-                                    <Pencil size={13} />
-                                  </button>
+                                  <div className="flex items-center justify-end gap-1">
+                                    {deletingDate === r.date ? (
+                                      <>
+                                        <span className="text-[10px] text-red-600 mr-1">削除しますか？</span>
+                                        <button type="button"
+                                          onClick={async () => {
+                                            const result = await deleteWeight(selectedResidentId, r.date)
+                                            setDeletingDate(null)
+                                            if (result.error) setDeleteError(result.error)
+                                            if (editDate === r.date) { setEditDate(today); setEditWeight('') }
+                                          }}
+                                          className="text-[10px] px-1.5 py-0.5 bg-red-500 text-white rounded hover:bg-red-600">
+                                          はい
+                                        </button>
+                                        <button type="button"
+                                          onClick={() => setDeletingDate(null)}
+                                          className="text-[10px] px-1.5 py-0.5 border border-gray-200 text-gray-500 rounded hover:border-gray-400">
+                                          いいえ
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button type="button"
+                                          onClick={() => { setEditDate(r.date); setEditWeight(r.weight.toFixed(1)) }}
+                                          className={`p-1 rounded transition ${isThisRowEditing ? 'text-amber-600' : 'text-gray-300 hover:text-amber-500'}`}
+                                          title="修正">
+                                          <Pencil size={13} />
+                                        </button>
+                                        <button type="button"
+                                          onClick={() => { setDeletingDate(r.date); setDeleteError(null) }}
+                                          className="p-1 rounded text-gray-300 hover:text-red-500 transition"
+                                          title="削除">
+                                          <Trash2 size={13} />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             )
