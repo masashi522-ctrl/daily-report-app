@@ -16,7 +16,7 @@ export default async function StaffPage() {
 
   const { data: facility } = await supabase
     .from('Facility')
-    .select('name, facilityCode')
+    .select('name, facilityCode, slug')
     .eq('id', session.facilityId)
     .maybeSingle()
 
@@ -41,6 +41,14 @@ export default async function StaffPage() {
             <p className="text-2xl font-bold tracking-widest text-blue-800 font-mono">{facility.facilityCode}</p>
           </div>
           <p className="text-xs text-blue-500 w-full">このコードを新しいスタッフに共有すると、<a href="/register" className="underline" target="_blank">/register</a> から施設に紐付けて登録できます</p>
+        </div>
+      )}
+
+      {isAdmin && facility?.slug && (
+        <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+          <p className="text-xs font-medium text-teal-600">この施設専用のログインURL</p>
+          <p className="text-sm font-bold text-teal-900 font-mono break-all">{`/${facility.slug}/login`}</p>
+          <p className="text-xs text-teal-500 mt-1">このURLをブックマークしてもらうと、スタッフは施設を意識せずログインできます</p>
         </div>
       )}
 

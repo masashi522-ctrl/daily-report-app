@@ -7,10 +7,7 @@ import { redirect } from 'next/navigation'
 
 export type LoginState = { error: string } | null
 
-export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-
+async function authenticate(email: string, password: string, expectedSlug: string | null): Promise<LoginState> {
   if (!email || !password) {
     return { error: 'メールアドレスとパスワードを入力してください' }
   }
@@ -36,6 +33,10 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     .eq('id', staff.facilityId)
     .maybeSingle()
 
+  if (expectedSlug && facility?.slug !== expectedSlug) {
+    return { error: 'このURLはご自身の施設用ではありません。ご自身の施設のログインURLからログインしてください' }
+  }
+
   await createSession({
     userId: staff.id,
     email: staff.email,
@@ -47,6 +48,14 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   })
 
   redirect(facility?.slug ? `/${facility.slug}` : '/dashboard')
+}
+
+export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
+  return authenticate(formData.get('email') as string, formData.get('password') as string, null)
+}
+
+export async function facilityLogin(slug: string, _prevState: LoginState, formData: FormData): Promise<LoginState> {
+  return authenticate(formData.get('email') as string, formData.get('password') as string, slug)
 }
 
 export async function logout() {
