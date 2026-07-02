@@ -51,6 +51,7 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [localRecords, setLocalRecords] = useState<Record<string, DailyRecord>>(recordMap)
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({})
   useEffect(() => { setLocalRecords(recordMap) }, [recordMap])
 
   function matchRow(r: Resident) {
@@ -100,26 +101,28 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
 
   function handleSave(residentId: string) {
     setSaving(residentId)
+    setSaveErrors(prev => { const next = { ...prev }; delete next[residentId]; return next })
     const d = getDraft(residentId)
     const rec = localRecords[residentId]
     startTransition(async () => {
-      const saved = await saveBathingRecord({
+      const { data: saved, error } = await saveBathingRecord({
         residentId, date, id: rec?.id, ...d,
         bathingCareChecks: d.bathingCareChecks.join(',') || null,
       })
       setSaving(null)
-      setLocalRecords(prev => ({
-        ...prev,
-        [residentId]: saved
-          ? { ...(prev[residentId] ?? {}), ...saved } as DailyRecord
-          : { ...(prev[residentId] ?? {}), ...d, bathingCareChecks: d.bathingCareChecks.join(',') || null, updatedAt: new Date().toISOString() } as DailyRecord,
-      }))
+      if (error) {
+        // 保存失敗時はローカル状態を書き換えず、下書きも残して再保存できるようにする
+        setSaveErrors(prev => ({ ...prev, [residentId]: error }))
+        return
+      }
+      setLocalRecords(prev => ({ ...prev, [residentId]: saved as DailyRecord }))
       setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
     })
   }
 
   function handleSaveAll() {
     setSavingAll(true)
+    setSaveErrors({})
     const list = filtered.map(r => {
       const d = getDraft(r.id)
       const rec = localRecords[r.id]
@@ -132,23 +135,26 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
       const results = await saveAllBathing(list)
       setSavingAll(false)
       const updates: Record<string, DailyRecord> = {}
+      const errors: Record<string, string> = {}
+      const savedIds = new Set<string>()
       for (let i = 0; i < list.length; i++) {
         const item = list[i]
-        const saved = results[i]
-        updates[item.residentId] = saved
-          ? { ...(localRecords[item.residentId] ?? {}), ...saved } as DailyRecord
-          : {
-              ...(localRecords[item.residentId] ?? {}),
-              bathing: item.bathing ?? 'NOT_APPLICABLE',
-              bathingSkipReason: item.bathingSkipReason ?? null,
-              bathingSkipDetail: item.bathingSkipDetail ?? null,
-              bathingNote: item.bathingNote ?? null,
-              bathingCareChecks: item.bathingCareChecks ?? null,
-              updatedAt: new Date().toISOString(),
-            } as unknown as DailyRecord
+        const { data: saved, error } = results[i]
+        if (error) {
+          errors[item.residentId] = error
+          continue
+        }
+        updates[item.residentId] = saved as DailyRecord
+        savedIds.add(item.residentId)
       }
       setLocalRecords(prev => ({ ...prev, ...updates }))
-      setDrafts({})
+      setSaveErrors(errors)
+      // 保存に成功した利用者だけ下書きをクリアし、失敗分は再保存できるよう残す
+      setDrafts(prev => {
+        const next = { ...prev }
+        for (const id of savedIds) delete next[id]
+        return next
+      })
     })
   }
 
@@ -165,14 +171,16 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
   const SaveBtn = ({ id }: { id: string }) => {
     const isDirty = !!drafts[id]
     const isSaved = !!localRecords[id]
+    const hasError = !!saveErrors[id]
     return (
       <button onClick={() => handleSave(id)} disabled={saving === id || savingAll}
         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
           saving === id        ? 'bg-gray-200 text-gray-400' :
+          hasError             ? 'bg-red-500 text-white hover:bg-red-600' :
           isSaved && !isDirty ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' :
                                 'bg-teal-600 text-white hover:bg-teal-700'
         }`}>
-        {saving === id ? '保存中...' : isSaved && !isDirty ? '済' : '保存'}
+        {saving === id ? '保存中...' : hasError ? '再試行' : isSaved && !isDirty ? '済' : '保存'}
       </button>
     )
   }
@@ -249,6 +257,9 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
         )}
         {/* 全員保存 */}
         <div className="flex justify-end w-full gap-2 items-center">
+          {Object.keys(saveErrors).length > 0 && (
+            <p className="text-xs text-red-600 font-medium">{Object.keys(saveErrors).length}名の保存に失敗しました</p>
+          )}
           <p className="text-xs text-gray-400">{filtered.length}/{residents.length}名 表示中</p>
           <button onClick={handleSaveAll} disabled={savingAll}
             className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition">
@@ -303,6 +314,11 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
             </div>
 
             <div className="p-4 space-y-3">
+              {saveErrors[resident.id] && (
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                  保存に失敗しました。「再試行」を押してください。（{saveErrors[resident.id]}）
+                </div>
+              )}
               {/* 特記事項（利用者登録で設定した固定表示） */}
               {(resident.bathingSpecialItems || resident.bathingSpecialFreeText) && (() => {
                 const items = resident.bathingSpecialItems

@@ -16,7 +16,12 @@ export interface BathingDraft {
   bathingCareChecks?: string | null
 }
 
-export async function saveBathingRecord(draft: BathingDraft): Promise<DailyRecord | null> {
+export interface SaveBathingResult {
+  data: DailyRecord | null
+  error: string | null
+}
+
+export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathingResult> {
   await requireSession()
 
   const payload = {
@@ -45,9 +50,12 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<DailyRecor
       .eq('id', existing.id)
       .select('*')
       .single()
-    if (error) console.error('[bathing UPDATE error]', error)
+    if (error) {
+      console.error('[bathing UPDATE error]', error)
+      return { data: null, error: error.message }
+    }
     revalidatePath('/bathing')
-    return (saved as DailyRecord) ?? null
+    return { data: saved as DailyRecord, error: null }
   } else {
     const { data: saved, error } = await supabase
       .from('DailyRecord')
@@ -68,13 +76,16 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<DailyRecor
       })
       .select('*')
       .single()
-    if (error) console.error('[bathing INSERT error]', error)
+    if (error) {
+      console.error('[bathing INSERT error]', error)
+      return { data: null, error: error.message }
+    }
     revalidatePath('/bathing')
-    return (saved as DailyRecord) ?? null
+    return { data: saved as DailyRecord, error: null }
   }
 }
 
-export async function saveAllBathing(drafts: BathingDraft[]): Promise<(DailyRecord | null)[]> {
+export async function saveAllBathing(drafts: BathingDraft[]): Promise<SaveBathingResult[]> {
   await requireSession()
   const results = await Promise.all(drafts.map(saveBathingRecord))
   revalidatePath('/bathing')
