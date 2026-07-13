@@ -53,7 +53,7 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
   // Look up existing record to avoid overwriting fields managed by other pages
   const { data: rows } = await supabase
     .from('DailyRecord')
-    .select('id, bathing, trainingDone, trainingSkipReason, trainingSkipDetail, trainingNote')
+    .select('id, bathing, trainingDone, trainingSkipReason, trainingSkipDetail, trainingNote, weight')
     .eq('date', data.date)
     .eq('residentId', data.residentId)
     .limit(1)
@@ -68,6 +68,7 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
       trainingSkipReason: data.trainingSkipReason !== undefined ? (data.trainingSkipReason ?? null) : existing.trainingSkipReason,
       trainingSkipDetail: data.trainingSkipDetail !== undefined ? (data.trainingSkipDetail ?? null) : existing.trainingSkipDetail,
       trainingNote: data.trainingNote !== undefined ? (data.trainingNote ?? null) : existing.trainingNote,
+      weight: data.weight !== undefined ? (data.weight ?? null) : existing.weight,
     }
     await supabase.from('DailyRecord').update(merged).eq('id', existing.id)
   } else {
@@ -79,6 +80,8 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
   }
 
   revalidatePath('/dashboard')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
 }
 
 export async function saveAllRecords(
@@ -133,6 +136,7 @@ export async function addTemporaryAttendance({ residentId, date }: { residentId:
   revalidatePath('/dashboard')
   revalidatePath('/bathing')
   revalidatePath('/training')
+  revalidatePath('/analytics')
   return { success: true }
 }
 
@@ -150,4 +154,5 @@ export async function removeTemporaryAttendance({ residentId, date }: { resident
   revalidatePath('/dashboard')
   revalidatePath('/bathing')
   revalidatePath('/training')
+  revalidatePath('/analytics')
 }

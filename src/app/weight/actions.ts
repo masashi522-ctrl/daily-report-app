@@ -56,6 +56,7 @@ export async function saveWeight(
   }
 
   revalidatePath('/weight')
+  revalidatePath('/analytics')
   return { success: true }
 }
 
@@ -72,5 +73,6 @@ export async function deleteWeight(residentId: string, date: string): Promise<{ 
   if (error) return { error: `削除に失敗しました: ${error.message}` }
 
   revalidatePath('/weight')
+  revalidatePath('/analytics')
   return {}
 }

@@ -116,9 +116,81 @@ export async function GET(request: Request) {
     ]),
   ]
 
+  // ── シート4: 体重推移（直近3ヶ月） ──
+  const WEIGHT_TREND_MONTHS = 3
+  function monthsEndingAt(endYear: number, endMonth: number, count: number) {
+    const list: { key: string; label: string }[] = []
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(endYear, endMonth - 1 - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      list.push({ key, label: `${d.getFullYear()}年${d.getMonth() + 1}月` })
+    }
+    return list
+  }
+  const weightMonths = monthsEndingAt(year, month, WEIGHT_TREND_MONTHS)
+  const weightFrom = `${weightMonths[0].key}-01`
+
+  let weightRows: (string | number | null)[][]
+  if (residentId) {
+    const { data: weightRaw } = await supabase
+      .from('DailyRecord')
+      .select('date, weight')
+      .eq('residentId', residentId)
+      .not('weight', 'is', null)
+      .gte('date', weightFrom)
+      .lte('date', to)
+      .order('date', { ascending: true })
+    const weightRecords = (weightRaw ?? []).filter(x => x.weight != null) as { date: string; weight: number }[]
+
+    weightRows = [
+      ['利用者', targetName, '対象期間', `${weightMonths[0].label} 〜 ${weightMonths[WEIGHT_TREND_MONTHS - 1].label}`],
+      [],
+      ['測定日', '体重(kg)', '前回比(kg)'],
+      ...weightRecords.map((x, i) => [
+        x.date,
+        x.weight,
+        i > 0 ? parseFloat((x.weight - weightRecords[i - 1].weight).toFixed(1)) : null,
+      ]),
+    ]
+    if (weightRecords.length >= 2) {
+      const diff = parseFloat((weightRecords[weightRecords.length - 1].weight - weightRecords[0].weight).toFixed(1))
+      weightRows.push([], ['期間内増減', diff, null])
+    }
+  } else {
+    const residentIds = (residents ?? []).map(x => x.id)
+    const { data: weightRaw } = residentIds.length
+      ? await supabase
+          .from('DailyRecord')
+          .select('residentId, date, weight')
+          .in('residentId', residentIds)
+          .not('weight', 'is', null)
+          .gte('date', weightFrom)
+          .lte('date', to)
+          .order('date', { ascending: true })
+      : { data: [] }
+    const weightRecords = (weightRaw ?? []).filter(x => x.weight != null) as { residentId: string; date: string; weight: number }[]
+
+    const byResidentMonth = new Map<string, Map<string, number>>()
+    for (const x of weightRecords) {
+      const mk = x.date.slice(0, 7)
+      if (!byResidentMonth.has(x.residentId)) byResidentMonth.set(x.residentId, new Map())
+      byResidentMonth.get(x.residentId)!.set(mk, x.weight)
+    }
+
+    weightRows = [['利用者名', ...weightMonths.map(m => m.label), '期間内増減(kg)']]
+    for (const res of residents ?? []) {
+      const monthly = byResidentMonth.get(res.id) ?? new Map<string, number>()
+      const values = weightMonths.map(m => monthly.get(m.key) ?? null)
+      const measured = values.filter((v): v is number => v != null)
+      const diff = measured.length >= 2 ? parseFloat((measured[measured.length - 1] - measured[0]).toFixed(1)) : null
+      weightRows.push([res.name, ...values, diff])
+    }
+  }
+
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vitalRows), 'バイタル月平均')
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(careRows), 'ケア実施回数')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(weightRows), '体重推移')
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detailRows), '日別詳細')
 
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })

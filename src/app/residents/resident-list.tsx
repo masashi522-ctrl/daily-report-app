@@ -28,6 +28,20 @@ export default function ResidentList({ residents, editId }: Props) {
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [generating, startGenerate] = useTransition()
   const [generateResult, setGenerateResult] = useState<string | null>(null)
+  const [, startDelete] = useTransition()
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({})
+
+  function handleDelete(id: string) {
+    startDelete(async () => {
+      const result = await deleteResident(id)
+      setDeleteErrors(prev => {
+        const next = { ...prev }
+        if (result.error) next[id] = result.error
+        else delete next[id]
+        return next
+      })
+    })
+  }
 
   function applySearch() {
     setAppliedText(inputText)
@@ -170,11 +184,19 @@ export default function ResidentList({ residents, editId }: Props) {
                   </form>
                 </td>
                 <td className="px-3 py-2 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <a href={`/residents?edit=${r.id}`} className="text-violet-500 hover:text-violet-700 text-xs font-medium">編集</a>
-                    <form action={deleteResident.bind(null, r.id)}>
-                      <button className="text-red-500 hover:text-red-700 text-xs">削除</button>
-                    </form>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center justify-center gap-2">
+                      <a href={`/residents?edit=${r.id}`} className="text-violet-500 hover:text-violet-700 text-xs font-medium">編集</a>
+                      <button
+                        onClick={() => {
+                          if (confirm(`${r.name}さんを削除しますか？`)) handleDelete(r.id)
+                        }}
+                        className="text-red-500 hover:text-red-700 text-xs"
+                      >削除</button>
+                    </div>
+                    {deleteErrors[r.id] && (
+                      <p className="text-[10px] text-red-600 max-w-[160px]">{deleteErrors[r.id]}</p>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -241,10 +263,16 @@ export default function ResidentList({ residents, editId }: Props) {
                 href={`/residents?edit=${r.id}`}
                 className="flex-1 text-center text-sm py-2 rounded-lg bg-violet-50 text-violet-600 font-medium hover:bg-violet-100 transition"
               >編集</a>
-              <form action={deleteResident.bind(null, r.id)} className="flex-1">
-                <button className="w-full text-sm py-2 rounded-lg bg-red-50 text-red-500 font-medium hover:bg-red-100 transition">削除</button>
-              </form>
+              <button
+                onClick={() => {
+                  if (confirm(`${r.name}さんを削除しますか？`)) handleDelete(r.id)
+                }}
+                className="flex-1 text-sm py-2 rounded-lg bg-red-50 text-red-500 font-medium hover:bg-red-100 transition"
+              >削除</button>
             </div>
+            {deleteErrors[r.id] && (
+              <p className="text-[10px] text-red-600 px-4 pb-3">{deleteErrors[r.id]}</p>
+            )}
             </div>
           </div>
         ))}

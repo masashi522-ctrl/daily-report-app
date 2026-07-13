@@ -49,6 +49,7 @@ export async function saveTrainingRecord(draft: TrainingDraft): Promise<DailyRec
       .single()
     if (error) console.error('[training UPDATE error]', error)
     revalidatePath('/training')
+    revalidatePath('/analytics')
     return (saved as DailyRecord) ?? null
   } else {
     const { data: saved, error } = await supabase
@@ -72,6 +73,7 @@ export async function saveTrainingRecord(draft: TrainingDraft): Promise<DailyRec
       .single()
     if (error) console.error('[training INSERT error]', error)
     revalidatePath('/training')
+    revalidatePath('/analytics')
     return (saved as DailyRecord) ?? null
   }
 }
@@ -80,5 +82,6 @@ export async function saveAllTraining(drafts: TrainingDraft[]): Promise<(DailyRe
   await requireSession()
   const results = await Promise.all(drafts.map(saveTrainingRecord))
   revalidatePath('/training')
+  revalidatePath('/analytics')
   return results
 }

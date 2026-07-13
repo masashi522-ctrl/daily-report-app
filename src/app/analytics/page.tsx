@@ -71,6 +71,7 @@ export default async function AnalyticsPage({
     fluidAll:        avgCombined(r.map(x => x.fluidIntakeAm), r.map(x => x.fluidIntakePm)),
     mealMain:        avg(r.map(x => x.mealMainFood)),
     mealSide:        avg(r.map(x => x.mealSideFood)),
+    weight:          avg(r.map(x => (x.weight != null && x.weight > 0) ? x.weight : null)),
     bathing:         `${countOf(r.map(x => x.bathing === 'DONE'))}/${total}回`,
     oralCare:        `${countOf(r.map(x => x.oralCare))}/${total}回`,
     medMorning:      `${countOf(r.map(x => x.medicationMorning))}/${total}回`,
@@ -127,6 +128,12 @@ export default async function AnalyticsPage({
         { label: '主菜', value: stats.mealSide },
       ],
     },
+    {
+      title: '体重', unit: 'kg',
+      rows: [
+        { label: '月平均', value: stats.weight, highlight: true },
+      ],
+    },
   ]
 
   const counts = [
@@ -167,6 +174,10 @@ export default async function AnalyticsPage({
         return (am > 0 || pm > 0) ? am + pm : null
       }),
       meal:   allDays.map(d => byDay.get(d)?.mealMainFood ?? null),
+      weight: allDays.map(d => {
+        const w = byDay.get(d)?.weight
+        return (w != null && w > 0) ? w : null
+      }),
     }
 
     const attendingRecs = r.filter(x => !x.isAbsent)

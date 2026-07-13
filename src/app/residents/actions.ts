@@ -59,13 +59,32 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   if (error) return { error: `登録に失敗しました: ${error.message}` }
 
   revalidatePath('/residents')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
   redirect('/residents')
 }
 
-export async function deleteResident(id: string) {
+export async function deleteResident(id: string): Promise<{ error?: string }> {
   const session = await requireSession()
-  await supabase.from('Resident').delete().eq('id', id).eq('facilityId', session.facilityId)
+
+  const { count } = await supabase
+    .from('DailyRecord')
+    .select('id', { count: 'exact', head: true })
+    .eq('residentId', id)
+
+  if (count && count > 0) {
+    return {
+      error: `この利用者には日々の記録が${count}件あるため削除できません。一覧から除外するには「退所」ボタンをご利用ください。`,
+    }
+  }
+
+  const { error } = await supabase.from('Resident').delete().eq('id', id).eq('facilityId', session.facilityId)
+  if (error) return { error: `削除に失敗しました: ${error.message}` }
+
   revalidatePath('/residents')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
+  return {}
 }
 
 export async function updateResident(id: string, prevState: ResidentFormState, formData: FormData): Promise<ResidentFormState> {
@@ -115,6 +134,8 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   if (error) return { error: `更新に失敗しました: ${error.message}` }
 
   revalidatePath('/residents')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
   redirect('/residents')
 }
 
@@ -152,6 +173,8 @@ export async function generateAllFurigana(): Promise<{ updated: number; errors: 
   }
 
   revalidatePath('/residents')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
   return { updated, errors }
 }
 
@@ -159,4 +182,6 @@ export async function toggleActive(id: string, isActive: boolean) {
   const session = await requireSession()
   await supabase.from('Resident').update({ isActive, updatedAt: new Date().toISOString() }).eq('id', id).eq('facilityId', session.facilityId)
   revalidatePath('/residents')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
 }

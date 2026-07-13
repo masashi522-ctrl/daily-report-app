@@ -55,6 +55,7 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathin
       return { data: null, error: error.message }
     }
     revalidatePath('/bathing')
+    revalidatePath('/analytics')
     return { data: saved as DailyRecord, error: null }
   } else {
     const { data: saved, error } = await supabase
@@ -81,6 +82,7 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathin
       return { data: null, error: error.message }
     }
     revalidatePath('/bathing')
+    revalidatePath('/analytics')
     return { data: saved as DailyRecord, error: null }
   }
 }
@@ -89,5 +91,6 @@ export async function saveAllBathing(drafts: BathingDraft[]): Promise<SaveBathin
   await requireSession()
   const results = await Promise.all(drafts.map(saveBathingRecord))
   revalidatePath('/bathing')
+  revalidatePath('/analytics')
   return results
 }

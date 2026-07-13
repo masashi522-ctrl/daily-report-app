@@ -10,6 +10,7 @@ export interface ChartData {
   temp: (number | null)[]
   fluid: (number | null)[]
   meal: (number | null)[]
+  weight: (number | null)[]
 }
 
 function SvgLineChart({
@@ -159,6 +160,7 @@ export default function ResidentReport({
   const hasBp   = chartData.bpSys.some(v => v != null)
   const hasTemp = chartData.temp.some(v => v != null)
   const hasFluid = chartData.fluid.some(v => v != null)
+  const hasWeight = chartData.weight.some(v => v != null)
 
   return (
     <div className="flex flex-col gap-4 mt-2">
@@ -206,6 +208,17 @@ export default function ResidentReport({
             forcedMin={0}
             height={90}
             unit="ml"
+          />
+        </div>
+      )}
+      {hasWeight && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-teal-700 mb-2">体重推移（kg）</h3>
+          <SvgLineChart
+            days={chartData.days}
+            series={[{ values: chartData.weight, color: '#0d9488', label: '体重' }]}
+            height={90}
+            unit="kg"
           />
         </div>
       )}
