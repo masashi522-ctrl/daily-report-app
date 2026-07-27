@@ -319,30 +319,6 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
                   保存に失敗しました。「再試行」を押してください。（{saveErrors[resident.id]}）
                 </div>
               )}
-              {/* 特記事項（利用者登録で設定した固定表示） */}
-              {(resident.bathingSpecialItems || resident.bathingSpecialFreeText) && (() => {
-                const items = resident.bathingSpecialItems
-                  ? BATHING_SPECIAL_ITEMS.filter(s => resident.bathingSpecialItems!.split(',').includes(s.key))
-                  : []
-                return (
-                  <div className="p-3 bg-sky-50 rounded-lg border border-sky-100">
-                    <p className="text-[10px] font-semibold text-sky-700 mb-1.5">特記事項</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {items.map(s => (
-                        <span key={s.key} className="text-xs bg-sky-100 text-sky-800 border border-sky-200 rounded-full px-2 py-0.5 font-medium">
-                          {s.label}
-                        </span>
-                      ))}
-                      {resident.bathingSpecialFreeText && (
-                        <span className="text-xs bg-white text-gray-700 border border-sky-200 rounded-full px-2 py-0.5">
-                          {resident.bathingSpecialFreeText}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })()}
-
               {/* バイタル詳細（折りたたみ表示） */}
               {rec && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-rose-50 rounded-lg border border-rose-100">
@@ -433,6 +409,30 @@ export default function BathingTable({ residents, recordMap, date }: Props) {
                   />
                 </div>
               )}
+
+              {/* 特記事項（利用者登録で設定した固定表示） */}
+              {(resident.bathingSpecialItems || resident.bathingSpecialFreeText) && (() => {
+                const items = resident.bathingSpecialItems
+                  ? BATHING_SPECIAL_ITEMS.filter(s => resident.bathingSpecialItems!.split(',').includes(s.key))
+                  : []
+                return (
+                  <div className="p-3 bg-sky-50 rounded-lg border border-sky-100">
+                    <p className="text-[10px] font-semibold text-sky-700 mb-1.5">特記事項</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map(s => (
+                        <span key={s.key} className="text-xs bg-sky-100 text-sky-800 border border-sky-200 rounded-full px-2 py-0.5 font-medium">
+                          {s.label}
+                        </span>
+                      ))}
+                      {resident.bathingSpecialFreeText && (
+                        <span className="text-xs bg-white text-gray-700 border border-sky-200 rounded-full px-2 py-0.5">
+                          {resident.bathingSpecialFreeText}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* ケア項目チェックリスト */}
               {resident.bathingCareItems && (() => {

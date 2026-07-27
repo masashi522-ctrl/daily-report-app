@@ -119,24 +119,6 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
         </label>
         <DayCheckboxes name="bathingDays" checkedDays={checkedBathing} />
       </div>
-      {/* 入浴ケア項目 */}
-      <div className="border border-teal-100 rounded-lg p-3 bg-teal-50/40">
-        <label className="text-xs font-semibold text-teal-800 block mb-2">
-          入浴ケア項目
-          <span className="ml-1 font-normal text-gray-400">（この利用者に必要な項目にチェック）</span>
-        </label>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          {BATHING_CARE_ITEMS.map(item => (
-            <label key={item.key} className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" name="bathingCareItems" value={item.key}
-                defaultChecked={checkedCareItems.includes(item.key)}
-                className="w-4 h-4 accent-teal-600" />
-              <span className="text-sm text-gray-700">{item.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
       {/* 入浴特記事項 */}
       <div className="border border-sky-100 rounded-lg p-3 bg-sky-50/40">
         <label className="text-xs font-semibold text-sky-800 block mb-2">
@@ -159,6 +141,24 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
             defaultValue={resident.bathingSpecialFreeText ?? ''}
             placeholder="例: 腰痛あり、お湯は低め"
             className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sky-400" />
+        </div>
+      </div>
+
+      {/* 入浴ケア項目 */}
+      <div className="border border-teal-100 rounded-lg p-3 bg-teal-50/40">
+        <label className="text-xs font-semibold text-teal-800 block mb-2">
+          入浴ケア項目
+          <span className="ml-1 font-normal text-gray-400">（この利用者に必要な項目にチェック）</span>
+        </label>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {BATHING_CARE_ITEMS.map(item => (
+            <label key={item.key} className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" name="bathingCareItems" value={item.key}
+                defaultChecked={checkedCareItems.includes(item.key)}
+                className="w-4 h-4 accent-teal-600" />
+              <span className="text-sm text-gray-700">{item.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 
