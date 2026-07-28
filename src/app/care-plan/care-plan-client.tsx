@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Download } from 'lucide-react'
 import { saveCarePlan } from './actions'
 import { CARE_LEVEL_OPTIONS, type CarePlan, type CarePlanGoal } from '@/types/database'
 
@@ -86,12 +86,28 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
             </div>
           ) : (
             <form action={formAction} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-5">
-              <div className="text-center border-b border-gray-100 pb-3">
+              <div className="text-center border-b border-gray-100 pb-3 relative">
                 <h3 className="font-bold text-gray-800 text-lg tracking-widest">通所介護計画書</h3>
                 {plan?.updatedAt && (
                   <span className="text-xs text-gray-400">
                     最終更新: {new Date(plan.updatedAt).toLocaleString('ja-JP')}
                   </span>
+                )}
+                {plan && (
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <a
+                      href={`/api/care-plan/export?residentId=${selectedResidentId}&format=xlsx`}
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition"
+                    >
+                      <Download size={13} /> Excelでダウンロード
+                    </a>
+                    <a
+                      href={`/api/care-plan/export?residentId=${selectedResidentId}&format=docx`}
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 transition"
+                    >
+                      <Download size={13} /> Wordでダウンロード
+                    </a>
+                  </div>
                 )}
               </div>
 
