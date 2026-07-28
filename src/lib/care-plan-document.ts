@@ -144,22 +144,32 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
   r++
   r++
 
-  ws.getRow(r).height = 16
-  mg(`A${r}:${LAST_COL}${r}`, `A${r}`, '上記の通所介護計画によりサービス提供を行います。', { size: 9 })
+  ws.getRow(r).height = 18
+  mg(`A${r}:${LAST_COL}${r}`, `A${r}`, '上記の通所介護計画によりサービス提供を行います。', { size: 9, v: 'top', wrap: true })
   r++
-  ws.getRow(r).height = 16
-  mg(`A${r}:D${r}`, `A${r}`, `説明日：${jaDate(plan.explanationDate)}`, { size: 9 })
-  mg(`E${r}:${LAST_COL}${r}`, `E${r}`, `説明者：${plan.explainerName ?? ''}`, { size: 9 })
+
+  ws.getRow(r).height = 20
+  mg(`A${r}:B${r}`, `A${r}`, '説明日', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
+  mg(`C${r}:D${r}`, `C${r}`, jaDate(plan.explanationDate), { size: 9, h: 'center' })
+  mg(`E${r}:F${r}`, `E${r}`, '説明者', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
+  mg(`G${r}:${LAST_COL}${r}`, `G${r}`, plan.explainerName ?? '', { size: 9, h: 'center' })
   r++
-  ws.getRow(r).height = 16
-  mg(`A${r}:${LAST_COL}${r}`, `A${r}`, `事業所名称：${facilityName}`, { size: 9 })
+
+  ws.getRow(r).height = 20
+  mg(`A${r}:B${r}`, `A${r}`, '事業所名称', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
+  mg(`C${r}:${LAST_COL}${r}`, `C${r}`, facilityName, { size: 9 })
   r++
+  r++
+
   ws.getRow(r).height = 30
   mg(`A${r}:${LAST_COL}${r}`, `A${r}`, '上記計画の内容について説明を受け同意し、交付されました。', { size: 9, v: 'top', wrap: true })
   r++
-  ws.getRow(r).height = 18
-  mg(`A${r}:D${r}`, `A${r}`, `利用者同意署名欄：${plan.familyConfirmation ?? ''}`, { size: 9 })
-  mg(`E${r}:${LAST_COL}${r}`, `E${r}`, `代筆者署名欄（続柄）：${plan.proxySigner ?? ''}`, { size: 9 })
+
+  ws.getRow(r).height = 24
+  mg(`A${r}:B${r}`, `A${r}`, '利用者同意署名欄', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
+  mg(`C${r}:D${r}`, `C${r}`, plan.familyConfirmation ?? '', { size: 9, h: 'center', wrap: true })
+  mg(`E${r}:F${r}`, `E${r}`, '代筆者署名欄（続柄）', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
+  mg(`G${r}:${LAST_COL}${r}`, `G${r}`, plan.proxySigner ?? '', { size: 9, h: 'center', wrap: true })
 
   return wb
 }

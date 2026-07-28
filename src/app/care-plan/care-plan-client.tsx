@@ -18,6 +18,13 @@ interface Props {
 
 const EMPTY_GOAL: CarePlanGoal = { issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '' }
 
+// スキャン結果が全角数字（要介護２ 等）で来ても選択肢と一致するよう正規化する
+function normalizeCareLevel(v: string | null | undefined): string {
+  if (!v) return ''
+  const halfWidth = v.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).trim()
+  return (CARE_LEVEL_OPTIONS as readonly string[]).includes(halfWidth) ? halfWidth : ''
+}
+
 interface ScanResult {
   planDate: string
   staffName: string
@@ -354,7 +361,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 block mb-1">要介護</label>
-                  <select ref={careLevelRef} name="careLevel" defaultValue={effectivePlan?.careLevel ?? selectedResident.careLevel ?? ''}
+                  <select ref={careLevelRef} name="careLevel" defaultValue={normalizeCareLevel(effectivePlan?.careLevel) || selectedResident.careLevel || ''}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
                     <option value="">未設定</option>
                     {CARE_LEVEL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}

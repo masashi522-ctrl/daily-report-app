@@ -23,7 +23,7 @@ const CARE_PLAN_SCAN_SCHEMA = {
     planDate: { type: 'string', description: '作成年月日。西暦のYYYY-MM-DD形式。読み取れなければ空文字列' },
     staffName: { type: 'string', description: '作成者' },
     birthDate: { type: 'string', description: '生年月日。西暦のYYYY-MM-DD形式。読み取れなければ空文字列' },
-    careLevel: { type: 'string', description: '要介護度（例: 要介護2）' },
+    careLevel: { type: 'string', description: '要介護度（例: 要介護2。数字は必ず半角で出力すること）' },
     needsAnalysis: { type: 'string', description: '利用者及び家族の生活に対する意向を踏まえた課題分析の結果' },
     supportPolicy: { type: 'string', description: '総合的な援助の方針' },
     goalImage: { type: 'string', description: 'ゴールのイメージ' },

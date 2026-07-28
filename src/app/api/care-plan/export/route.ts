@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filenameBase + '.xlsx')}`,
+      'Cache-Control': 'no-store',
     },
   })
 }
