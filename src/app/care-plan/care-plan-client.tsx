@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Download, Camera, Loader2, Sparkles } from 'lucide-react'
 import { saveCarePlan } from './actions'
 import { CARE_LEVEL_OPTIONS, type CarePlan, type CarePlanGoal } from '@/types/database'
+import { mergeGoalsBySameIssue } from '@/lib/care-plan-goals'
 
 interface Resident { id: string; name: string; furigana: string | null; careLevel: string | null }
 
@@ -140,7 +141,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
       })
       setGoals(prev => {
         const meaningfulPrev = prev.filter(g => g.issue || g.longTermGoal || g.shortTermGoal || g.serviceContent || g.frequency)
-        const combined = [...meaningfulPrev, ...(data.goals ?? [])]
+        const combined = mergeGoalsBySameIssue([...meaningfulPrev, ...(data.goals ?? [])])
         return combined.length > 0 ? combined : [{ ...EMPTY_GOAL }]
       })
       setGoalImageText(prev => prev || data.goalImage)

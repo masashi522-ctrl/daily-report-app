@@ -1,5 +1,6 @@
 import { requireSession } from '@/lib/session'
 import Anthropic from '@anthropic-ai/sdk'
+import { mergeGoalsBySameIssue } from '@/lib/care-plan-goals'
 
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 const PDF_TYPE = 'application/pdf'
@@ -132,6 +133,9 @@ export async function POST(request: Request) {
 
   try {
     const parsed = JSON.parse(textBlock.text)
+    if (Array.isArray(parsed.goals)) {
+      parsed.goals = mergeGoalsBySameIssue(parsed.goals)
+    }
     return Response.json(parsed)
   } catch {
     return new Response('読み取り結果の解析に失敗しました', { status: 500 })
