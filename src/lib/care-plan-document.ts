@@ -25,6 +25,25 @@ const COL = {
 }
 const FONT = 'メイリオ'
 
+// A〜H列の幅（Excel単位）。文章量に応じた行の高さ計算にも使う。
+const COLUMN_WIDTHS = [14, 12, 12, 12, 12, 10, 10, 10]
+
+function widthUnits(fromCol: number, toCol: number): number {
+  let sum = 0
+  for (let c = fromCol; c <= toCol; c++) sum += COLUMN_WIDTHS[c - 1] ?? 10
+  return sum
+}
+
+// 列幅とフォントサイズから、折り返し後に文章が切れないための行の高さ(pt)を見積もる
+function estimateTextHeight(text: string | null | undefined, units: number, fontSize: number, minHeight: number): number {
+  const t = (text ?? '').trim()
+  if (!t) return minHeight
+  const charsPerLine = Math.max(6, Math.floor(units * (10 / fontSize) * 0.52))
+  const lines = t.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(Array.from(line).length / charsPerLine)), 0)
+  const lineHeight = fontSize * 1.6
+  return Math.max(minHeight, Math.ceil(lines * lineHeight + 8))
+}
+
 export function buildCarePlanExcel(resident: Resident, facilityName: string, plan: CarePlan): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Daily Report App'
@@ -41,10 +60,7 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
     },
   })
 
-  ws.columns = [
-    { width: 14 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 },
-    { width: 10 }, { width: 10 }, { width: 10 },
-  ]
+  ws.columns = COLUMN_WIDTHS.map(width => ({ width }))
   const LAST_COL = 'H'
 
   const ac = (hex: string) => ({ argb: 'FF' + hex })
@@ -91,7 +107,7 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
   mg(`E${r}:${LAST_COL}${r}`, `E${r}`, `作成者：${plan.staffName ?? ''}`, { size: 9, fg: COL.lblFg })
   r++
 
-  ws.getRow(r).height = 20
+  ws.getRow(r).height = estimateTextHeight(`利用者氏名：${resident.name} 様`, widthUnits(1, 3), 11, 20)
   mg(`A${r}:C${r}`, `A${r}`, `利用者氏名：${resident.name} 様`, { bold: true, size: 11 })
   mg(`D${r}:E${r}`, `D${r}`, `生年月日：${jaDate(plan.birthDate)}`, { size: 9 })
   mg(`F${r}:${LAST_COL}${r}`, `F${r}`, `要介護：${plan.careLevel ?? ''}`, { size: 9 })
@@ -105,7 +121,7 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
   ]
   for (const [label, text] of textSections) {
     secHdr(r, label); r++
-    ws.getRow(r).height = 50
+    ws.getRow(r).height = estimateTextHeight(text, widthUnits(1, 8), 10, 24)
     mg(`A${r}:${LAST_COL}${r}`, `A${r}`, text ?? '', { size: 10, v: 'top', wrap: true })
     r++
   }
@@ -123,7 +139,13 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
     { issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '' },
   ]
   for (const g of goals) {
-    ws.getRow(r).height = 32
+    ws.getRow(r).height = Math.max(
+      estimateTextHeight(g.issue, widthUnits(1, 2), 9, 20),
+      estimateTextHeight(g.longTermGoal, widthUnits(3, 3), 9, 20),
+      estimateTextHeight(g.shortTermGoal, widthUnits(4, 5), 9, 20),
+      estimateTextHeight(g.serviceContent, widthUnits(6, 7), 9, 20),
+      estimateTextHeight(g.frequency, widthUnits(8, 8), 9, 20),
+    )
     mg(`A${r}:B${r}`, `A${r}`, g.issue, { size: 9, v: 'top', wrap: true })
     sc(`C${r}`, g.longTermGoal, { size: 9, v: 'top', wrap: true })
     mg(`D${r}:E${r}`, `D${r}`, g.shortTermGoal, { size: 9, v: 'top', wrap: true })
@@ -139,7 +161,7 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
   mg(`C${r}:${LAST_COL}${r}`, `C${r}`,
     `期間：${jaDate(plan.evaluationPeriodStart)} ～ ${jaDate(plan.evaluationPeriodEnd)}`, { size: 9 })
   r++
-  ws.getRow(r).height = 40
+  ws.getRow(r).height = estimateTextHeight(plan.evaluationContent, widthUnits(1, 8), 10, 24)
   mg(`A${r}:${LAST_COL}${r}`, `A${r}`, `評価内容：${plan.evaluationContent ?? ''}`, { size: 10, v: 'top', wrap: true })
   r++
   r++
@@ -148,14 +170,17 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
   mg(`A${r}:${LAST_COL}${r}`, `A${r}`, '上記の通所介護計画によりサービス提供を行います。', { size: 9, v: 'top', wrap: true })
   r++
 
-  ws.getRow(r).height = 20
+  ws.getRow(r).height = Math.max(
+    20,
+    estimateTextHeight(plan.explainerName, widthUnits(7, 8), 9, 20),
+  )
   mg(`A${r}:B${r}`, `A${r}`, '説明日', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
   mg(`C${r}:D${r}`, `C${r}`, jaDate(plan.explanationDate), { size: 9, h: 'center' })
   mg(`E${r}:F${r}`, `E${r}`, '説明者', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
   mg(`G${r}:${LAST_COL}${r}`, `G${r}`, plan.explainerName ?? '', { size: 9, h: 'center' })
   r++
 
-  ws.getRow(r).height = 20
+  ws.getRow(r).height = estimateTextHeight(facilityName, widthUnits(3, 8), 9, 20)
   mg(`A${r}:B${r}`, `A${r}`, '事業所名称', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
   mg(`C${r}:${LAST_COL}${r}`, `C${r}`, facilityName, { size: 9 })
   r++
@@ -165,7 +190,10 @@ export function buildCarePlanExcel(resident: Resident, facilityName: string, pla
   mg(`A${r}:${LAST_COL}${r}`, `A${r}`, '上記計画の内容について説明を受け同意し、交付されました。', { size: 9, v: 'top', wrap: true })
   r++
 
-  ws.getRow(r).height = 24
+  ws.getRow(r).height = Math.max(
+    estimateTextHeight(plan.familyConfirmation, widthUnits(3, 4), 9, 24),
+    estimateTextHeight(plan.proxySigner, widthUnits(7, 8), 9, 24),
+  )
   mg(`A${r}:B${r}`, `A${r}`, '利用者同意署名欄', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
   mg(`C${r}:D${r}`, `C${r}`, plan.familyConfirmation ?? '', { size: 9, h: 'center', wrap: true })
   mg(`E${r}:F${r}`, `E${r}`, '代筆者署名欄（続柄）', { bg: COL.lblBg, fg: COL.lblFg, bold: true, size: 8, h: 'center' })
