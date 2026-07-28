@@ -65,6 +65,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
     try {
       const fd = new FormData()
       fd.append('file', file)
+      fd.append('facilityName', facilityName)
       const res = await fetch('/api/care-plan/scan', { method: 'POST', body: fd })
       if (!res.ok) {
         const msg = await res.text()
