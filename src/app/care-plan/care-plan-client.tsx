@@ -79,6 +79,8 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
   const [scanApplied, setScanApplied] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
   const [suggestError, setSuggestError] = useState<string | null>(null)
+  const [suggestingServiceIndex, setSuggestingServiceIndex] = useState<number | null>(null)
+  const [suggestServiceError, setSuggestServiceError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const needsAnalysisRef = useRef<HTMLTextAreaElement>(null)
   const supportPolicyRef = useRef<HTMLTextAreaElement>(null)
@@ -184,6 +186,37 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
       setSuggestError(e instanceof Error ? e.message : '提案の生成に失敗しました')
     } finally {
       setSuggesting(false)
+    }
+  }
+
+  async function handleSuggestServiceContent(index: number) {
+    setSuggestServiceError(null)
+    setSuggestingServiceIndex(index)
+    try {
+      const g = goals[index]
+      const res = await fetch('/api/care-plan/suggest-service-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issue: g.issue,
+          longTermGoal: g.longTermGoal,
+          shortTermGoal: g.shortTermGoal,
+          frequency: g.frequency,
+          currentServiceContent: g.serviceContent,
+          careLevel: careLevelRef.current?.value ?? '',
+          facilityName,
+        }),
+      })
+      if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg || '生成に失敗しました')
+      }
+      const data = await res.json()
+      updateGoal(index, 'serviceContent', data.suggestion ?? '')
+    } catch (e) {
+      setSuggestServiceError(e instanceof Error ? e.message : '生成に失敗しました')
+    } finally {
+      setSuggestingServiceIndex(null)
     }
   }
 
@@ -415,7 +448,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                     <span className="text-[10px] text-gray-400">解決すべき課題（ニーズ）</span>
                     <span className="text-[10px] text-gray-400">長期目標</span>
                     <span className="text-[10px] text-gray-400">短期目標</span>
-                    <span className="text-[10px] text-gray-400">サービス内容</span>
+                    <span className="text-[10px] text-gray-400">サービス内容（AI生成可）</span>
                     <span className="text-[10px] text-gray-400">頻度</span>
                     <span />
                   </div>
@@ -430,9 +463,17 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                       <textarea name="goalShortTerm" value={g.shortTermGoal} rows={3}
                         onChange={e => updateGoal(i, 'shortTermGoal', e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
-                      <textarea name="goalService" value={g.serviceContent} rows={3}
-                        onChange={e => updateGoal(i, 'serviceContent', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                      <div className="flex flex-col gap-1">
+                        <button type="button" onClick={() => handleSuggestServiceContent(i)}
+                          disabled={suggestingServiceIndex === i}
+                          className="self-start flex items-center gap-0.5 text-[10px] text-teal-600 hover:text-teal-800 font-medium disabled:opacity-50">
+                          {suggestingServiceIndex === i ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                          AI生成
+                        </button>
+                        <textarea name="goalService" value={g.serviceContent} rows={3}
+                          onChange={e => updateGoal(i, 'serviceContent', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                      </div>
                       <input type="text" name="goalFrequency" value={g.frequency}
                         onChange={e => updateGoal(i, 'frequency', e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
@@ -443,6 +484,10 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                     </div>
                   ))}
                 </div>
+                {suggestServiceError && (
+                  <p className="text-xs text-red-600 mt-1">{suggestServiceError}</p>
+                )}
+                <p className="text-[10px] text-gray-400 mt-1">「AI生成」は、その行の課題・目標・現在のサービス内容をもとに、具体的なケア内容を提案します（既存の内容は上書きされます）。</p>
               </div>
 
               {/* サービス達成状況 */}
