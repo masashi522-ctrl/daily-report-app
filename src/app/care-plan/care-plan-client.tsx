@@ -18,6 +18,31 @@ interface Props {
 
 const EMPTY_GOAL: CarePlanGoal = { issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '' }
 
+interface ScanResult {
+  planDate: string
+  staffName: string
+  birthDate: string
+  careLevel: string
+  needsAnalysis: string
+  supportPolicy: string
+  goalImage: string
+  goals: CarePlanGoal[]
+  monitoringDate: string
+  evaluationPeriodStart: string
+  evaluationPeriodEnd: string
+  evaluationContent: string
+  explanationDate: string
+  explainerName: string
+  familyConfirmation: string
+  proxySigner: string
+}
+
+const SCAN_SCALAR_FIELDS: (keyof Omit<ScanResult, 'goals'>)[] = [
+  'planDate', 'staffName', 'birthDate', 'careLevel', 'needsAnalysis', 'supportPolicy', 'goalImage',
+  'monitoringDate', 'evaluationPeriodStart', 'evaluationPeriodEnd', 'evaluationContent',
+  'explanationDate', 'explainerName', 'familyConfirmation', 'proxySigner',
+]
+
 const GOJUUON_ROWS = [
   { label: 'あ', chars: 'あいうえおアイウエオ' },
   { label: 'か', chars: 'かきくけこカキクケコがぎぐげごガギグゲゴ' },
@@ -96,10 +121,22 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
         const msg = await res.text()
         throw new Error(msg || '読み取りに失敗しました')
       }
-      const data = await res.json()
-      setEffectivePlan(prev => ({ ...(prev ?? ({} as CarePlan)), ...data }))
-      setGoals(data.goals && data.goals.length > 0 ? data.goals : [{ ...EMPTY_GOAL }])
-      setGoalImageText(data.goalImage ?? '')
+      const data: ScanResult = await res.json()
+
+      // 既存の内容を残しつつ、今回読み取れた項目だけを上書きする（複数回の読み込みを合成する）
+      setEffectivePlan(prev => {
+        const merged: CarePlan = { ...(prev ?? ({} as CarePlan)) }
+        for (const field of SCAN_SCALAR_FIELDS) {
+          if (data[field]) merged[field] = data[field]
+        }
+        return merged
+      })
+      setGoals(prev => {
+        const meaningfulPrev = prev.filter(g => g.issue || g.longTermGoal || g.shortTermGoal || g.serviceContent || g.frequency)
+        const combined = [...meaningfulPrev, ...(data.goals ?? [])]
+        return combined.length > 0 ? combined : [{ ...EMPTY_GOAL }]
+      })
+      setGoalImageText(prev => prev || data.goalImage)
       setFormKey(k => k + 1)
       setScanApplied(true)
     } catch (e) {
