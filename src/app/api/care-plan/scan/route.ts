@@ -49,26 +49,30 @@ export async function POST(request: Request) {
   await requireSession()
 
   const formData = await request.formData()
-  const file = formData.get('file')
+  const files = formData.getAll('files').filter((f): f is File => f instanceof File)
   const facilityName = (formData.get('facilityName') as string) || ''
 
-  if (!(file instanceof File)) return new Response('file is required', { status: 400 })
-  const isPdf = file.type === PDF_TYPE
-  if (!isPdf && !SUPPORTED_IMAGE_TYPES.has(file.type)) {
-    return new Response('対応していないファイル形式です（JPEG/PNG/GIF/WEBP/PDFのみ）', { status: 400 })
-  }
+  if (files.length === 0) return new Response('file is required', { status: 400 })
+  if (files.length > 10) return new Response('ファイルは10件までにしてください', { status: 400 })
 
-  const buf = Buffer.from(await file.arrayBuffer())
-  const base64 = buf.toString('base64')
+  for (const f of files) {
+    if (f.type !== PDF_TYPE && !SUPPORTED_IMAGE_TYPES.has(f.type)) {
+      return new Response('対応していないファイル形式です（JPEG/PNG/GIF/WEBP/PDFのみ）', { status: 400 })
+    }
+  }
 
   const client = new Anthropic()
 
-  const sourceBlock = isPdf
-    ? { type: 'document' as const, source: { type: 'base64' as const, media_type: PDF_TYPE as 'application/pdf', data: base64 } }
-    : {
-        type: 'image' as const,
-        source: { type: 'base64' as const, media_type: file.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: base64 },
-      }
+  const sourceBlocks = await Promise.all(files.map(async f => {
+    const buf = Buffer.from(await f.arrayBuffer())
+    const base64 = buf.toString('base64')
+    return f.type === PDF_TYPE
+      ? { type: 'document' as const, source: { type: 'base64' as const, media_type: PDF_TYPE as 'application/pdf', data: base64 } }
+      : {
+          type: 'image' as const,
+          source: { type: 'base64' as const, media_type: f.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: base64 },
+        }
+  }))
 
   const response = await client.messages.create({
     model: 'claude-opus-4-8',
@@ -82,7 +86,7 @@ export async function POST(request: Request) {
       {
         role: 'user',
         content: [
-          sourceBlock,
+          ...sourceBlocks,
           {
             type: 'text',
             text: [
@@ -111,6 +115,9 @@ export async function POST(request: Request) {
               '- 日付はすべて西暦のYYYY-MM-DD形式に変換してください（令和・平成・昭和などの和暦表記は西暦に変換すること）。',
               '- 完全に空欄の行は抽出しないでください。',
               '- 複数ページのPDFの場合は、全ページの内容を確認してください。',
+              files.length > 1
+                ? '- 複数の画像・PDFが渡されています。同じ利用者・同じ計画書の別ページ、または関連する複数の資料です。すべてに目を通し、1件の計画書として内容を統合して抽出してください。同じ項目が複数の資料に重複して記載されている場合は、より詳しく書かれている方を優先してください。'
+                : '',
             ].filter(text => text !== '').join('\n'),
           },
         ],

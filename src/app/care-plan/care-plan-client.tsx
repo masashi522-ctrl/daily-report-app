@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Download, Camera, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Download, Camera, Loader2, Sparkles } from 'lucide-react'
 import { saveCarePlan } from './actions'
 import { CARE_LEVEL_OPTIONS, type CarePlan, type CarePlanGoal } from '@/types/database'
 
@@ -18,6 +18,19 @@ interface Props {
 
 const EMPTY_GOAL: CarePlanGoal = { issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '' }
 
+const GOJUUON_ROWS = [
+  { label: 'あ', chars: 'あいうえおアイウエオ' },
+  { label: 'か', chars: 'かきくけこカキクケコがぎぐげごガギグゲゴ' },
+  { label: 'さ', chars: 'さしすせそサシスセソざじずぜぞザジズゼゾ' },
+  { label: 'た', chars: 'たちつてとタチツテトだぢづでどダヂヅデド' },
+  { label: 'な', chars: 'なにぬねのナニヌネノ' },
+  { label: 'は', chars: 'はひふへほハヒフヘホばびぶべぼバビブベボぱぴぷぺぽパピプペポ' },
+  { label: 'ま', chars: 'まみむめもマミムメモ' },
+  { label: 'や', chars: 'やゆよヤユヨ' },
+  { label: 'ら', chars: 'らりるれろラリルレロ' },
+  { label: 'わ', chars: 'わをんワヲン' },
+]
+
 export default function CarePlanClient({ residents, selectedResidentId, selectedResident, plan, facilityName }: Props) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState(saveCarePlan.bind(null, selectedResidentId), null)
@@ -27,10 +40,20 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
   const [goals, setGoals] = useState<CarePlanGoal[]>(
     plan?.goals && plan.goals.length > 0 ? plan.goals : [{ ...EMPTY_GOAL }],
   )
+  const [goalImageText, setGoalImageText] = useState(plan?.goalImage ?? '')
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanApplied, setScanApplied] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestError, setSuggestError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const needsAnalysisRef = useRef<HTMLTextAreaElement>(null)
+  const supportPolicyRef = useRef<HTMLTextAreaElement>(null)
+  const careLevelRef = useRef<HTMLSelectElement>(null)
+
+  const [searchText, setSearchText] = useState('')
+  const [appliedText, setAppliedText] = useState('')
+  const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
 
   useEffect(() => {
     if (state?.success) setSavedAt(new Date().toLocaleTimeString('ja-JP'))
@@ -40,8 +63,10 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
     setSavedAt(null)
     setEffectivePlan(plan)
     setGoals(plan?.goals && plan.goals.length > 0 ? plan.goals : [{ ...EMPTY_GOAL }])
+    setGoalImageText(plan?.goalImage ?? '')
     setScanError(null)
     setScanApplied(false)
+    setSuggestError(null)
     setFormKey(k => k + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedResidentId])
@@ -58,13 +83,13 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
     setGoals(prev => prev.filter((_, i) => i !== index))
   }
 
-  async function handleScanFile(file: File) {
+  async function handleScanFiles(files: File[]) {
     setScanError(null)
     setScanApplied(false)
     setScanning(true)
     try {
       const fd = new FormData()
-      fd.append('file', file)
+      for (const file of files) fd.append('files', file)
       fd.append('facilityName', facilityName)
       const res = await fetch('/api/care-plan/scan', { method: 'POST', body: fd })
       if (!res.ok) {
@@ -74,6 +99,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
       const data = await res.json()
       setEffectivePlan(prev => ({ ...(prev ?? ({} as CarePlan)), ...data }))
       setGoals(data.goals && data.goals.length > 0 ? data.goals : [{ ...EMPTY_GOAL }])
+      setGoalImageText(data.goalImage ?? '')
       setFormKey(k => k + 1)
       setScanApplied(true)
     } catch (e) {
@@ -84,10 +110,48 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
   }
 
   function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (file) handleScanFile(file)
+    if (files.length > 0) handleScanFiles(files)
   }
+
+  async function handleSuggestGoalImage() {
+    setSuggestError(null)
+    setSuggesting(true)
+    try {
+      const res = await fetch('/api/care-plan/suggest-goal-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          needsAnalysis: needsAnalysisRef.current?.value ?? '',
+          supportPolicy: supportPolicyRef.current?.value ?? '',
+          careLevel: careLevelRef.current?.value ?? '',
+          goals,
+        }),
+      })
+      if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg || '提案の生成に失敗しました')
+      }
+      const data = await res.json()
+      setGoalImageText(data.suggestion ?? '')
+    } catch (e) {
+      setSuggestError(e instanceof Error ? e.message : '提案の生成に失敗しました')
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
+  const filteredResidents = residents.filter(r => {
+    const matchName = !appliedText ||
+      r.name.includes(appliedText) ||
+      (r.furigana ?? '').includes(appliedText)
+    if (!matchName) return false
+    if (!gojuuonRow) return true
+    const searchChar = (r.furigana ?? r.name)[0]
+    const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
+    return row ? row.chars.includes(searchChar) : true
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,23 +163,72 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* 利用者選択 */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
-            {residents.length === 0 && (
-              <p className="text-xs text-gray-400 text-center py-4">利用者が登録されていません</p>
-            )}
-            {residents.map(r => (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-2">
+            {/* 検索バー */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && setAppliedText(searchText)}
+                placeholder="名前で検索..."
+                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:border-teal-400"
+                style={{ fontSize: '16px' }}
+              />
               <button
-                key={r.id}
-                onClick={() => router.push(`/care-plan?resident=${r.id}`)}
-                className={`text-left px-3 py-2 rounded-lg text-sm transition ${
-                  r.id === selectedResidentId
-                    ? 'bg-teal-600 text-white font-medium'
-                    : 'text-gray-700 hover:bg-teal-50'
+                onClick={() => setAppliedText(searchText)}
+                className="px-2.5 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700 whitespace-nowrap"
+              >検索</button>
+              {appliedText && (
+                <button onClick={() => { setSearchText(''); setAppliedText('') }}
+                  className="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5 rounded-lg hover:bg-gray-100">
+                  ✕
+                </button>
+              )}
+            </div>
+            {/* 50音タブ */}
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setGojuuonRow(null)}
+                className={`text-[11px] px-1.5 py-0.5 rounded border font-medium transition ${
+                  gojuuonRow === null
+                    ? 'bg-teal-700 text-white border-teal-700'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-teal-400'
                 }`}
-              >
-                {r.name}
-              </button>
-            ))}
+              >全</button>
+              {GOJUUON_ROWS.map(row => (
+                <button key={row.label}
+                  onClick={() => setGojuuonRow(gojuuonRow === row.label ? null : row.label)}
+                  className={`text-[11px] px-1.5 py-0.5 rounded border transition ${
+                    gojuuonRow === row.label
+                      ? 'bg-teal-600 text-white border-teal-600'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-teal-400 hover:text-teal-600'
+                  }`}
+                >{row.label}</button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1 max-h-[55vh] overflow-y-auto">
+              {residents.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">利用者が登録されていません</p>
+              )}
+              {residents.length > 0 && filteredResidents.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">該当する利用者がいません</p>
+              )}
+              {filteredResidents.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => router.push(`/care-plan?resident=${r.id}`)}
+                  className={`text-left px-3 py-2 rounded-lg text-sm transition ${
+                    r.id === selectedResidentId
+                      ? 'bg-teal-600 text-white font-medium'
+                      : 'text-gray-700 hover:bg-teal-50'
+                  }`}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -132,13 +245,14 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
                     <p className="text-sm font-semibold text-teal-800">ケアプランをスキャン・写真・PDFで読み込む</p>
-                    <p className="text-xs text-gray-500 mt-0.5">紙の計画書の撮影・スキャン画像、またはPDFデータを読み込ませると、内容を自動で読み取り下のフォームに反映します</p>
+                    <p className="text-xs text-gray-500 mt-0.5">紙の計画書の撮影・スキャン画像、またはPDFデータを読み込ませると、内容を自動で読み取り下のフォームに反映します（複数ファイルの同時選択可）</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*,application/pdf"
+                      multiple
                       className="hidden"
                       onChange={onFileSelected}
                     />
@@ -149,7 +263,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                       className="flex items-center gap-1.5 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50"
                     >
                       {scanning ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
-                      {scanning ? '読み取り中...' : '写真・PDFを選択'}
+                      {scanning ? '読み取り中...' : '写真・PDFを選択（複数可）'}
                     </button>
                   </div>
                 </div>
@@ -203,7 +317,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 block mb-1">要介護</label>
-                  <select name="careLevel" defaultValue={effectivePlan?.careLevel ?? selectedResident.careLevel ?? ''}
+                  <select ref={careLevelRef} name="careLevel" defaultValue={effectivePlan?.careLevel ?? selectedResident.careLevel ?? ''}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
                     <option value="">未設定</option>
                     {CARE_LEVEL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
@@ -216,20 +330,30 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 <label className="text-xs font-semibold text-teal-800 block mb-1">
                   【利用者及び家族の生活に対する意向を踏まえた課題分析の結果】
                 </label>
-                <textarea name="needsAnalysis" defaultValue={effectivePlan?.needsAnalysis ?? ''} rows={3}
+                <textarea ref={needsAnalysisRef} name="needsAnalysis" defaultValue={effectivePlan?.needsAnalysis ?? ''} rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-teal-800 block mb-1">【総合的な援助の方針】</label>
-                <textarea name="supportPolicy" defaultValue={effectivePlan?.supportPolicy ?? ''} rows={3}
+                <textarea ref={supportPolicyRef} name="supportPolicy" defaultValue={effectivePlan?.supportPolicy ?? ''} rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-teal-800 block mb-1">【ゴールのイメージ】</label>
-                <textarea name="goalImage" defaultValue={effectivePlan?.goalImage ?? ''} rows={2}
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-teal-800">【ゴールのイメージ】</label>
+                  <button type="button" onClick={handleSuggestGoalImage} disabled={suggesting}
+                    className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium disabled:opacity-50">
+                    {suggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                    {suggesting ? '生成中...' : 'AIで提案'}
+                  </button>
+                </div>
+                <textarea name="goalImage" value={goalImageText} onChange={e => setGoalImageText(e.target.value)} rows={2}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
+                {suggestError && (
+                  <p className="text-xs text-red-600 mt-1">{suggestError}</p>
+                )}
               </div>
 
               {/* 援助目標テーブル */}
