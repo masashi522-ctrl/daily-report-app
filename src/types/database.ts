@@ -177,21 +177,34 @@ export interface TrainingPlan {
   updatedAt: string
 }
 
+export interface CarePlanGoal {
+  issue: string
+  longTermGoal: string
+  shortTermGoal: string
+  serviceContent: string
+  frequency: string
+}
+
 export interface CarePlan {
   id: string
   residentId: string
   facilityId: string | null
   planDate: string | null
-  nextReviewDate: string | null
   staffName: string | null
+  birthDate: string | null
   careLevel: string | null
-  lifeIssues: string | null
-  longTermGoal: string | null
-  shortTermGoal: string | null
-  serviceContent: string | null
-  considerations: string | null
+  needsAnalysis: string | null
+  supportPolicy: string | null
+  goalImage: string | null
+  goals: CarePlanGoal[] | null
+  monitoringDate: string | null
+  evaluationPeriodStart: string | null
+  evaluationPeriodEnd: string | null
+  evaluationContent: string | null
+  explanationDate: string | null
+  explainerName: string | null
   familyConfirmation: string | null
-  notes: string | null
+  proxySigner: string | null
   createdAt: string
   updatedAt: string
 }

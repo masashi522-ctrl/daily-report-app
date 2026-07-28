@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import type { CarePlanGoal } from '@/types/database'
 
 export type CarePlanFormState = { error?: string; success?: boolean } | null
 
@@ -13,17 +14,37 @@ export async function saveCarePlan(
 ): Promise<CarePlanFormState> {
   const session = await requireSession()
 
-  const planDate            = (formData.get('planDate') as string) || null
-  const nextReviewDate      = (formData.get('nextReviewDate') as string) || null
-  const staffName           = (formData.get('staffName') as string)?.trim() || null
-  const careLevel           = (formData.get('careLevel') as string)?.trim() || null
-  const lifeIssues          = (formData.get('lifeIssues') as string)?.trim() || null
-  const longTermGoal        = (formData.get('longTermGoal') as string)?.trim() || null
-  const shortTermGoal       = (formData.get('shortTermGoal') as string)?.trim() || null
-  const serviceContent      = (formData.get('serviceContent') as string)?.trim() || null
-  const considerations      = (formData.get('considerations') as string)?.trim() || null
-  const familyConfirmation  = (formData.get('familyConfirmation') as string)?.trim() || null
-  const notes               = (formData.get('notes') as string)?.trim() || null
+  const planDate              = (formData.get('planDate') as string) || null
+  const staffName             = (formData.get('staffName') as string)?.trim() || null
+  const birthDate              = (formData.get('birthDate') as string) || null
+  const careLevel              = (formData.get('careLevel') as string)?.trim() || null
+  const needsAnalysis          = (formData.get('needsAnalysis') as string)?.trim() || null
+  const supportPolicy          = (formData.get('supportPolicy') as string)?.trim() || null
+  const goalImage              = (formData.get('goalImage') as string)?.trim() || null
+  const monitoringDate         = (formData.get('monitoringDate') as string) || null
+  const evaluationPeriodStart  = (formData.get('evaluationPeriodStart') as string) || null
+  const evaluationPeriodEnd    = (formData.get('evaluationPeriodEnd') as string) || null
+  const evaluationContent      = (formData.get('evaluationContent') as string)?.trim() || null
+  const explanationDate        = (formData.get('explanationDate') as string) || null
+  const explainerName          = (formData.get('explainerName') as string)?.trim() || null
+  const familyConfirmation     = (formData.get('familyConfirmation') as string)?.trim() || null
+  const proxySigner            = (formData.get('proxySigner') as string)?.trim() || null
+
+  const issueList          = formData.getAll('goalIssue') as string[]
+  const longTermGoalList   = formData.getAll('goalLongTerm') as string[]
+  const shortTermGoalList  = formData.getAll('goalShortTerm') as string[]
+  const serviceContentList = formData.getAll('goalService') as string[]
+  const frequencyList      = formData.getAll('goalFrequency') as string[]
+
+  const goals: CarePlanGoal[] = issueList
+    .map((_, i) => ({
+      issue: issueList[i]?.trim() ?? '',
+      longTermGoal: longTermGoalList[i]?.trim() ?? '',
+      shortTermGoal: shortTermGoalList[i]?.trim() ?? '',
+      serviceContent: serviceContentList[i]?.trim() ?? '',
+      frequency: frequencyList[i]?.trim() ?? '',
+    }))
+    .filter(g => g.issue || g.longTermGoal || g.shortTermGoal || g.serviceContent || g.frequency)
 
   const { data: existing } = await supabase
     .from('CarePlan')
@@ -32,8 +53,9 @@ export async function saveCarePlan(
     .maybeSingle()
 
   const payload = {
-    planDate, nextReviewDate, staffName, careLevel, lifeIssues, longTermGoal, shortTermGoal,
-    serviceContent, considerations, familyConfirmation, notes,
+    planDate, staffName, birthDate, careLevel, needsAnalysis, supportPolicy, goalImage,
+    goals, monitoringDate, evaluationPeriodStart, evaluationPeriodEnd, evaluationContent,
+    explanationDate, explainerName, familyConfirmation, proxySigner,
     updatedAt: new Date().toISOString(),
   }
 

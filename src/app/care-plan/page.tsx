@@ -38,6 +38,7 @@ export default async function CarePlanPage({
       selectedResidentId={residentId}
       selectedResident={selectedResident}
       plan={plan}
+      facilityName={session.facilityName}
     />
   )
 }
