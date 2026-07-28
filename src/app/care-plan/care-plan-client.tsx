@@ -130,7 +130,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               <div className="bg-white rounded-xl border border-teal-200 shadow-sm p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
-                    <p className="text-sm font-semibold text-teal-800">介護計画書をスキャン・写真・PDFで読み込む</p>
+                    <p className="text-sm font-semibold text-teal-800">ケアプランをスキャン・写真・PDFで読み込む</p>
                     <p className="text-xs text-gray-500 mt-0.5">紙の計画書の撮影・スキャン画像、またはPDFデータを読み込ませると、内容を自動で読み取り下のフォームに反映します</p>
                   </div>
                   <div className="flex items-center gap-2">
