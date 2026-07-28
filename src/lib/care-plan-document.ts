@@ -34,14 +34,15 @@ function widthUnits(fromCol: number, toCol: number): number {
   return sum
 }
 
-// 列幅とフォントサイズから、折り返し後に文章が切れないための行の高さ(pt)を見積もる
+// 列幅から、折り返し後に文章が切れないための行の高さ(pt)を見積もる
+// 全角文字を想定し、余裕を持たせて安全側（高さ多め）に倒す
 function estimateTextHeight(text: string | null | undefined, units: number, fontSize: number, minHeight: number): number {
   const t = (text ?? '').trim()
   if (!t) return minHeight
-  const charsPerLine = Math.max(6, Math.floor(units * (10 / fontSize) * 0.52))
+  const charsPerLine = Math.max(5, Math.floor(units * 0.42))
   const lines = t.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(Array.from(line).length / charsPerLine)), 0)
-  const lineHeight = fontSize * 1.6
-  return Math.max(minHeight, Math.ceil(lines * lineHeight + 8))
+  const lineHeight = fontSize * 1.7
+  return Math.max(minHeight, Math.ceil(lines * lineHeight + 10))
 }
 
 export function buildCarePlanExcel(resident: Resident, facilityName: string, plan: CarePlan): ExcelJS.Workbook {

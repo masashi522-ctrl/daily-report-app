@@ -419,19 +419,19 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                     <span />
                   </div>
                   {goals.map((g, i) => (
-                    <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_1fr_0.6fr_auto] gap-2 p-2 bg-teal-50/40 rounded-lg border border-teal-100">
-                      <input type="text" name="goalIssue" value={g.issue}
+                    <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_1fr_0.6fr_auto] gap-2 p-2 bg-teal-50/40 rounded-lg border border-teal-100 items-start">
+                      <textarea name="goalIssue" value={g.issue} rows={3}
                         onChange={e => updateGoal(i, 'issue', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
-                      <input type="text" name="goalLongTerm" value={g.longTermGoal}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                      <textarea name="goalLongTerm" value={g.longTermGoal} rows={3}
                         onChange={e => updateGoal(i, 'longTermGoal', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
-                      <input type="text" name="goalShortTerm" value={g.shortTermGoal}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                      <textarea name="goalShortTerm" value={g.shortTermGoal} rows={3}
                         onChange={e => updateGoal(i, 'shortTermGoal', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
-                      <input type="text" name="goalService" value={g.serviceContent}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                      <textarea name="goalService" value={g.serviceContent} rows={3}
                         onChange={e => updateGoal(i, 'serviceContent', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
                       <input type="text" name="goalFrequency" value={g.frequency}
                         onChange={e => updateGoal(i, 'frequency', e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
