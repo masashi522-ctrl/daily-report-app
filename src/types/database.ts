@@ -157,12 +157,53 @@ export interface DailyRecord {
   updatedAt: string
 }
 
+export interface TrainingPlan {
+  id: string
+  residentId: string
+  facilityId: string | null
+  planDate: string | null
+  nextReviewDate: string | null
+  staffName: string | null
+  physicalStatus: string | null
+  userIntention: string | null
+  familyIntention: string | null
+  issues: string | null
+  longTermGoal: string | null
+  shortTermGoal: string | null
+  trainingContent: string | null
+  frequency: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CarePlan {
+  id: string
+  residentId: string
+  facilityId: string | null
+  planDate: string | null
+  nextReviewDate: string | null
+  staffName: string | null
+  careLevel: string | null
+  lifeIssues: string | null
+  longTermGoal: string | null
+  shortTermGoal: string | null
+  serviceContent: string | null
+  considerations: string | null
+  familyConfirmation: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Database {
   public: {
     Tables: {
       Staff: { Row: Staff; Insert: Omit<Staff, 'id' | 'createdAt' | 'updatedAt'>; Update: Partial<Staff> }
       Resident: { Row: Resident; Insert: Omit<Resident, 'id' | 'createdAt' | 'updatedAt'>; Update: Partial<Resident> }
       DailyRecord: { Row: DailyRecord; Insert: Omit<DailyRecord, 'id' | 'createdAt' | 'updatedAt'>; Update: Partial<DailyRecord> }
+      TrainingPlan: { Row: TrainingPlan; Insert: Omit<TrainingPlan, 'createdAt' | 'updatedAt'>; Update: Partial<TrainingPlan> }
+      CarePlan: { Row: CarePlan; Insert: Omit<CarePlan, 'createdAt' | 'updatedAt'>; Update: Partial<CarePlan> }
     }
   }
 }
