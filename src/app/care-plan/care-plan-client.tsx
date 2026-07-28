@@ -96,16 +96,10 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 {plan && (
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <a
-                      href={`/api/care-plan/export?residentId=${selectedResidentId}&format=xlsx`}
+                      href={`/api/care-plan/export?residentId=${selectedResidentId}`}
                       className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition"
                     >
                       <Download size={13} /> Excelでダウンロード
-                    </a>
-                    <a
-                      href={`/api/care-plan/export?residentId=${selectedResidentId}&format=docx`}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 transition"
-                    >
-                      <Download size={13} /> Wordでダウンロード
                     </a>
                   </div>
                 )}

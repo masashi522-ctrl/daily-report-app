@@ -1,13 +1,12 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
-import { Packer, buildCarePlanExcel, buildCarePlanWord } from '@/lib/care-plan-document'
+import { buildCarePlanExcel } from '@/lib/care-plan-document'
 import type { CarePlan, Resident } from '@/types/database'
 
 export async function GET(request: Request) {
   const session = await requireSession()
   const { searchParams } = new URL(request.url)
   const residentId = searchParams.get('residentId') ?? ''
-  const format = searchParams.get('format') === 'docx' ? 'docx' : 'xlsx'
 
   if (!residentId) return new Response('residentId is required', { status: 400 })
 
@@ -27,17 +26,6 @@ export async function GET(request: Request) {
   if (!plan) return new Response('介護計画書がまだ保存されていません', { status: 404 })
 
   const filenameBase = `介護計画書_${resident.name}`
-
-  if (format === 'docx') {
-    const doc = buildCarePlanWord(resident as Resident, session.facilityName, plan as CarePlan)
-    const nodeBuffer = await Packer.toBuffer(doc)
-    return new Response(new Uint8Array(nodeBuffer), {
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filenameBase + '.docx')}`,
-      },
-    })
-  }
 
   const wb = buildCarePlanExcel(resident as Resident, session.facilityName, plan as CarePlan)
   const buf = await wb.xlsx.writeBuffer()
