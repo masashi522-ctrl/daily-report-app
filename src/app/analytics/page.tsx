@@ -1,7 +1,7 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import ResidentReport, { type ChartData } from './resident-report'
-import type { ReportStats } from './actions'
+import type { ReportStats, CarePlanSummary } from './actions'
 import AnalyticsFilter from './analytics-filter'
 
 export default async function AnalyticsPage({
@@ -195,6 +195,23 @@ export default async function AnalyticsPage({
       ])
       .filter((v): v is { date: string; label: string; text: string } => v !== null)
 
+    const { data: carePlanRaw } = await supabase
+      .from('CarePlan')
+      .select('goalImage, goals')
+      .eq('residentId', residentId)
+      .maybeSingle()
+    const carePlan: CarePlanSummary | null = carePlanRaw
+      ? {
+          goalImage: carePlanRaw.goalImage,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          goals: ((carePlanRaw.goals ?? []) as any[]).map(g => ({
+            issue: g.issue ?? '',
+            longTermGoal: g.longTermGoal ?? '',
+            shortTermGoal: g.shortTermGoal ?? '',
+          })),
+        }
+      : null
+
     reportStats = {
       residentName: targetName,
       year,
@@ -217,6 +234,7 @@ export default async function AnalyticsPage({
       weightMax:          weightValues.length ? Math.max(...weightValues) : null,
       weightMeasureCount: weightValues.length,
       careNotes,
+      carePlan,
     }
   }
 
