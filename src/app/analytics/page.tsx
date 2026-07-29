@@ -195,6 +195,30 @@ export default async function AnalyticsPage({
       ])
       .filter((v): v is { date: string; label: string; text: string } => v !== null)
 
+    const serviceGaps = [...r]
+      .filter(x => !x.isAbsent)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .flatMap(x => {
+        const events: { date: string; label: string; reason: string }[] = []
+        if (x.bathing === 'NOT_DONE') {
+          events.push({
+            date: x.date,
+            label: '入浴',
+            reason: [x.bathingSkipReason, x.bathingSkipDetail].filter(Boolean).join('：') || '理由不明',
+          })
+        }
+        if (x.trainingDone === false && (x.trainingSkipReason || x.trainingSkipDetail)) {
+          events.push({
+            date: x.date,
+            label: '機能訓練',
+            reason: [x.trainingSkipReason, x.trainingSkipDetail].filter(Boolean).join('：') || '理由不明',
+          })
+        }
+        return events
+      })
+
+    const oralCareGapCount = attendingRecs.filter(x => !x.oralCare).length
+
     const { data: carePlanRaw } = await supabase
       .from('CarePlan')
       .select('goalImage, goals')
@@ -235,6 +259,8 @@ export default async function AnalyticsPage({
       weightMeasureCount: weightValues.length,
       careNotes,
       carePlan,
+      serviceGaps,
+      oralCareGapCount,
     }
   }
 

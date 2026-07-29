@@ -20,6 +20,12 @@ export interface CarePlanSummary {
   goals: CarePlanGoalSummary[]
 }
 
+export interface ServiceGap {
+  date: string
+  label: string
+  reason: string
+}
+
 export interface ReportStats {
   residentName: string
   year: number
@@ -43,6 +49,8 @@ export interface ReportStats {
   weightMeasureCount: number
   careNotes: CareNote[]
   carePlan: CarePlanSummary | null
+  serviceGaps: ServiceGap[]
+  oralCareGapCount: number
 }
 
 // Groq/Llamaが稀に混入させる簡体字を、対応する日本語表記に補正する（プロンプト指示だけに頼らない保険）
@@ -67,16 +75,30 @@ const SIMPLIFIED_CHINESE_FIXES: [RegExp, string][] = [
   [/伤口/g, '傷口'],
 ]
 
-function sanitizeReportText(text: string): string {
-  const fixed = SIMPLIFIED_CHINESE_FIXES.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text)
-  return collapseRepeatedSentences(fixed)
+// 単位（mmHg・kg・ml等）以外で、日本語の文字に直接くっついて挿入される英単語や、
+// デーヴァナーガリー文字・ハングルなど日本語で使わないスクリプトが稀に混入するための保険
+const ALLOWED_LATIN_UNITS = /^(mmHg|kg|g|ml|l|kcal|cm|mm|bpm|dl)$/i
+function stripStrayForeignScript(text: string): string {
+  const noForeignScript = text.replace(/[ऀ-ॿ가-힣ᄀ-ᇿЀ-ӿ؀-ۿ฀-๿]/g, '')
+  return noForeignScript.replace(
+    /(?<=[぀-ヿ一-鿿])([A-Za-z]{2,})(?=[぀-ヿ一-鿿])/g,
+    (match, word: string) => (ALLOWED_LATIN_UNITS.test(word) ? match : '')
+  )
 }
 
-// Groq/Llamaが稀に文末や短い文を連続で繰り返す（例:「いただけました。いただけました。」）ため、
-// 直前の文と完全一致する文、または直前の文の語尾と完全一致する短い断片を除去する
+function sanitizeReportText(text: string): string {
+  const fixed = SIMPLIFIED_CHINESE_FIXES.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text)
+  return collapseRepeatedSentences(stripStrayForeignScript(fixed))
+}
+
+// Groq/Llamaが稀に文末や短い文を連続で繰り返す（例:「いただけました。いただけました。」）ほか、
+// 同じ定型文が離れた見出しにまたがって重複することがあるため、2種類の重複を除去する：
+// (1) 直前の文と完全一致する文、または直前の文の語尾と完全一致する短い断片（連続重複）
+// (2) 文書全体で見て、ある程度の長さを持つ文が2回以上出現する場合の2回目以降（離れた場所の重複）
 function collapseRepeatedSentences(text: string): string {
   const parts = text.split(/(?<=[。！？])/)
   const result: string[] = []
+  const seenLongSentences = new Set<string>()
   for (const part of parts) {
     const trimmed = part.trim()
     if (!trimmed) { result.push(part); continue }
@@ -85,7 +107,9 @@ function collapseRepeatedSentences(text: string): string {
     const isTailDuplicate =
       trimmed.length >= 3 && trimmed.length <= 24 &&
       prevTrimmed.length > trimmed.length && prevTrimmed.endsWith(trimmed)
-    if (isExactDuplicate || isTailDuplicate) continue
+    const isGlobalDuplicate = trimmed.length >= 12 && seenLongSentences.has(trimmed)
+    if (isExactDuplicate || isTailDuplicate || isGlobalDuplicate) continue
+    if (trimmed.length >= 12) seenLongSentences.add(trimmed)
     result.push(part)
   }
   return result.join('')
@@ -150,6 +174,7 @@ export async function generateCareReport(stats: ReportStats, forceDetailed: bool
 ・「〜についてみましたところ」「〜の様子です」など回りくどい導入は使わないこと
 ・「お休み、いただかれなかった」のような不自然な敬語表現は使わないこと
 ・「お気遣いいただけますよう、お願い申し上げます」は使わないこと（この表現は相手を気遣う言葉であり、ケアマネジャーに何かを依頼する結びとしては意味が逆転し不自然になる）。気になる点がない場合の結びは「今後もお気づきの点がございましたら、随時ご連絡いたします。」のように、こちらから連絡する姿勢で書くこと
+・「目をつけています」「目をつけております」は使わないこと（監視・注視といった否定的な意味合いになる）。「注意深く見守っております」「留意しております」「気を配っております」などに言い換えること
 
 【文の重複について（重要）】
 ・同じ文、または直前の文と同じ語尾を、続けて2回書かないこと（例：「〜いただけました。いただけました。」「〜お願い申し上げます。お願い申し上げます。」のような繰り返しは禁止）
@@ -160,7 +185,7 @@ export async function generateCareReport(stats: ReportStats, forceDetailed: bool
 ・欠席がある場合：「○日間ご利用いただき、○日お休みされました。」
 ・「〜についてみましたところ」「確認しましたところ」などの前置きは不要。出欠の事実を直接書くこと`
 
-  const hasNotable = stats.careNotes.length > 0 || forceDetailed
+  const hasNotable = stats.careNotes.length > 0 || stats.serviceGaps.length > 0 || forceDetailed
   const careNotesText = stats.careNotes.length > 0
     ? stats.careNotes.map(n => {
         const d = n.date.split('-')
@@ -179,6 +204,13 @@ export async function generateCareReport(stats: ReportStats, forceDetailed: bool
           .map((g, i) => `援助目標${i + 1} — 課題: ${g.issue || 'なし'} / 長期目標: ${g.longTermGoal || 'なし'} / 短期目標: ${g.shortTermGoal || 'なし'}`),
       ].filter(Boolean).join('\n')
     : 'なし（介護計画書が未作成、または未保存です）'
+
+  const serviceGapsText = stats.serviceGaps.length > 0
+    ? stats.serviceGaps.map(g => {
+        const d = g.date.split('-')
+        return `${parseInt(d[1])}月${parseInt(d[2])}日［${g.label}］未実施・理由: ${g.reason}`
+      }).join('\n')
+    : 'なし（予定していたサービスは滞りなく提供できました）'
 
   const prompt = `以下のデータをもとに、${stats.residentName}様の${stats.year}年${stats.month}月の月次サービス利用報告書を作成してください。
 【今月の概況】の冒頭は「${stats.residentName}様の今月のご利用状況についてご報告いたします。」という一文から始め、以降は氏名を繰り返さないこと。
@@ -201,10 +233,9 @@ ${weightInfo}
 ■ 水分摂取量（月平均）
 1日あたり: ${fluid}
 
-■ ケアサービス実施状況（参考値。文章中に回数をすべて列挙する必要はありません）
-入浴: ${stats.bathingCount}回（利用${stats.attendanceForBathing}日中）
-機能訓練: ${stats.trainingCount}回
-口腔ケア: ${stats.oralCareCount}回
+■ サービスが実施できなかった記録（入浴・機能訓練）
+${serviceGapsText}
+${stats.oralCareGapCount > 0 ? `口腔ケアを実施できなかった日: ${stats.oralCareGapCount}日（理由の記録なし）` : ''}
 
 ■ 現場の記録（特記事項・入浴/機能訓練/口腔ケアの申し送りメモ）
 ${careNotesText}
@@ -222,7 +253,8 @@ ${hasCarePlan ? `・介護計画書の情報があります。【今月の概況
 ・【ケアサービス・活動の様子】は、介護計画書の援助目標（特に短期目標・サービス内容）と関連づけて、今月の様子がその目標にどうつながっているかが伝わるように書くこと。目標の文言をそのまま引き写すのではなく、実際の様子として自然に言い換えること。` : `・介護計画書の情報がないため、通常通り、データと現場の記録のみをもとに記載すること。介護計画書が未作成である旨には触れないこと。`}
 
 【ケアサービス・活動の様子】の書き方（最重要・必ず守ること）:
-・入浴・機能訓練・口腔ケアの実施回数を毎回すべて列挙しないこと。「入浴は○回、機能訓練も○回、口腔ケアは○回実施しました」のように回数を並べる書き方は禁止。回数に触れるとしても、文章の流れの中で最大1つまでにとどめること。
+・入浴・機能訓練・口腔ケアが「何回実施できたか」という報告は一切しないこと。「入浴は○回、機能訓練も○回、口腔ケアは○回実施しました」のような回数の列挙は禁止。実施回数の数字は本文中に一切出さないこと。
+・その代わり、上記「サービスが実施できなかった記録」に記載がある場合は、その内容（日付・サービス名・理由）を中心に報告すること。実施できなかった記録がない場合は「予定していたサービスは滞りなく提供できました」のように簡潔に触れる程度にとどめ、回数は書かないこと。
 ・書く材料が少ないからといって、回数の列挙で文章を長くすることは絶対にしないこと。書く内容が乏しい場合は、無理に長くせず簡潔にまとめること。
 ${hasNotable ? `・今月はこの利用者について詳しく報告する必要があります（現場の記録がある、または加算対象・ケアプラン更新月に該当）。
 　上記「現場の記録」がある場合はその内容をもとに、①デイで実際に観察された具体的な事実（日付・部位・状況など）、②介護職員・機能訓練指導員としての見解（原因の推測や状態の解釈）、③デイでの対応内容、④ご自宅での様子や対応について、ケアマネジャーに確認・共有をお願いする一文、の4つの要素を1つの段落の中に自然な流れで盛り込むこと。④は「ご自宅での○○について、ケアマネジャー様からもご確認いただけますと幸いです。」のように、具体的に何を確認してほしいかが分かる形で必ず含めること。【事実】【評価】のような見出しやラベルは付けず、普通の報告文として書くこと。
