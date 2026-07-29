@@ -3,6 +3,12 @@
 import Groq from 'groq-sdk'
 import { requireSession } from '@/lib/session'
 
+export interface CareNote {
+  date: string
+  label: string
+  text: string
+}
+
 export interface ReportStats {
   residentName: string
   year: number
@@ -24,9 +30,10 @@ export interface ReportStats {
   weightMin: number | null
   weightMax: number | null
   weightMeasureCount: number
+  careNotes: CareNote[]
 }
 
-export async function generateCareReport(stats: ReportStats): Promise<string> {
+export async function generateCareReport(stats: ReportStats, forceDetailed: boolean = false): Promise<string> {
   await requireSession()
 
   const apiKey = process.env.GROQ_API_KEY
@@ -66,6 +73,7 @@ export async function generateCareReport(stats: ReportStats): Promise<string> {
 ・「指摘」や「指示」の口調にならないよう注意し、あくまで「報告」の文章にすること
 ・「食事量が少ない」「体重が減少」「活動が困難」などのネガティブな表現は、できるかぎりポジティブな表現に言い換えること（例：「少しずつ召し上がっていただいております」「体重の変化に注意しながら経過を見守っております」「サポートしながら楽しんで取り組まれています」など）
 ・ただしポジティブな言い換えが不自然になる場合は、柔らかく中立的な表現にとどめること
+・この言い換えルールは、日々の様子に関する一般的な表現にのみ適用すること。皮膚状態の異常・外傷・体調急変など、事実として観察された安全・健康上の所見は、婉曲化・軽視せず、正確にそのまま報告すること（例：「発赤を確認しました」を「少し気になる様子でした」のように弱めないこと）
 
 【使ってはいけない表現・言い換えルール】
 ・「〜を行いました」→「〜でした」「〜されました」に言い換えること（例：「ご利用を行いました」→「ご利用でした」）
@@ -86,6 +94,14 @@ export async function generateCareReport(stats: ReportStats): Promise<string> {
 ・欠席0日の場合：「お休みなく、予定利用日はすべてご利用いただけました。」
 ・欠席がある場合：「○日間ご利用いただき、○日お休みされました。」
 ・「〜についてみましたところ」「確認しましたところ」などの前置きは不要。出欠の事実を直接書くこと`
+
+  const hasNotable = stats.careNotes.length > 0 || forceDetailed
+  const careNotesText = stats.careNotes.length > 0
+    ? stats.careNotes.map(n => {
+        const d = n.date.split('-')
+        return `${parseInt(d[1])}月${parseInt(d[2])}日［${n.label}］${n.text}`
+      }).join('\n')
+    : 'なし'
 
   const prompt = `以下のデータをもとに、${stats.residentName}様の${stats.year}年${stats.month}月の月次サービス利用報告書を作成してください。
 【今月の概況】の冒頭は「${stats.residentName}様の今月のご利用状況についてご報告いたします。」という一文から始め、以降は氏名を繰り返さないこと。
@@ -108,15 +124,25 @@ ${weightInfo}
 ■ 水分摂取量（月平均）
 1日あたり: ${fluid}
 
-■ ケアサービス実施状況
+■ ケアサービス実施状況（参考値。文章中に回数をすべて列挙する必要はありません）
 入浴: ${stats.bathingCount}回（利用${stats.attendanceForBathing}日中）
 機能訓練: ${stats.trainingCount}回
 口腔ケア: ${stats.oralCareCount}回
+
+■ 現場の記録（特記事項・入浴/機能訓練/口腔ケアの申し送りメモ）
+${careNotesText}
 
 ---
 上記のデータをもとに、以下の見出しに沿って月次報告書を作成してください。
 各見出しの内容は箇条書きを使わず、2〜4文程度の文章（段落）で書いてください。
 体重データがある場合は【バイタル・健康状態】または【食事・水分の様子】の中で具体的な数値を引用して触れること。
+
+【ケアサービス・活動の様子】の書き方（最重要・必ず守ること）:
+・入浴・機能訓練・口腔ケアの実施回数を毎回すべて列挙しないこと。「入浴は○回、機能訓練も○回、口腔ケアは○回実施しました」のように回数を並べる書き方は禁止。回数に触れるとしても、文章の流れの中で最大1つまでにとどめること。
+・書く材料が少ないからといって、回数の列挙で文章を長くすることは絶対にしないこと。書く内容が乏しい場合は、無理に長くせず簡潔にまとめること。
+${hasNotable ? `・今月はこの利用者について詳しく報告する必要があります（現場の記録がある、または加算対象・ケアプラン更新月に該当）。
+　上記「現場の記録」がある場合はその内容をもとに、①デイで実際に観察された具体的な事実（日付・部位・状況など）、②介護職員・機能訓練指導員としての見解（原因の推測や状態の解釈）、③デイでの対応内容、④ご自宅での様子や対応について、ケアマネジャーに確認・共有をお願いする一文、の4つの要素を1つの段落の中に自然な流れで盛り込むこと。④は「ご自宅での○○について、ケアマネジャー様からもご確認いただけますと幸いです。」のように、具体的に何を確認してほしいかが分かる形で必ず含めること。【事実】【評価】のような見出しやラベルは付けず、普通の報告文として書くこと。
+　「現場の記録」が「なし」で、加算対象・ケアプラン更新月などの理由のみで詳しい報告が必要な場合は、回数の列挙で分量を稼ぐのではなく、活動への参加の様子や取り組み方、機能訓練での様子など、実際に観察できた具体的な内容を中心に記載すること。特に具体的に書ける内容がなければ、無理に4〜5文にせず、通常の分量（2〜3文）で構わない。` : `・今月はこの利用者について特段の変化がありません。定型的な一文（例:「入浴・機能訓練・口腔ケアを通じて、いつも通り穏やかにお過ごしいただきました。」）に、気づいた点があれば一言添える程度の簡潔な記載（2文程度）にとどめ、長く書きすぎないこと。`}
 
 【今月の概況】
 【バイタル・健康状態】

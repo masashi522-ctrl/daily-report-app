@@ -185,6 +185,16 @@ export default async function AnalyticsPage({
 
     const weightValues = r.map(x => x.weight).filter((v): v is number => v != null && v > 0)
 
+    const careNotes = [...r]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .flatMap(x => [
+        x.specialNotes?.trim() ? { date: x.date, label: '特記事項', text: x.specialNotes.trim() } : null,
+        x.bathingNote?.trim() ? { date: x.date, label: '入浴', text: x.bathingNote.trim() } : null,
+        x.trainingNote?.trim() ? { date: x.date, label: '機能訓練', text: x.trainingNote.trim() } : null,
+        x.oralCareNote?.trim() ? { date: x.date, label: '口腔ケア', text: x.oralCareNote.trim() } : null,
+      ])
+      .filter((v): v is { date: string; label: string; text: string } => v !== null)
+
     reportStats = {
       residentName: targetName,
       year,
@@ -206,6 +216,7 @@ export default async function AnalyticsPage({
       weightMin:          weightValues.length ? Math.min(...weightValues) : null,
       weightMax:          weightValues.length ? Math.max(...weightValues) : null,
       weightMeasureCount: weightValues.length,
+      careNotes,
     }
   }
 

@@ -108,12 +108,13 @@ export default function ResidentReport({
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [forceDetailed, setForceDetailed] = useState(false)
 
   async function handleGenerate() {
     setGenerating(true)
     setReport('')
     try {
-      const text = await generateCareReport(stats)
+      const text = await generateCareReport(stats, forceDetailed)
       setReport(text)
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err)
@@ -265,6 +266,13 @@ export default function ResidentReport({
             </button>
           </div>
         </div>
+        <label className="flex items-center gap-1.5 mb-3 cursor-pointer select-none w-fit">
+          <input type="checkbox" checked={forceDetailed} onChange={e => setForceDetailed(e.target.checked)}
+            className="w-3.5 h-3.5 accent-blue-600" />
+          <span className="text-xs text-gray-600">
+            加算対象・ケアプラン更新月・状態に変化があった方 — 詳しく報告する
+          </span>
+        </label>
         {report ? (
           <div className="bg-slate-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border border-slate-100">
             {report}
