@@ -68,7 +68,27 @@ const SIMPLIFIED_CHINESE_FIXES: [RegExp, string][] = [
 ]
 
 function sanitizeReportText(text: string): string {
-  return SIMPLIFIED_CHINESE_FIXES.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text)
+  const fixed = SIMPLIFIED_CHINESE_FIXES.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text)
+  return collapseRepeatedSentences(fixed)
+}
+
+// Groq/Llamaが稀に文末や短い文を連続で繰り返す（例:「いただけました。いただけました。」）ため、
+// 直前の文と完全一致する文、または直前の文の語尾と完全一致する短い断片を除去する
+function collapseRepeatedSentences(text: string): string {
+  const parts = text.split(/(?<=[。！？])/)
+  const result: string[] = []
+  for (const part of parts) {
+    const trimmed = part.trim()
+    if (!trimmed) { result.push(part); continue }
+    const prevTrimmed = result.length > 0 ? result[result.length - 1].trim() : ''
+    const isExactDuplicate = prevTrimmed === trimmed
+    const isTailDuplicate =
+      trimmed.length >= 3 && trimmed.length <= 24 &&
+      prevTrimmed.length > trimmed.length && prevTrimmed.endsWith(trimmed)
+    if (isExactDuplicate || isTailDuplicate) continue
+    result.push(part)
+  }
+  return result.join('')
 }
 
 export async function generateCareReport(stats: ReportStats, forceDetailed: boolean = false): Promise<string> {
@@ -129,6 +149,11 @@ export async function generateCareReport(stats: ReportStats, forceDetailed: bool
 ・介護現場で使わない格式語・文語（「寄与」「お日柄」「享受」「鑑みて」など）は使わないこと
 ・「〜についてみましたところ」「〜の様子です」など回りくどい導入は使わないこと
 ・「お休み、いただかれなかった」のような不自然な敬語表現は使わないこと
+・「お気遣いいただけますよう、お願い申し上げます」は使わないこと（この表現は相手を気遣う言葉であり、ケアマネジャーに何かを依頼する結びとしては意味が逆転し不自然になる）。気になる点がない場合の結びは「今後もお気づきの点がございましたら、随時ご連絡いたします。」のように、こちらから連絡する姿勢で書くこと
+
+【文の重複について（重要）】
+・同じ文、または直前の文と同じ語尾を、続けて2回書かないこと（例：「〜いただけました。いただけました。」「〜お願い申し上げます。お願い申し上げます。」のような繰り返しは禁止）
+・1つの内容は1回だけ述べ、言い換えたり繰り返したりして文章を長くしないこと
 
 【出欠の表現ルール】
 ・欠席0日の場合：「お休みなく、予定利用日はすべてご利用いただけました。」
