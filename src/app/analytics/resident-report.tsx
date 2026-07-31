@@ -284,17 +284,27 @@ export default function ResidentReport({
         )}
       </div>
 
-      {/* Excel Download */}
-      <div className="flex justify-end">
+      {/* PDF / Word Download */}
+      <div className="flex justify-end gap-2">
         <a
-          href={`/api/analytics/export?year=${year}&month=${month}&residentId=${residentId}`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition font-medium"
+          href={`/api/analytics/export?format=pdf&year=${year}&month=${month}&residentId=${residentId}`}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm hover:bg-rose-700 transition font-medium"
           download
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          Excelダウンロード（{stats.residentName}）
+          PDFダウンロード（{stats.residentName}）
+        </a>
+        <a
+          href={`/api/analytics/export?format=word&year=${year}&month=${month}&residentId=${residentId}`}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition font-medium"
+          download
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Wordダウンロード（{stats.residentName}）
         </a>
       </div>
     </div>

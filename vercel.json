@@ -2,7 +2,7 @@
   "buildCommand": "npx prisma generate && npm run build",
   "functions": {
     "src/app/**": {
-      "includeFiles": "node_modules/kuromoji/dict/**"
+      "includeFiles": "{node_modules/kuromoji/dict/**,src/assets/fonts/*.ttf}"
     }
   }
 }
