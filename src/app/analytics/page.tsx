@@ -217,8 +217,6 @@ export default async function AnalyticsPage({
         return events
       })
 
-    const oralCareGapCount = attendingRecs.filter(x => !x.oralCare).length
-
     const { data: carePlanRaw } = await supabase
       .from('CarePlan')
       .select('goalImage, goals')
@@ -260,7 +258,6 @@ export default async function AnalyticsPage({
       careNotes,
       carePlan,
       serviceGaps,
-      oralCareGapCount,
     }
   }
 
