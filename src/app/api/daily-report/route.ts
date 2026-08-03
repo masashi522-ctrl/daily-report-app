@@ -51,13 +51,13 @@ async function generateAIText(
 
   const [dailyRes, rehabRes] = await Promise.all([
     client.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 400,
       messages: [{ role: 'user', content: 'あなたはデイサービスの介護記録担当スタッフです。以下の当日記録をもとに「日中のご様子・連絡事項」欄の文章を自然な介護記録文体で３〜５文で作成してください。文章のみ出力してください。\n\n' + context }],
     }),
     record.trainingDone
       ? client.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.3-70b-versatile',
           max_tokens: 200,
           messages: [{ role: 'user', content: 'あなたはデイサービスの機能訓練担当スタッフです。以下の訓練記録をもとに「リハビリからの連絡事項」欄の文章を自然な記録文体で１〜２文で作成してください。文章のみ出力してください。\n\n' + context }],
         })
