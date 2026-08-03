@@ -268,7 +268,7 @@ ${hasNotable ? `・今月はこの利用者について詳しく報告する必�
   try {
     const client = new Groq({ apiKey })
     const completion = await client.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       max_tokens: 1500,
       messages: [
         { role: 'system', content: systemMessage },
