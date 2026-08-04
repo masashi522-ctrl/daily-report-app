@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #f0fdf9 0%, #ecfeff 50%, #eff6ff 100%)' }}>
-      <header className="shadow-lg" style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 55%, #2563eb 100%)' }}>
+      <header className="shadow-lg print:hidden" style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 55%, #2563eb 100%)' }}>
         {/* メインヘッダー行 */}
         <div className="max-w-screen-xl mx-auto px-4 py-2.5 flex items-center gap-4">
           {/* ロゴ・タイトル */}

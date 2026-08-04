@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import ResidentReport, { type ChartData } from './resident-report'
 import type { ReportStats, CarePlanSummary } from './actions'
 import AnalyticsFilter from './analytics-filter'
+import PrintButton from './print-button'
 
 export default async function AnalyticsPage({
   searchParams,
@@ -263,19 +264,38 @@ export default async function AnalyticsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-xl font-bold text-gray-800">集計・分析</h2>
+      <style>{`
+        @page { size: A4 portrait; margin: 12mm; }
+        @media print { body { background: white; } }
+      `}</style>
+
+      <div className="flex items-center justify-between gap-3 print:hidden">
+        <h2 className="text-xl font-bold text-gray-800">集計・分析</h2>
+        <PrintButton />
+      </div>
+
+      {/* 印刷用ヘッダー（画面には非表示） */}
+      <div className="hidden print:block print:mb-2">
+        <h1 className="text-lg font-bold text-gray-900">デイサービス 集計・分析</h1>
+        <p className="text-xs text-gray-600 mt-0.5">
+          {session.facilityName}　/　対象: {targetName}　/　{year}年{month}月　/　記録{total}件
+        </p>
+        <p className="text-[10px] text-gray-400">印刷日時: {new Date().toLocaleString('ja-JP')}</p>
+      </div>
 
       {/* フィルター */}
-      <AnalyticsFilter
-        residents={residents}
-        residentId={residentId}
-        year={year}
-        month={month}
-        total={total}
-      />
+      <div className="print:hidden">
+        <AnalyticsFilter
+          residents={residents}
+          residentId={residentId}
+          year={year}
+          month={month}
+          total={total}
+        />
+      </div>
 
       {/* バイタル系グループ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-4">
         {groups.map(group => (
           <div key={group.title} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-2">
