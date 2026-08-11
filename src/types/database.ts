@@ -157,25 +157,13 @@ export interface DailyRecord {
   updatedAt: string
 }
 
-export interface TrainingPlan {
-  id: string
-  residentId: string
-  facilityId: string | null
-  planDate: string | null
-  nextReviewDate: string | null
-  staffName: string | null
-  physicalStatus: string | null
-  userIntention: string | null
-  familyIntention: string | null
-  issues: string | null
-  longTermGoal: string | null
-  shortTermGoal: string | null
-  trainingContent: string | null
-  frequency: string | null
-  notes: string | null
-  createdAt: string
-  updatedAt: string
-}
+export const ADL_INDEPENDENCE_LEVEL_OPTIONS = [
+  '自立', 'J1', 'J2', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2',
+] as const
+
+export const DEMENTIA_INDEPENDENCE_LEVEL_OPTIONS = [
+  '自立', 'Ⅰ', 'Ⅱa', 'Ⅱb', 'Ⅲa', 'Ⅲb', 'Ⅳ', 'M',
+] as const
 
 export interface CarePlanGoal {
   issue: string
@@ -183,6 +171,45 @@ export interface CarePlanGoal {
   shortTermGoal: string
   serviceContent: string
   frequency: string
+}
+
+// 個別機能訓練計画書の「リハビリ目標」表の1行分。CarePlanGoalと同じ形。
+export type TrainingPlanGoal = CarePlanGoal
+
+export interface TrainingPlan {
+  id: string
+  residentId: string
+  facilityId: string | null
+  planDate: string | null
+  previousPlanDate: string | null
+  firstPlanDate: string | null
+  version: number
+  staffName: string | null
+  gender: string | null
+  birthDate: string | null
+  careLevel: string | null
+  adlIndependenceLevel: string | null
+  dementiaIndependenceLevel: string | null
+  needsAnalysis: string | null
+  supportPolicy: string | null
+  goalImage: string | null
+  socialParticipation: string | null
+  housingSituation: string | null
+  goals: TrainingPlanGoal[] | null
+  diseaseName: string | null
+  onsetDate: string | null
+  recentAdmissionDate: string | null
+  recentDischargeDate: string | null
+  trainingPrecautions: string | null
+  monitoringDate: string | null
+  monitoringPeriod: string | null
+  monitoringContent: string | null
+  explanationDate: string | null
+  explainerName: string | null
+  familySignature: string | null
+  proxySignature: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CarePlan {
