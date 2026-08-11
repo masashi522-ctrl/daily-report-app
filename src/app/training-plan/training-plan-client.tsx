@@ -2,10 +2,11 @@
 
 import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Download } from 'lucide-react'
 import { saveTrainingPlan } from './actions'
 import type { TrainingPlan } from '@/types/database'
 
-interface Resident { id: string; name: string; furigana: string | null }
+interface Resident { id: string; name: string; furigana: string | null; careLevel: string | null }
 
 interface Props {
   residents: Resident[]
@@ -78,11 +79,21 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
             <form action={formAction} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 className="font-semibold text-gray-800">{selectedResident.name} さんの機能訓練計画書</h3>
-                {plan?.updatedAt && (
-                  <span className="text-xs text-gray-400">
-                    最終更新: {new Date(plan.updatedAt).toLocaleString('ja-JP')}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {plan?.updatedAt && (
+                    <span className="text-xs text-gray-400">
+                      最終更新: {new Date(plan.updatedAt).toLocaleString('ja-JP')}
+                    </span>
+                  )}
+                  {plan && (
+                    <a
+                      href={`/api/training-plan/export?residentId=${selectedResidentId}`}
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition"
+                    >
+                      <Download size={13} /> Excelでダウンロード
+                    </a>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

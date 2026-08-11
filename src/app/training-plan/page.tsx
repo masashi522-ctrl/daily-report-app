@@ -12,7 +12,7 @@ export default async function TrainingPlanPage({
 
   const { data: residentsRaw } = await supabase
     .from('Resident')
-    .select('id, name, furigana')
+    .select('id, name, furigana, careLevel')
     .eq('isActive', true)
     .eq('facilityId', session.facilityId)
 
