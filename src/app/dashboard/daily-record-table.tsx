@@ -90,7 +90,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [incompleteOnly, setIncompleteOnly] = useState(false)
 
-  const todayNum = new Date().getDay()
+  const todayNum = new Date(date + 'T00:00:00').getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
 
   // 必須項目（備考・特記事項を除く）の未入力チェック
