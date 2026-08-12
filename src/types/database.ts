@@ -81,6 +81,11 @@ export const SERVICE_START_TIMES = (() => {
 
 export const SERVICE_TIME_CATEGORIES = ['3-4', '4-5', '5-6', '6-7', '7-8', '8-9'] as const
 
+export interface HospitalizationPeriod {
+  admissionDate: string
+  dischargeDate: string | null
+}
+
 export interface Resident {
   id: string
   name: string
@@ -102,6 +107,9 @@ export interface Resident {
   serviceStartTime: string | null
   serviceEndTime: string | null
   serviceTimeCategory: string | null
+  serviceStartDate: string | null
+  serviceEndDate: string | null
+  hospitalizations: HospitalizationPeriod[] | null
   createdAt: string
   updatedAt: string
 }

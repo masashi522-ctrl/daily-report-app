@@ -1,10 +1,65 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
 import { addResident, generateFurigana } from './actions'
-import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, BATHING_CARE_ITEMS, BATHING_SPECIAL_ITEMS } from '@/types/database'
+import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, BATHING_CARE_ITEMS, BATHING_SPECIAL_ITEMS, type HospitalizationPeriod } from '@/types/database'
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
+
+function HospitalizationEditor({
+  periods,
+  onChange,
+}: {
+  periods: HospitalizationPeriod[]
+  onChange: (periods: HospitalizationPeriod[]) => void
+}) {
+  function update(i: number, field: keyof HospitalizationPeriod, value: string) {
+    onChange(periods.map((p, idx) => (idx === i ? { ...p, [field]: value || null } : p)))
+  }
+  function add() {
+    onChange([...periods, { admissionDate: '', dischargeDate: null }])
+  }
+  function remove(i: number) {
+    onChange(periods.filter((_, idx) => idx !== i))
+  }
+
+  return (
+    <div className="border border-amber-100 rounded-lg p-3 bg-amber-50/40">
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs font-semibold text-amber-800">
+          入退院期間
+          <span className="ml-1 font-normal text-gray-400">（複数回登録可・退院日未定なら空欄のまま）</span>
+        </label>
+        <button type="button" onClick={add}
+          className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-medium">
+          <Plus size={13} /> 追加
+        </button>
+      </div>
+      {periods.length === 0 ? (
+        <p className="text-xs text-gray-400">入退院履歴はありません</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {periods.map((p, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input type="date" name="hospAdmission" value={p.admissionDate}
+                onChange={e => update(i, 'admissionDate', e.target.value)}
+                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
+              <span className="text-xs text-gray-400">〜</span>
+              <input type="date" name="hospDischarge" value={p.dischargeDate ?? ''}
+                onChange={e => update(i, 'dischargeDate', e.target.value)}
+                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
+              <button type="button" onClick={() => remove(i)}
+                className="text-red-400 hover:text-red-600 shrink-0">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function DayCheckboxes({ name, checkedDays = [] }: { name: string; checkedDays?: number[] }) {
   return (
@@ -25,6 +80,7 @@ export default function ResidentForm() {
   const [state, action, pending] = useActionState(addResident, null)
   const [furigana, setFurigana] = useState('')
   const [generating, startGenerate] = useTransition()
+  const [hospitalizations, setHospitalizations] = useState<HospitalizationPeriod[]>([])
 
   function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
     const name = e.target.value.trim()
@@ -170,6 +226,21 @@ export default function ResidentForm() {
           {SERVICE_TIME_CATEGORIES.map(v => <option key={v} value={v}>{v}時間</option>)}
         </select>
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-gray-700 block mb-1">利用開始日</label>
+          <input type="date" name="serviceStartDate"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-700 block mb-1">
+            利用中止日 <span className="text-gray-400 font-normal text-[11px]">（入力すると自動的に退所扱い）</span>
+          </label>
+          <input type="date" name="serviceEndDate"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        </div>
+      </div>
+      <HospitalizationEditor periods={hospitalizations} onChange={setHospitalizations} />
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">禁止食品・アレルギー</label>
         <input name="foodRestrictions" placeholder="例: 甲殻類、納豆禁"

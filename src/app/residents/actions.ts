@@ -5,8 +5,20 @@ import { requireSession } from '@/lib/session'
 import { toFurigana } from '@/lib/furigana'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import type { HospitalizationPeriod } from '@/types/database'
 
 export type ResidentFormState = { error: string } | null
+
+function parseHospitalizations(formData: FormData): HospitalizationPeriod[] {
+  const admissions = formData.getAll('hospAdmission') as string[]
+  const discharges = formData.getAll('hospDischarge') as string[]
+  return admissions
+    .map((admissionDate, i) => ({
+      admissionDate: admissionDate?.trim() ?? '',
+      dischargeDate: discharges[i]?.trim() || null,
+    }))
+    .filter(h => h.admissionDate)
+}
 
 export async function addResident(prevState: ResidentFormState, formData: FormData): Promise<ResidentFormState> {
   const session = await requireSession()
@@ -26,6 +38,9 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const serviceStartTime        = (formData.get('serviceStartTime') as string) || null
   const serviceEndTime          = (formData.get('serviceEndTime') as string) || null
   const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
+  const serviceStartDate        = (formData.get('serviceStartDate') as string) || null
+  const serviceEndDate          = (formData.get('serviceEndDate') as string) || null
+  const hospitalizations        = parseHospitalizations(formData)
   const weightMeasureEveryVisit  = formData.get('weightMeasureEveryVisit') === '1'
   const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
   const bathingSpecialItems      = (formData.getAll('bathingSpecialItems') as string[]).join(',') || null
@@ -38,7 +53,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     foodType,
     foodRestrictions: foodRestrictions || null,
     specialCondition: specialCondition || null,
-    isActive: true,
+    isActive: !serviceEndDate,
     sortOrder,
     attendanceDays:      attendanceDays      || null,
     bathingDays:         bathingDays         || null,
@@ -47,6 +62,9 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     serviceStartTime,
     serviceEndTime,
     serviceTimeCategory,
+    serviceStartDate,
+    serviceEndDate,
+    hospitalizations,
     weightMeasureEveryVisit,
     bathingCareItems,
     bathingSpecialItems,
@@ -103,6 +121,9 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const serviceStartTime        = (formData.get('serviceStartTime') as string) || null
   const serviceEndTime          = (formData.get('serviceEndTime') as string) || null
   const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
+  const serviceStartDate        = (formData.get('serviceStartDate') as string) || null
+  const serviceEndDate          = (formData.get('serviceEndDate') as string) || null
+  const hospitalizations        = parseHospitalizations(formData)
   const weightMeasureEveryVisit  = formData.get('weightMeasureEveryVisit') === '1'
   const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
   const bathingSpecialItems      = (formData.getAll('bathingSpecialItems') as string[]).join(',') || null
@@ -124,6 +145,10 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     serviceStartTime,
     serviceEndTime,
     serviceTimeCategory,
+    serviceStartDate,
+    serviceEndDate,
+    hospitalizations,
+    isActive: !serviceEndDate,
     weightMeasureEveryVisit,
     bathingCareItems,
     bathingSpecialItems,
