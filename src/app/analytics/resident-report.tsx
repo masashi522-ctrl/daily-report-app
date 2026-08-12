@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { generateCareReport, type ReportStats } from './actions'
+import PhotoGallery, { type ResidentPhoto } from './photo-gallery'
 
 export interface ChartData {
   days: number[]
@@ -97,12 +98,14 @@ export default function ResidentReport({
   residentId,
   year,
   month,
+  photos,
 }: {
   stats: ReportStats
   chartData: ChartData
   residentId: string
   year: number
   month: number
+  photos: ResidentPhoto[]
 }) {
   const [report, setReport] = useState('')
   const [generating, setGenerating] = useState(false)
@@ -142,6 +145,8 @@ export default function ResidentReport({
           residentName: stats.residentName,
           year: stats.year,
           month: stats.month,
+          dailyNotes: stats.dailyNotes,
+          photoUrls: photos.map(p => p.url),
         }),
       })
       if (!res.ok) throw new Error('ダウンロードに失敗しました')
@@ -222,6 +227,42 @@ export default function ResidentReport({
             height={90}
             unit="kg"
           />
+        </div>
+      )}
+
+      {/* 当月の特記事項 */}
+      {stats.dailyNotes.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            当月の特記事項
+            <span className="ml-2 text-xs font-normal text-gray-400">{stats.dailyNotes.length}件</span>
+          </h3>
+          <div className="flex flex-col gap-2">
+            {stats.dailyNotes.map((note, i) => {
+              const d = note.date.split('-')
+              return (
+                <div key={`${note.date}-${i}`} className="flex gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                  <span className="text-xs font-medium text-gray-500 shrink-0 w-16">
+                    {parseInt(d[1])}月{parseInt(d[2])}日
+                  </span>
+                  <span className="text-sm text-gray-700 whitespace-pre-wrap">{note.text}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 写真（最大5枚） */}
+      <div className="print:hidden">
+        <PhotoGallery residentId={residentId} year={year} month={month} photos={photos} />
+      </div>
+      {photos.length > 0 && (
+        <div className="hidden print:grid print:grid-cols-3 gap-2">
+          {photos.map(photo => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={photo.id} src={photo.url} alt="" className="w-full aspect-square object-cover rounded" />
+          ))}
         </div>
       )}
 

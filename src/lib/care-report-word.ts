@@ -1,10 +1,16 @@
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } from 'docx'
+import { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, BorderStyle } from 'docx'
+import type { ReportPhoto } from './care-report-photo'
 
 const FONT = 'MS Gothic'
 
 interface ReportSection {
   header: string
   body: string
+}
+
+interface DailyNote {
+  date: string
+  text: string
 }
 
 function parseReportSections(text: string): ReportSection[] {
@@ -23,6 +29,8 @@ export async function buildCareReportWord(
   residentName: string,
   year: number,
   month: number,
+  dailyNotes: DailyNote[] = [],
+  photos: ReportPhoto[] = [],
 ): Promise<Buffer> {
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
   const sections = parseReportSections(reportText)
@@ -80,6 +88,56 @@ export async function buildCareReportWord(
           }),
         )
       }
+    }
+  }
+
+  if (dailyNotes.length > 0) {
+    children.push(
+      new Paragraph({
+        spacing: { before: 280, after: 100 },
+        children: [new TextRun({ text: '【当月の特記事項】', bold: true, size: 26, font: FONT, color: '1a3c6e' })],
+        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '1a3c6e' } },
+      }),
+    )
+    for (const note of dailyNotes) {
+      const d = note.date.split('-')
+      children.push(
+        new Paragraph({
+          spacing: { after: 120 },
+          children: [new TextRun({ text: `${parseInt(d[1])}月${parseInt(d[2])}日　${note.text}`, size: 24, font: FONT })],
+        }),
+      )
+    }
+  }
+
+  if (photos.length > 0) {
+    children.push(
+      new Paragraph({
+        spacing: { before: 280, after: 160 },
+        children: [new TextRun({ text: '【今月の様子（写真）】', bold: true, size: 26, font: FONT, color: '1a3c6e' })],
+        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '1a3c6e' } },
+      }),
+    )
+    const maxWidth = 260
+    const maxHeight = 195
+    for (const photo of photos) {
+      const scale = Math.min(maxWidth / photo.width, maxHeight / photo.height, 1)
+      children.push(
+        new Paragraph({
+          spacing: { after: 160 },
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              type: photo.type,
+              data: photo.buffer,
+              transformation: {
+                width: Math.round(photo.width * scale),
+                height: Math.round(photo.height * scale),
+              },
+            }),
+          ],
+        }),
+      )
     }
   }
 

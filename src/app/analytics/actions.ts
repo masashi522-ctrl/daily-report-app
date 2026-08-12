@@ -26,6 +26,11 @@ export interface ServiceGap {
   reason: string
 }
 
+export interface DailyNote {
+  date: string
+  text: string
+}
+
 export interface ReportStats {
   residentName: string
   year: number
@@ -48,6 +53,7 @@ export interface ReportStats {
   weightMax: number | null
   weightMeasureCount: number
   careNotes: CareNote[]
+  dailyNotes: DailyNote[]
   carePlan: CarePlanSummary | null
   serviceGaps: ServiceGap[]
 }

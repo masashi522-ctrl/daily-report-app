@@ -1,9 +1,12 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import ResidentReport, { type ChartData } from './resident-report'
+import type { ResidentPhoto } from './photo-gallery'
 import type { ReportStats, CarePlanSummary } from './actions'
 import AnalyticsFilter from './analytics-filter'
 import PrintButton from './print-button'
+
+const PHOTO_BUCKET = 'resident-monthly-photos'
 
 export default async function AnalyticsPage({
   searchParams,
@@ -153,6 +156,7 @@ export default async function AnalyticsPage({
   // 個人選択時：グラフ用の日別データとAIレポート用統計を計算
   let chartData: ChartData | null = null
   let reportStats: ReportStats | null = null
+  let photos: ResidentPhoto[] = []
 
   if (residentId && r.length > 0) {
     const allDays = Array.from({ length: lastDay }, (_, i) => i + 1)
@@ -195,6 +199,12 @@ export default async function AnalyticsPage({
         x.oralCareNote?.trim() ? { date: x.date, label: '口腔ケア', text: x.oralCareNote.trim() } : null,
       ])
       .filter((v): v is { date: string; label: string; text: string } => v !== null)
+
+    // 画面表示・月次報告書への添付用：特記事項欄のみを日付順に抽出
+    const dailyNotes = [...r]
+      .filter(x => x.specialNotes?.trim())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(x => ({ date: x.date, text: x.specialNotes.trim() }))
 
     const serviceGaps = [...r]
       .filter(x => !x.isAbsent)
@@ -257,8 +267,26 @@ export default async function AnalyticsPage({
       weightMax:          weightValues.length ? Math.max(...weightValues) : null,
       weightMeasureCount: weightValues.length,
       careNotes,
+      dailyNotes,
       carePlan,
       serviceGaps,
+    }
+
+    const { data: photoRows } = await supabase
+      .from('ResidentMonthlyPhoto')
+      .select('id, storagePath')
+      .eq('residentId', residentId)
+      .eq('year', year)
+      .eq('month', month)
+      .order('sortOrder', { ascending: true })
+
+    if (photoRows && photoRows.length > 0) {
+      const { data: signedUrls } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .createSignedUrls(photoRows.map(p => p.storagePath), 3600)
+      photos = photoRows
+        .map((p, i) => ({ id: p.id, url: signedUrls?.[i]?.signedUrl ?? '' }))
+        .filter(p => p.url)
     }
   }
 
@@ -342,6 +370,7 @@ export default async function AnalyticsPage({
             residentId={residentId}
             year={year}
             month={month}
+            photos={photos}
           />
         </div>
       ) : residentId ? (

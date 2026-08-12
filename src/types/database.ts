@@ -246,6 +246,18 @@ export interface CarePlan {
   updatedAt: string
 }
 
+export interface ResidentMonthlyPhoto {
+  id: string
+  facilityId: string
+  residentId: string
+  year: number
+  month: number
+  storagePath: string
+  caption: string | null
+  sortOrder: number
+  createdAt: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -254,6 +266,7 @@ export interface Database {
       DailyRecord: { Row: DailyRecord; Insert: Omit<DailyRecord, 'id' | 'createdAt' | 'updatedAt'>; Update: Partial<DailyRecord> }
       TrainingPlan: { Row: TrainingPlan; Insert: Omit<TrainingPlan, 'createdAt' | 'updatedAt'>; Update: Partial<TrainingPlan> }
       CarePlan: { Row: CarePlan; Insert: Omit<CarePlan, 'createdAt' | 'updatedAt'>; Update: Partial<CarePlan> }
+      ResidentMonthlyPhoto: { Row: ResidentMonthlyPhoto; Insert: Omit<ResidentMonthlyPhoto, 'id' | 'createdAt'>; Update: Partial<ResidentMonthlyPhoto> }
     }
   }
 }
