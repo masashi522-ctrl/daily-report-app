@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import { SERVICE_TIME_CATEGORIES } from '@/types/database'
+import { SERVICE_TIME_CATEGORIES, type HospitalizationPeriod } from '@/types/database'
+import { isHospitalizedOn } from '@/lib/hospitalization'
 
 export interface DayBreakdown {
   date: string
@@ -55,13 +56,16 @@ export async function computeMonthlyOperationsStats(
 
   const [{ data: facilityRaw }, { data: residentsRaw }] = await Promise.all([
     supabase.from('Facility').select('capacity, capacityByCategory').eq('id', facilityId).maybeSingle(),
-    supabase.from('Resident').select('id, careLevel, serviceTimeCategory').eq('facilityId', facilityId),
+    supabase.from('Resident').select('id, careLevel, serviceTimeCategory, hospitalizations').eq('facilityId', facilityId),
   ])
 
   const capacity: number | null = facilityRaw?.capacity ?? null
   const capacityByCategory = (facilityRaw?.capacityByCategory ?? {}) as Record<string, number>
   const residents = residentsRaw ?? []
   const residentIds = residents.map(r => r.id)
+  const hospitalizationsById = new Map<string, HospitalizationPeriod[] | null>(
+    residents.map(r => [r.id, r.hospitalizations as HospitalizationPeriod[] | null]),
+  )
 
   let records: { residentId: string; date: string; isAbsent: boolean }[] = []
   if (residentIds.length > 0) {
@@ -71,7 +75,10 @@ export async function computeMonthlyOperationsStats(
       .in('residentId', residentIds)
       .gte('date', from)
       .lte('date', to)
-    records = data ?? []
+    // 入院期間中の記録は稼働率・利用実績から除外する
+    records = (data ?? []).filter(
+      r => !isHospitalizedOn(hospitalizationsById.get(r.residentId), r.date),
+    )
   }
 
   const byDate = new Map<string, { attend: number; absent: number }>()

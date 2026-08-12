@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { FOOD_TYPE_LABELS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
+import { isHospitalizedOn } from '@/lib/hospitalization'
 import { saveRecord, saveAllRecords } from './actions'
 
 interface Props {
@@ -428,6 +429,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
         {filtered.map(resident => {
           const d = getDraft(resident.id)
           const isAbsent = d.isAbsent ?? false
+          const isHospitalized = isHospitalizedOn(resident.hospitalizations, date)
           const missing = getMissing(resident.id)
           const hasVital = d.bpSystolic != null || d.tempMorning != null
           const isTemp = recordMap[resident.id]?.isTemporaryAttendance === true
@@ -438,6 +440,9 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`font-semibold ${isAbsent ? 'text-gray-400 line-through' : 'text-teal-900'}`}>{resident.name}</span>
+                    {isHospitalized && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold border border-amber-200">入院中</span>
+                    )}
                     {isTemp && !isAbsent && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-semibold border border-orange-200">臨時</span>
                     )}
@@ -646,6 +651,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               {filtered.map((resident, i) => {
                 const d = getDraft(resident.id)
                 const isAbsent = d.isAbsent ?? false
+                const isHospitalized = isHospitalizedOn(resident.hospitalizations, date)
                 const isTemp = recordMap[resident.id]?.isTemporaryAttendance === true
                 const base = i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
                 const missing = getMissing(resident.id)
@@ -657,6 +663,9 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     {/* 名前 */}
                     <td className={td}>
                       <div className={`font-semibold leading-tight text-[11px] truncate ${isAbsent ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{resident.name}</div>
+                      {isHospitalized && (
+                        <div className="text-[9px] text-amber-700 font-semibold">入院中</div>
+                      )}
                       {isTemp && !isAbsent && (
                         <div className="text-[9px] text-orange-500 font-medium">臨時</div>
                       )}
