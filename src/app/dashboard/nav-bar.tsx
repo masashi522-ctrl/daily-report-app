@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Users, BookOpen, BarChart2, UserCog, Bath, Dumbbell, FileText, Scale, Target, ClipboardCheck } from 'lucide-react'
+import { ClipboardList, Users, BookOpen, BarChart2, UserCog, Bath, Dumbbell, FileText, Scale, Target, ClipboardCheck, CalendarCheck } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/dashboard',       label: '日次記録',   mobileLabel: '日次',   icon: ClipboardList, exact: true },
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/training-plan',   label: '機能訓練計画書', mobileLabel: '訓練計画', icon: Target },
   { href: '/care-plan',       label: '介護計画書', mobileLabel: '介護計画', icon: ClipboardCheck },
   { href: '/report',          label: '連絡帳',     mobileLabel: '連絡帳', icon: FileText },
+  { href: '/monthly-report',  label: '月次報告',   mobileLabel: '月次',   icon: CalendarCheck },
   { href: '/weight',          label: '体重',       mobileLabel: '体重',   icon: Scale },
   { href: '/residents',       label: '利用者管理', mobileLabel: '利用者', icon: Users },
   { href: '/history',         label: '過去記録',   mobileLabel: '過去',   icon: BookOpen },
