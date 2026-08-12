@@ -24,6 +24,19 @@ interface Props {
 
 const EMPTY_GOAL: TrainingPlanGoal = { issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '' }
 
+const GOJUUON_ROWS = [
+  { label: 'あ', chars: 'あいうえおアイウエオ' },
+  { label: 'か', chars: 'かきくけこカキクケコがぎぐげごガギグゲゴ' },
+  { label: 'さ', chars: 'さしすせそサシスセソざじずぜぞザジズゼゾ' },
+  { label: 'た', chars: 'たちつてとタチツテトだぢづでどダヂヅデド' },
+  { label: 'な', chars: 'なにぬねのナニヌネノ' },
+  { label: 'は', chars: 'はひふへほハヒフヘホばびぶべぼバビブベボぱぴぷぺぽパピプペポ' },
+  { label: 'ま', chars: 'まみむめもマミムメモ' },
+  { label: 'や', chars: 'やゆよヤユヨ' },
+  { label: 'ら', chars: 'らりるれろラリルレロ' },
+  { label: 'わ', chars: 'わをんワヲン' },
+]
+
 interface GenerateResult {
   needsAnalysis: string
   supportPolicy: string
@@ -46,6 +59,10 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [generateApplied, setGenerateApplied] = useState(false)
+
+  const [searchText, setSearchText] = useState('')
+  const [appliedText, setAppliedText] = useState('')
+  const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
 
   useEffect(() => {
     if (state?.success) setSavedAt(new Date().toLocaleTimeString('ja-JP'))
@@ -107,6 +124,17 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
     }
   }
 
+  const filteredResidents = residents.filter(r => {
+    const matchName = !appliedText ||
+      r.name.includes(appliedText) ||
+      (r.furigana ?? '').includes(appliedText)
+    if (!matchName) return false
+    if (!gojuuonRow) return true
+    const searchChar = (r.furigana ?? r.name)[0]
+    const row = GOJUUON_ROWS.find(g => g.label === gojuuonRow)
+    return row ? row.chars.includes(searchChar) : true
+  })
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -117,23 +145,72 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* 利用者選択 */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
-            {residents.length === 0 && (
-              <p className="text-xs text-gray-400 text-center py-4">利用者が登録されていません</p>
-            )}
-            {residents.map(r => (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-2">
+            {/* 検索バー */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && setAppliedText(searchText)}
+                placeholder="名前で検索..."
+                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:border-teal-400"
+                style={{ fontSize: '16px' }}
+              />
               <button
-                key={r.id}
-                onClick={() => router.push(`/training-plan?resident=${r.id}`)}
-                className={`text-left px-3 py-2 rounded-lg text-sm transition ${
-                  r.id === selectedResidentId
-                    ? 'bg-teal-600 text-white font-medium'
-                    : 'text-gray-700 hover:bg-teal-50'
+                onClick={() => setAppliedText(searchText)}
+                className="px-2.5 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700 whitespace-nowrap"
+              >検索</button>
+              {appliedText && (
+                <button onClick={() => { setSearchText(''); setAppliedText('') }}
+                  className="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5 rounded-lg hover:bg-gray-100">
+                  ✕
+                </button>
+              )}
+            </div>
+            {/* 50音タブ */}
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setGojuuonRow(null)}
+                className={`text-[11px] px-1.5 py-0.5 rounded border font-medium transition ${
+                  gojuuonRow === null
+                    ? 'bg-teal-700 text-white border-teal-700'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-teal-400'
                 }`}
-              >
-                {r.name}
-              </button>
-            ))}
+              >全</button>
+              {GOJUUON_ROWS.map(row => (
+                <button key={row.label}
+                  onClick={() => setGojuuonRow(gojuuonRow === row.label ? null : row.label)}
+                  className={`text-[11px] px-1.5 py-0.5 rounded border transition ${
+                    gojuuonRow === row.label
+                      ? 'bg-teal-600 text-white border-teal-600'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-teal-400 hover:text-teal-600'
+                  }`}
+                >{row.label}</button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1 max-h-[55vh] overflow-y-auto">
+              {residents.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">利用者が登録されていません</p>
+              )}
+              {residents.length > 0 && filteredResidents.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">該当する利用者がいません</p>
+              )}
+              {filteredResidents.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => router.push(`/training-plan?resident=${r.id}`)}
+                  className={`text-left px-3 py-2 rounded-lg text-sm transition ${
+                    r.id === selectedResidentId
+                      ? 'bg-teal-600 text-white font-medium'
+                      : 'text-gray-700 hover:bg-teal-50'
+                  }`}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
