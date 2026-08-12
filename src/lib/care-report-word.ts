@@ -18,20 +18,19 @@ function parseReportSections(text: string): ReportSection[] {
     })
 }
 
-function buildResidentSection(
+export async function buildCareReportWord(
   reportText: string,
   residentName: string,
   year: number,
   month: number,
-  today: string,
-  pageBreakBefore: boolean,
-): Paragraph[] {
+): Promise<Buffer> {
+  const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
   const sections = parseReportSections(reportText)
+
   const children: Paragraph[] = []
 
   children.push(
     new Paragraph({
-      pageBreakBefore,
       alignment: AlignmentType.CENTER,
       spacing: { before: 240, after: 120 },
       children: [new TextRun({ text: '月次サービス利用報告書', bold: true, size: 52, font: FONT })],
@@ -83,44 +82,6 @@ function buildResidentSection(
       }
     }
   }
-
-  return children
-}
-
-export async function buildCareReportWord(
-  reportText: string,
-  residentName: string,
-  year: number,
-  month: number,
-): Promise<Buffer> {
-  const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
-  const children = buildResidentSection(reportText, residentName, year, month, today, false)
-
-  const doc = new Document({
-    sections: [
-      {
-        properties: {
-          page: { margin: { top: 1440, bottom: 1440, left: 1700, right: 1700 } },
-        },
-        children,
-      },
-    ],
-  })
-
-  const nodeBuffer = await Packer.toBuffer(doc)
-  return Buffer.from(nodeBuffer)
-}
-
-// 複数利用者分の月次報告書を1つのWordファイルにまとめる（1名につき1ページ）
-export async function buildBulkCareReportWord(
-  reports: { residentName: string; reportText: string }[],
-  year: number,
-  month: number,
-): Promise<Buffer> {
-  const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
-  const children = reports.flatMap((r, i) =>
-    buildResidentSection(r.reportText, r.residentName, year, month, today, i > 0),
-  )
 
   const doc = new Document({
     sections: [

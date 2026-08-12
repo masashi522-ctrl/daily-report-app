@@ -25,6 +25,8 @@ export interface Facility {
   name: string
   facilityCode: string
   slug: string | null
+  capacity: number | null
+  capacityByCategory: Partial<Record<typeof SERVICE_TIME_CATEGORIES[number], number>> | null
   createdAt: string
   updatedAt: string
 }
