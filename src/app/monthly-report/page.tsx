@@ -33,14 +33,23 @@ export default async function MonthlyReportPage({
   const year = parseInt(params.year || String(now.getFullYear()))
   const month = parseInt(params.month || String(now.getMonth() + 1))
 
-  const [{ data: facilityRaw }, stats] = await Promise.all([
+  const [{ data: facilityRaw }, { data: activeResidents }, stats] = await Promise.all([
     supabase.from('Facility').select('capacity, capacityByCategory').eq('id', session.facilityId).maybeSingle(),
+    supabase.from('Resident').select('serviceTimeCategory').eq('facilityId', session.facilityId).eq('isActive', true),
     computeMonthlyOperationsStats(session.facilityId, year, month),
   ])
 
   const facility = {
     capacity: (facilityRaw?.capacity ?? null) as number | null,
     capacityByCategory: (facilityRaw?.capacityByCategory ?? null) as Record<string, number> | null,
+  }
+
+  // 時間区分別定員の初期値提案用：現在登録されている（在籍中の）利用者数を区分ごとに集計
+  const registeredCategoryCounts: Record<string, number> = {}
+  for (const r of activeResidents ?? []) {
+    if (r.serviceTimeCategory) {
+      registeredCategoryCounts[r.serviceTimeCategory] = (registeredCategoryCounts[r.serviceTimeCategory] ?? 0) + 1
+    }
   }
 
   const prev = prevMonth(year, month)
@@ -64,7 +73,7 @@ export default async function MonthlyReportPage({
         </div>
       </div>
 
-      <CapacityForm facility={facility} />
+      <CapacityForm facility={facility} registeredCategoryCounts={registeredCategoryCounts} />
 
       {/* サマリーカード */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
