@@ -77,10 +77,6 @@ export default async function AnalyticsPage({
     mealSide:        avg(r.map(x => x.mealSideFood)),
     weight:          avg(r.map(x => (x.weight != null && x.weight > 0) ? x.weight : null)),
     bathing:         `${countOf(r.map(x => x.bathing === 'DONE'))}/${total}回`,
-    oralCare:        `${countOf(r.map(x => x.oralCare))}/${total}回`,
-    medMorning:      `${countOf(r.map(x => x.medicationMorning))}/${total}回`,
-    medLunch:        `${countOf(r.map(x => x.medicationBeforeLunch || x.medicationAfterLunch))}/${total}回`,
-    medEvening:      `${countOf(r.map(x => x.medicationEvening))}/${total}回`,
     training:        `${countOf(r.map(x => x.trainingDone))}/${total}回`,
   }
 
@@ -143,10 +139,6 @@ export default async function AnalyticsPage({
   const counts = [
     { label: '入浴 実施',    value: stats.bathing },
     { label: '機能訓練 実施', value: stats.training },
-    { label: '口腔ケア',     value: stats.oralCare },
-    { label: '朝薬',        value: stats.medMorning },
-    { label: '昼薬',        value: stats.medLunch },
-    { label: '夕薬',        value: stats.medEvening },
   ]
 
   const targetName = residentId
@@ -303,10 +295,14 @@ export default async function AnalyticsPage({
       </div>
 
       {/* 印刷用ヘッダー（画面には非表示） */}
-      <div className="hidden print:block print:mb-2">
+      <div className="hidden print:block print:mb-3">
         <h1 className="text-lg font-bold text-gray-900">デイサービス 集計・分析</h1>
-        <p className="text-xs text-gray-600 mt-0.5">
-          {session.facilityName}　/　対象: {targetName}　/　{year}年{month}月　/　記録{total}件
+        <p className="text-2xl font-bold text-gray-900 mt-1">
+          対象：{targetName}
+          <span className="text-base font-normal text-gray-600 ml-3">{year}年{month}月</span>
+        </p>
+        <p className="text-xs text-gray-600 mt-1">
+          {session.facilityName}　/　記録{total}件
         </p>
         <p className="text-[10px] text-gray-400">印刷日時: {new Date().toLocaleString('ja-JP')}</p>
       </div>
@@ -383,7 +379,7 @@ export default async function AnalyticsPage({
         </p>
       )}
 
-      <p className="text-xs text-gray-400">{year}年{month}月 / 対象: {targetName}</p>
+      <p className="text-xs text-gray-400 print:hidden">{year}年{month}月 / 対象: {targetName}</p>
     </div>
   )
 }

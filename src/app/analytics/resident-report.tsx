@@ -273,7 +273,7 @@ export default function ResidentReport({
             ケアマネジャー向け月次報告書
             <span className="ml-2 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">AI生成</span>
           </h3>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap print:hidden">
             {report && (
               <button onClick={handleCopy}
                 className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition ${
@@ -324,7 +324,7 @@ export default function ResidentReport({
             </button>
           </div>
         </div>
-        <label className="flex items-center gap-1.5 mb-3 cursor-pointer select-none w-fit">
+        <label className="flex items-center gap-1.5 mb-3 cursor-pointer select-none w-fit print:hidden">
           <input type="checkbox" checked={forceDetailed} onChange={e => setForceDetailed(e.target.checked)}
             className="w-3.5 h-3.5 accent-blue-600" />
           <span className="text-xs text-gray-600">
@@ -343,7 +343,7 @@ export default function ResidentReport({
       </div>
 
       {/* Excel Download */}
-      <div className="flex justify-end">
+      <div className="flex justify-end print:hidden">
         <a
           href={`/api/analytics/export?year=${year}&month=${month}&residentId=${residentId}`}
           className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition font-medium"
