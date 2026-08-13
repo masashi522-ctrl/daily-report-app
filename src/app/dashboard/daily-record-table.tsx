@@ -114,6 +114,13 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   function bpAlertPm(d: RecordDraft): boolean {
     return d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90)
   }
+  // 体温の入力ミス（例: 小数点抜けで「364」等）に気づけるよう、妥当な範囲外を警告表示する
+  function tempAlertAm(d: RecordDraft): boolean {
+    return d.tempMorning != null && (d.tempMorning < 30 || d.tempMorning > 42)
+  }
+  function tempAlertPm(d: RecordDraft): boolean {
+    return d.tempAfternoon != null && (d.tempAfternoon < 30 || d.tempAfternoon > 42)
+  }
 
   function getMissing(id: string): string[] {
     const d = getDraft(id)
@@ -523,8 +530,8 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>体温<br /><span className="text-[10px] text-gray-400">℃</span></span>
-                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" />
-                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" alert={tempAlertAm(d)} />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" alert={tempAlertPm(d)} />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>水分<br /><span className="text-[10px] text-gray-400">ml</span></span>
@@ -738,15 +745,20 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       </div>
                     </td>
                     {/* 体温 AM/PM */}
-                    <td className={td}>
+                    <td className={`${td} ${(tempAlertAm(d) || tempAlertPm(d)) && !isAbsent ? 'bg-red-50' : ''}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-temp" placeholder="AM" step="0.1" min={35} max={42}
                           value={d.tempMorning ?? ''} onChange={numHandler(resident.id, 'tempMorning')}
-                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
+                          className={`${numBase} ${tempAlertAm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '48px', ...(tempAlertAm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                         <input type="number" list="dl-temp" placeholder="PM" step="0.1" min={35} max={42}
                           value={d.tempAfternoon ?? ''} onChange={numHandler(resident.id, 'tempAfternoon')}
-                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
+                          className={`${numBase} ${tempAlertPm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '48px', ...(tempAlertPm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                       </div>
+                      {(tempAlertAm(d) || tempAlertPm(d)) && !isAbsent && (
+                        <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">体温確認</div>
+                      )}
                     </td>
                     {/* 食事 主/副 */}
                     <td className={td}>
