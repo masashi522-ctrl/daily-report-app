@@ -319,25 +319,27 @@ export default async function AnalyticsPage({
       </div>
 
       {/* バイタル系グループ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-4">
-        {groups.map(group => (
-          <div key={group.title} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-2">
-              {group.title} <span className="text-xs font-normal text-gray-400">月平均</span>
-            </h3>
-            <div className="flex flex-col gap-2">
-              {group.rows.map(row => (
-                <div key={row.label} className={`flex items-center justify-between rounded-lg px-3 py-2 ${row.highlight ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                  <span className={`text-xs ${row.highlight ? 'font-semibold text-blue-700' : 'text-gray-500'}`}>{row.label}</span>
-                  <span className={`font-bold ${row.highlight ? 'text-blue-700 text-lg' : 'text-gray-700'}`}>
-                    {row.value}
-                    {row.value !== '-' && <span className="text-xs font-normal text-gray-400 ml-1">{group.unit}</span>}
-                  </span>
-                </div>
-              ))}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-4">
+          {groups.map(group => (
+            <div key={group.title}>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-2">
+                {group.title} <span className="text-xs font-normal text-gray-400">月平均</span>
+              </h3>
+              <div className="flex flex-col gap-2">
+                {group.rows.map(row => (
+                  <div key={row.label} className={`flex items-center justify-between rounded-lg px-3 py-2 ${row.highlight ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                    <span className={`text-xs ${row.highlight ? 'font-semibold text-blue-700' : 'text-gray-500'}`}>{row.label}</span>
+                    <span className={`font-bold ${row.highlight ? 'text-blue-700 text-lg' : 'text-gray-700'}`}>
+                      {row.value}
+                      {row.value !== '-' && <span className="text-xs font-normal text-gray-400 ml-1">{group.unit}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* ケア実施回数 */}
