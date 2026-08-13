@@ -258,11 +258,14 @@ export default function ResidentReport({
         <PhotoGallery residentId={residentId} year={year} month={month} photos={photos} />
       </div>
       {photos.length > 0 && (
-        <div className="hidden print:grid print:grid-cols-3 gap-2">
-          {photos.map(photo => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={photo.id} src={photo.url} alt="" className="w-full aspect-square object-cover rounded" />
-          ))}
+        <div className="hidden print:block">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">今月の様子（写真）</h3>
+          <div className="grid print:grid-cols-3 gap-2">
+            {photos.map(photo => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={photo.id} src={photo.url} alt="" className="w-full aspect-square object-cover rounded" />
+            ))}
+          </div>
         </div>
       )}
 
