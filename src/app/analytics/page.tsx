@@ -58,20 +58,10 @@ export default async function AnalyticsPage({
   const r = records ?? []
 
   const stats = {
-    bpSystolicAm:    avg(r.map(x => x.bpSystolic)),
-    bpSystolicPm:    avg(r.map(x => x.bpSystolicPm)),
     bpSystolicAll:   avgCombined(r.map(x => x.bpSystolic), r.map(x => x.bpSystolicPm)),
-    bpDiastolicAm:   avg(r.map(x => x.bpDiastolic)),
-    bpDiastolicPm:   avg(r.map(x => x.bpDiastolicPm)),
     bpDiastolicAll:  avgCombined(r.map(x => x.bpDiastolic), r.map(x => x.bpDiastolicPm)),
-    pulseAm:         avg(r.map(x => x.pulse)),
-    pulsePm:         avg(r.map(x => x.pulsePm)),
     pulseAll:        avgCombined(r.map(x => x.pulse), r.map(x => x.pulsePm)),
-    tempAm:          avg(r.map(x => x.tempMorning)),
-    tempPm:          avg(r.map(x => x.tempAfternoon)),
     tempAll:         avgCombined(r.map(x => x.tempMorning), r.map(x => x.tempAfternoon)),
-    fluidAm:         avg(r.map(x => x.fluidIntakeAm)),
-    fluidPm:         avg(r.map(x => x.fluidIntakePm)),
     fluidAll:        avgCombined(r.map(x => x.fluidIntakeAm), r.map(x => x.fluidIntakePm)),
     mealMain:        avg(r.map(x => x.mealMainFood)),
     mealSide:        avg(r.map(x => x.mealSideFood)),
@@ -81,51 +71,16 @@ export default async function AnalyticsPage({
   }
 
   const groups = [
-    {
-      title: '血圧（収縮期）', unit: 'mmHg',
-      rows: [
-        { label: 'AM', value: stats.bpSystolicAm },
-        { label: 'PM', value: stats.bpSystolicPm },
-        { label: 'AM+PM合算', value: stats.bpSystolicAll, highlight: true },
-      ],
-    },
-    {
-      title: '血圧（拡張期）', unit: 'mmHg',
-      rows: [
-        { label: 'AM', value: stats.bpDiastolicAm },
-        { label: 'PM', value: stats.bpDiastolicPm },
-        { label: 'AM+PM合算', value: stats.bpDiastolicAll, highlight: true },
-      ],
-    },
-    {
-      title: '脈拍', unit: '回/分',
-      rows: [
-        { label: 'AM', value: stats.pulseAm },
-        { label: 'PM', value: stats.pulsePm },
-        { label: 'AM+PM合算', value: stats.pulseAll, highlight: true },
-      ],
-    },
-    {
-      title: '体温', unit: '℃',
-      rows: [
-        { label: 'AM', value: stats.tempAm },
-        { label: 'PM', value: stats.tempPm },
-        { label: 'AM+PM合算', value: stats.tempAll, highlight: true },
-      ],
-    },
-    {
-      title: '水分摂取', unit: 'ml',
-      rows: [
-        { label: 'AM', value: stats.fluidAm },
-        { label: 'PM', value: stats.fluidPm },
-        { label: 'AM+PM合算', value: stats.fluidAll, highlight: true },
-      ],
-    },
+    { title: '血圧（収縮期）', unit: 'mmHg', rows: [{ label: '月平均', value: stats.bpSystolicAll, highlight: true }] },
+    { title: '血圧（拡張期）', unit: 'mmHg', rows: [{ label: '月平均', value: stats.bpDiastolicAll, highlight: true }] },
+    { title: '脈拍', unit: '回/分', rows: [{ label: '月平均', value: stats.pulseAll, highlight: true }] },
+    { title: '体温', unit: '℃', rows: [{ label: '月平均', value: stats.tempAll, highlight: true }] },
+    { title: '水分摂取', unit: 'ml', rows: [{ label: '月平均', value: stats.fluidAll, highlight: true }] },
     {
       title: '食事量（月平均）', unit: '割',
       rows: [
-        { label: '主食', value: stats.mealMain },
-        { label: '主菜', value: stats.mealSide },
+        { label: '主食', value: stats.mealMain, highlight: false },
+        { label: '主菜', value: stats.mealSide, highlight: false },
       ],
     },
     {
