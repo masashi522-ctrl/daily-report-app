@@ -5,6 +5,7 @@ import {
   type MonthSummary,
 } from '@/lib/facility-operations-stats'
 import CapacityForm from './capacity-form'
+import PrintButton from '@/app/analytics/print-button'
 
 const DOW = ['日', '月', '火', '水', '木', '金', '土']
 const CATEGORY_LABELS: Record<string, string> = {
@@ -18,6 +19,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function jstToday() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+}
+
+function jstNowLabel() {
+  return new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 }
 
 function fmtRate(rate: number | null) {
@@ -65,7 +70,7 @@ function MonthCard({
 }) {
   return (
     <div
-      className={`bg-white rounded-xl border shadow-sm p-4 ${
+      className={`bg-white rounded-xl border shadow-sm p-4 print-block ${
         mode === 'partial' ? 'border-teal-300' : 'border-gray-200'
       }`}
     >
@@ -116,22 +121,46 @@ export default async function MonthlyReportPage() {
 
   return (
     <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+      <style>{`
+        @page { size: A4 portrait; margin: 12mm; }
+        @media print {
+          body { background: white; }
+          /* 枠ごとにページをまたがないようにする */
+          .print-block { break-inside: avoid; page-break-inside: avoid; box-shadow: none; }
+        }
+      `}</style>
+
       {/* ヘッダー */}
-      <div>
-        <h2 className="text-lg font-bold text-gray-800">月次報告</h2>
-        <p className="text-sm text-gray-500">
+      <div className="flex items-start justify-between gap-3 print:hidden">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800">月次報告</h2>
+          <p className="text-sm text-gray-500">
+            {today.replace(/-/g, '/')} 時点 ・ 営業曜日{' '}
+            {overview.operatingDows.map(d => DOW[d]).join('・') || '-'}
+          </p>
+        </div>
+        <PrintButton />
+      </div>
+
+      {/* 印刷用ヘッダー（画面には非表示） */}
+      <div className="hidden print:block print:mb-3">
+        <h1 className="text-lg font-bold text-gray-900">{session.facilityName}　月次報告</h1>
+        <p className="text-xs text-gray-600 mt-1">
           {today.replace(/-/g, '/')} 時点 ・ 営業曜日{' '}
           {overview.operatingDows.map(d => DOW[d]).join('・') || '-'}
         </p>
+        <p className="text-[10px] text-gray-400">印刷日時: {jstNowLabel()}</p>
       </div>
 
-      <CapacityForm
-        facility={{ capacity: overview.capacity, capacityByCategory: overview.capacityByCategory }}
-        registeredCategoryCounts={registeredCategoryCounts}
-      />
+      <div className="print:hidden">
+        <CapacityForm
+          facility={{ capacity: overview.capacity, capacityByCategory: overview.capacityByCategory }}
+          registeredCategoryCounts={registeredCategoryCounts}
+        />
+      </div>
 
       {/* 介護度 × 利用時間 の構成 */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
         <h3 className="text-sm font-semibold text-gray-700 mb-1">介護度 × 利用時間 の構成</h3>
         <p className="text-[10px] text-gray-400 mb-3">
           在籍中の利用者を、介護度と利用時間区分で集計しています。「按分後」は 5時間以上=1.0人／3時間以上5時間未満=0.5人／3時間未満=0人 で換算した人数です
@@ -139,7 +168,7 @@ export default async function MonthlyReportPage() {
         {composition.grandTotal === 0 ? (
           <p className="text-xs text-gray-400 text-center py-6">在籍中の利用者が登録されていません</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto print:overflow-visible">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-400 border-b border-gray-100">
@@ -219,7 +248,7 @@ export default async function MonthlyReportPage() {
       {/* 前月・当月・翌月 */}
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-2">前月・当月・翌月</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 print:grid-cols-3 gap-3">
           <MonthCard summary={overview.prevMonth} caption="実績" mode="actual" />
           <MonthCard summary={overview.currentMonth} caption="実績（本日まで）" mode="partial" />
           <MonthCard summary={overview.nextMonth} caption="予測" mode="forecast" />
@@ -231,9 +260,9 @@ export default async function MonthlyReportPage() {
       </div>
 
       {/* 年度サマリー */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">年度サマリー（4月〜3月）</h3>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-gray-400 border-b border-gray-100">
