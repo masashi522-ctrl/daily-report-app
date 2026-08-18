@@ -6,10 +6,10 @@ import type { CarePlanHistoryEntry } from '@/types/database'
 export default async function CarePlanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ resident?: string }>
+  searchParams: Promise<{ resident?: string; version?: string }>
 }) {
   const session = await requireSession()
-  const { resident: residentId = '' } = await searchParams
+  const { resident: residentId = '', version: editingVersionId = '' } = await searchParams
 
   const { data: residentsRaw } = await supabase
     .from('Resident')
@@ -41,6 +41,10 @@ export default async function CarePlanPage({
   }
 
   const selectedResident = residentId ? (residents.find(r => r.id === residentId) ?? null) : null
+  // 版を指定して開いているときは、その版の内容をフォームに読み込んで編集できるようにする
+  const editingHistory = editingVersionId
+    ? (history.find(h => h.id === editingVersionId) ?? null)
+    : null
 
   return (
     <CarePlanClient
@@ -49,6 +53,7 @@ export default async function CarePlanPage({
       selectedResident={selectedResident}
       plan={plan}
       history={history}
+      editingHistory={editingHistory}
       facilityName={session.facilityName}
     />
   )

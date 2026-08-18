@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Download, Camera, Loader2, Sparkles, History } from 'lucide-react'
+import { Plus, Trash2, Download, Camera, Loader2, Sparkles, History, Pencil } from 'lucide-react'
 import { saveCarePlan } from './actions'
 import { CARE_LEVEL_OPTIONS, PREVENTION_PROGRAMS, type CarePlan, type CarePlanGoal, type CarePlanHistoryEntry } from '@/types/database'
 import { mergeGoalsBySameIssue } from '@/lib/care-plan-goals'
@@ -15,6 +15,8 @@ interface Props {
   selectedResident: Resident | null
   plan: CarePlan | null
   history: CarePlanHistoryEntry[]
+  /** 保存済みの版を開いて編集しているときは、その版 */
+  editingHistory: CarePlanHistoryEntry | null
   facilityName: string
 }
 
@@ -68,16 +70,18 @@ const GOJUUON_ROWS = [
   { label: 'わ', chars: 'わをんワヲン' },
 ]
 
-export default function CarePlanClient({ residents, selectedResidentId, selectedResident, plan, history, facilityName }: Props) {
+export default function CarePlanClient({ residents, selectedResidentId, selectedResident, plan, history, editingHistory, facilityName }: Props) {
+  // 版を開いているときは、その版の内容をフォームの初期値にする
+  const basePlan: CarePlan | null = editingHistory ? editingHistory.snapshot : plan
   const router = useRouter()
   const [state, formAction, pending] = useActionState(saveCarePlan.bind(null, selectedResidentId), null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
-  const [effectivePlan, setEffectivePlan] = useState<CarePlan | null>(plan)
+  const [effectivePlan, setEffectivePlan] = useState<CarePlan | null>(basePlan)
   const [formKey, setFormKey] = useState(0)
   const [goals, setGoals] = useState<CarePlanGoal[]>(
-    plan?.goals && plan.goals.length > 0 ? plan.goals : [{ ...EMPTY_GOAL }],
+    basePlan?.goals && basePlan.goals.length > 0 ? basePlan.goals : [{ ...EMPTY_GOAL }],
   )
-  const [goalImageText, setGoalImageText] = useState(plan?.goalImage ?? '')
+  const [goalImageText, setGoalImageText] = useState(basePlan?.goalImage ?? '')
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanApplied, setScanApplied] = useState(false)
@@ -94,8 +98,11 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
   const [appliedText, setAppliedText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
 
-  // 要支援の方は「介護予防通所介護計画書」の様式で作成する
-  const isPrevention = !!selectedResident?.careLevel?.startsWith('要支援')
+  // 要支援の方は「介護予防通所介護計画書」の様式で作成する。
+  // 保存済みの版を開いているときは、その版を作ったときの様式のまま編集する
+  const isPrevention = editingHistory
+    ? editingHistory.planType === 'prevention'
+    : !!selectedResident?.careLevel?.startsWith('要支援')
   const planTitle = isPrevention ? '介護予防通所介護計画書' : '通所介護計画書'
   const selectedPrograms = (effectivePlan?.programs ?? '').split(',').filter(Boolean)
 
@@ -105,15 +112,15 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
 
   useEffect(() => {
     setSavedAt(null)
-    setEffectivePlan(plan)
-    setGoals(plan?.goals && plan.goals.length > 0 ? plan.goals : [{ ...EMPTY_GOAL }])
-    setGoalImageText(plan?.goalImage ?? '')
+    setEffectivePlan(basePlan)
+    setGoals(basePlan?.goals && basePlan.goals.length > 0 ? basePlan.goals : [{ ...EMPTY_GOAL }])
+    setGoalImageText(basePlan?.goalImage ?? '')
     setScanError(null)
     setScanApplied(false)
     setSuggestError(null)
     setFormKey(k => k + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedResidentId])
+  }, [selectedResidentId, editingHistory?.id])
 
   function updateGoal(index: number, field: keyof CarePlanGoal, value: string) {
     setGoals(prev => prev.map((g, i) => (i === index ? { ...g, [field]: value } : g)))
@@ -407,6 +414,26 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
 
               <form key={formKey} action={formAction} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-5">
               <input type="hidden" name="planType" value={isPrevention ? 'prevention' : 'standard'} />
+              {editingHistory && <input type="hidden" name="historyId" value={editingHistory.id} />}
+
+              {editingHistory && (
+                <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <Pencil size={14} className="text-amber-700" />
+                    <span className="text-xs font-semibold text-amber-800">
+                      第{editingHistory.version}版を編集しています
+                    </span>
+                    <span className="text-[10px] text-amber-700/80">
+                      保存すると、この版の内容が更新されます（新しい版は作られません）
+                    </span>
+                  </div>
+                  <button type="button"
+                    onClick={() => router.push(`/care-plan?resident=${selectedResidentId}`)}
+                    className="text-[11px] px-2.5 py-1 rounded-lg border border-amber-300 text-amber-800 hover:bg-amber-100 transition">
+                    編集をやめて最新の内容に戻る
+                  </button>
+                </div>
+              )}
               <div className="text-center border-b border-gray-100 pb-3 relative">
                 <h3 className="font-bold text-gray-800 text-lg tracking-widest">{planTitle}</h3>
                 {effectivePlan?.updatedAt && (
@@ -441,7 +468,9 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                   <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
                     {history.map(h => (
                       <div key={h.id}
-                        className="flex items-center justify-between gap-2 bg-white border border-amber-100 rounded-lg px-2.5 py-1.5">
+                        className={`flex items-center justify-between gap-2 bg-white rounded-lg px-2.5 py-1.5 border ${
+                          editingHistory?.id === h.id ? 'border-amber-400 ring-1 ring-amber-300' : 'border-amber-100'
+                        }`}>
                         <div className="min-w-0">
                           <span className="text-xs font-medium text-gray-700">第{h.version}版</span>
                           <span className="text-[10px] text-gray-500 ml-2">
@@ -451,12 +480,26 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                             保存: {new Date(h.createdAt).toLocaleString('ja-JP')}
                           </span>
                         </div>
-                        <a
-                          href={`/api/care-plan/export?residentId=${selectedResidentId}&historyId=${h.id}`}
-                          className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition shrink-0"
-                        >
-                          <Download size={11} /> Excel
-                        </a>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {editingHistory?.id === h.id ? (
+                            <span className="text-[10px] px-2 py-1 rounded-lg bg-amber-100 text-amber-800 font-medium">
+                              編集中
+                            </span>
+                          ) : (
+                            <button type="button"
+                              onClick={() => router.push(`/care-plan?resident=${selectedResidentId}&version=${h.id}`)}
+                              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-amber-300 text-amber-800 hover:bg-amber-100 transition"
+                            >
+                              <Pencil size={11} /> 編集
+                            </button>
+                          )}
+                          <a
+                            href={`/api/care-plan/export?residentId=${selectedResidentId}&historyId=${h.id}`}
+                            className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition"
+                          >
+                            <Download size={11} /> Excel
+                          </a>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -774,19 +817,31 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               )}
 
               <div className="flex items-center gap-3 pt-1 flex-wrap">
-                <button type="submit" disabled={pending}
-                  className="bg-teal-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
-                  {pending ? '保存中...' : '保存する'}
-                </button>
-                <button type="submit" name="saveAsNewVersion" value="1" disabled={pending}
-                  className="flex items-center gap-1.5 border border-amber-300 bg-amber-50 text-amber-800 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition disabled:opacity-50">
-                  <History size={14} />
-                  第{history.length + 1}版として保存
-                </button>
+                {editingHistory ? (
+                  <button type="submit" disabled={pending}
+                    className="flex items-center gap-1.5 bg-amber-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-amber-700 transition disabled:opacity-50">
+                    <Pencil size={14} />
+                    {pending ? '保存中...' : `第${editingHistory.version}版を上書き保存`}
+                  </button>
+                ) : (
+                  <>
+                    <button type="submit" disabled={pending}
+                      className="bg-teal-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
+                      {pending ? '保存中...' : '保存する'}
+                    </button>
+                    <button type="submit" name="saveAsNewVersion" value="1" disabled={pending}
+                      className="flex items-center gap-1.5 border border-amber-300 bg-amber-50 text-amber-800 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition disabled:opacity-50">
+                      <History size={14} />
+                      第{history.length + 1}版として保存
+                    </button>
+                  </>
+                )}
                 {savedAt && <span className="text-xs text-emerald-600">{savedAt} に保存しました</span>}
               </div>
               <p className="text-[10px] text-gray-400 -mt-2">
-                「保存する」は現在の内容を上書きします。計画を作り直したときは「第◯版として保存」を押すと、その時点の内容が控えとして残り、あとから確認・出力できます。
+                {editingHistory
+                  ? `第${editingHistory.version}版の内容を書き換えます。新しい版は作られません。別の版として残したい場合は、上の「編集をやめて最新の内容に戻る」から作成してください。`
+                  : '「保存する」は現在の内容を上書きします。計画を作り直したときは「第◯版として保存」を押すと、その時点の内容が控えとして残り、あとから編集・出力できます。'}
               </p>
               </form>
             </>

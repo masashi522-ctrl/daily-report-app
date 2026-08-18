@@ -91,6 +91,43 @@ export async function saveCarePlan(
       ? `保存に失敗しました。介護予防通所介護計画書の項目を保存する列がデータベースにありません（${message}）。Supabaseで列の追加が必要です。`
       : `保存に失敗しました: ${message}`
 
+  // 保存済みの版を開いて編集している場合は、その版の控えを更新する
+  const editingHistoryId = (formData.get('historyId') as string) || ''
+  if (editingHistoryId) {
+    const { data: entry } = await supabase
+      .from('CarePlanHistory')
+      .select('*')
+      .eq('id', editingHistoryId)
+      .eq('residentId', residentId)
+      .maybeSingle()
+    if (!entry) return { error: '編集対象の版が見つかりませんでした' }
+
+    const { error } = await supabase
+      .from('CarePlanHistory')
+      .update({
+        snapshot: { ...(entry.snapshot ?? {}), ...payload },
+        planDate,
+        planType: isPrevention ? 'prevention' : 'standard',
+      })
+      .eq('id', editingHistoryId)
+    if (error) return { error: describeError(error.message) }
+
+    // 最新版を編集したときは、編集中でない通常表示の内容も同じ内容に揃える
+    const { data: latest } = await supabase
+      .from('CarePlanHistory')
+      .select('id')
+      .eq('residentId', residentId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (latest?.id === editingHistoryId && existing) {
+      await supabase.from('CarePlan').update(payload).eq('id', existing.id)
+    }
+
+    revalidatePath('/care-plan')
+    return { success: true }
+  }
+
   if (existing) {
     const { error } = await supabase.from('CarePlan').update(payload).eq('id', existing.id)
     if (error) return { error: describeError(error.message) }
