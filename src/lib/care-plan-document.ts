@@ -1,18 +1,18 @@
 import ExcelJS from 'exceljs'
 import type { CarePlan, CarePlanGoal, Resident } from '@/types/database'
 
-function jaDate(d: string | null): string {
+export function jaDate(d: string | null): string {
   if (!d) return ''
   const [y, m, day] = d.split('-')
   return `${y}年${m}月${day}日`
 }
 
-function sheetSafeName(name: string): string {
+export function sheetSafeName(name: string): string {
   return name.replace(/[:\\/?[\]*]/g, '').slice(0, 31)
 }
 
 // ─── Excel ──────────────────────────────────────────────────────────
-const COL = {
+export const COL = {
   titleBg: '0F766E',
   titleFg: 'FFFFFF',
   hdrBg:   'E5E7EB',
@@ -23,12 +23,12 @@ const COL = {
   valFg:   '111827',
   border:  'D1D5DB',
 }
-const FONT = 'メイリオ'
+export const FONT = 'メイリオ'
 
 // A〜H列の幅（Excel単位）。文章量に応じた行の高さ計算にも使う。
-const COLUMN_WIDTHS = [14, 12, 12, 12, 12, 10, 10, 10]
+export const COLUMN_WIDTHS = [14, 12, 12, 12, 12, 10, 10, 10]
 
-function widthUnits(fromCol: number, toCol: number): number {
+export function widthUnits(fromCol: number, toCol: number): number {
   let sum = 0
   for (let c = fromCol; c <= toCol; c++) sum += COLUMN_WIDTHS[c - 1] ?? 10
   return sum
@@ -36,7 +36,7 @@ function widthUnits(fromCol: number, toCol: number): number {
 
 // 列幅から、折り返し後に文章が切れないための行の高さ(pt)を見積もる
 // 全角文字を想定し、余裕を持たせて安全側（高さ多め）に倒す
-function estimateTextHeight(text: string | null | undefined, units: number, fontSize: number, minHeight: number): number {
+export function estimateTextHeight(text: string | null | undefined, units: number, fontSize: number, minHeight: number): number {
   const t = (text ?? '').trim()
   if (!t) return minHeight
   const charsPerLine = Math.max(5, Math.floor(units * 0.42))

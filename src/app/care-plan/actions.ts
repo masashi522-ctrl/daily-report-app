@@ -30,21 +30,32 @@ export async function saveCarePlan(
   const familyConfirmation     = (formData.get('familyConfirmation') as string)?.trim() || null
   const proxySigner            = (formData.get('proxySigner') as string)?.trim() || null
 
+  // 要支援の方は介護予防通所介護計画書の様式で保存する
+  const isPrevention = formData.get('planType') === 'prevention'
+
   const issueList          = formData.getAll('goalIssue') as string[]
   const longTermGoalList   = formData.getAll('goalLongTerm') as string[]
   const shortTermGoalList  = formData.getAll('goalShortTerm') as string[]
   const serviceContentList = formData.getAll('goalService') as string[]
   const frequencyList      = formData.getAll('goalFrequency') as string[]
+  const goalList           = formData.getAll('goalGoal') as string[]
+  const supportPointList   = formData.getAll('goalSupportPoint') as string[]
+  const periodList         = formData.getAll('goalPeriod') as string[]
 
-  const goals: CarePlanGoal[] = issueList
-    .map((_, i) => ({
-      issue: issueList[i]?.trim() ?? '',
-      longTermGoal: longTermGoalList[i]?.trim() ?? '',
-      shortTermGoal: shortTermGoalList[i]?.trim() ?? '',
-      serviceContent: serviceContentList[i]?.trim() ?? '',
-      frequency: frequencyList[i]?.trim() ?? '',
-    }))
-    .filter(g => g.issue || g.longTermGoal || g.shortTermGoal || g.serviceContent || g.frequency)
+  const rowCount = isPrevention ? goalList.length : issueList.length
+  const goals: CarePlanGoal[] = Array.from({ length: rowCount }, (_, i) => ({
+    issue: issueList[i]?.trim() ?? '',
+    longTermGoal: longTermGoalList[i]?.trim() ?? '',
+    shortTermGoal: shortTermGoalList[i]?.trim() ?? '',
+    serviceContent: serviceContentList[i]?.trim() ?? '',
+    frequency: frequencyList[i]?.trim() ?? '',
+    goal: goalList[i]?.trim() ?? '',
+    supportPoint: supportPointList[i]?.trim() ?? '',
+    period: periodList[i]?.trim() ?? '',
+  })).filter(g =>
+    g.issue || g.longTermGoal || g.shortTermGoal || g.serviceContent || g.frequency ||
+    g.goal || g.supportPoint || g.period,
+  )
 
   const { data: existing } = await supabase
     .from('CarePlan')
@@ -52,16 +63,37 @@ export async function saveCarePlan(
     .eq('residentId', residentId)
     .maybeSingle()
 
+  // 予防様式のときだけ専用項目を保存する（通常様式の保存内容は従来どおり）
+  const preventionPayload = isPrevention
+    ? {
+        gender:           (formData.get('gender') as string)?.trim() || null,
+        version:          formData.get('version') ? parseInt(formData.get('version') as string) : null,
+        dailyGoal:        (formData.get('dailyGoal') as string)?.trim() || null,
+        yearlyGoal:       (formData.get('yearlyGoal') as string)?.trim() || null,
+        healthNotes:      (formData.get('healthNotes') as string)?.trim() || null,
+        programs:         (formData.getAll('programs') as string[]).join(',') || null,
+        serviceStartTime: (formData.get('serviceStartTime') as string) || null,
+        serviceEndTime:   (formData.get('serviceEndTime') as string) || null,
+      }
+    : {}
+
   const payload = {
     planDate, staffName, birthDate, careLevel, needsAnalysis, supportPolicy, goalImage,
     goals, monitoringDate, evaluationPeriodStart, evaluationPeriodEnd, evaluationContent,
     explanationDate, explainerName, familyConfirmation, proxySigner,
+    ...preventionPayload,
     updatedAt: new Date().toISOString(),
   }
 
+  // 予防様式の項目を保存するカラムがまだ無い場合に、原因が分かるようにする
+  const describeError = (message: string) =>
+    /column .* does not exist|Could not find the .* column/i.test(message)
+      ? `保存に失敗しました。介護予防通所介護計画書の項目を保存する列がデータベースにありません（${message}）。Supabaseで列の追加が必要です。`
+      : `保存に失敗しました: ${message}`
+
   if (existing) {
     const { error } = await supabase.from('CarePlan').update(payload).eq('id', existing.id)
-    if (error) return { error: `保存に失敗しました: ${error.message}` }
+    if (error) return { error: describeError(error.message) }
   } else {
     const { error } = await supabase.from('CarePlan').insert({
       id: crypto.randomUUID(),
@@ -70,7 +102,7 @@ export async function saveCarePlan(
       ...payload,
       createdAt: new Date().toISOString(),
     })
-    if (error) return { error: `保存に失敗しました: ${error.message}` }
+    if (error) return { error: describeError(error.message) }
   }
 
   revalidatePath('/care-plan')

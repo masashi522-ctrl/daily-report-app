@@ -181,7 +181,23 @@ export interface CarePlanGoal {
   shortTermGoal: string
   serviceContent: string
   frequency: string
+  // 介護予防通所介護計画書（要支援）の援助目標欄で使う項目。
+  // 様式が「目標／支援のポイント／サービス内容／頻度／期間」のため、
+  // 通常様式と同じJSONカラムに追加項目として保存する。
+  goal?: string
+  supportPoint?: string
+  period?: string
 }
+
+// 介護予防通所介護計画書の「必要な事業プログラム」の選択肢
+export const PREVENTION_PROGRAMS = [
+  '運動器の機能向上',
+  '栄養改善',
+  '口腔機能の向上',
+  '閉じこもり予防',
+  '物忘れ予防',
+  'うつ予防',
+] as const
 
 // 個別機能訓練計画書の「リハビリ目標」表の1行分。CarePlanGoalと同じ形。
 export type TrainingPlanGoal = CarePlanGoal
@@ -242,6 +258,16 @@ export interface CarePlan {
   explainerName: string | null
   familyConfirmation: string | null
   proxySigner: string | null
+  // ── ここから下は介護予防通所介護計画書（要支援）専用の項目 ──
+  gender: string | null
+  version: number | null
+  dailyGoal: string | null
+  yearlyGoal: string | null
+  healthNotes: string | null
+  /** 必要な事業プログラム。選択された項目をカンマ区切りで保存する */
+  programs: string | null
+  serviceStartTime: string | null
+  serviceEndTime: string | null
   createdAt: string
   updatedAt: string
 }

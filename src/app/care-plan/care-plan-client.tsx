@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Download, Camera, Loader2, Sparkles } from 'lucide-react'
 import { saveCarePlan } from './actions'
-import { CARE_LEVEL_OPTIONS, type CarePlan, type CarePlanGoal } from '@/types/database'
+import { CARE_LEVEL_OPTIONS, PREVENTION_PROGRAMS, type CarePlan, type CarePlanGoal } from '@/types/database'
 import { mergeGoalsBySameIssue } from '@/lib/care-plan-goals'
 
 interface Resident { id: string; name: string; furigana: string | null; careLevel: string | null }
@@ -17,7 +17,10 @@ interface Props {
   facilityName: string
 }
 
-const EMPTY_GOAL: CarePlanGoal = { issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '' }
+const EMPTY_GOAL: CarePlanGoal = {
+  issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '',
+  goal: '', supportPoint: '', period: '',
+}
 
 // スキャン結果が全角数字（要介護２ 等）で来ても選択肢と一致するよう正規化する
 function normalizeCareLevel(v: string | null | undefined): string {
@@ -89,6 +92,11 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
   const [searchText, setSearchText] = useState('')
   const [appliedText, setAppliedText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
+
+  // 要支援の方は「介護予防通所介護計画書」の様式で作成する
+  const isPrevention = !!selectedResident?.careLevel?.startsWith('要支援')
+  const planTitle = isPrevention ? '介護予防通所介護計画書' : '通所介護計画書'
+  const selectedPrograms = (effectivePlan?.programs ?? '').split(',').filter(Boolean)
 
   useEffect(() => {
     if (state?.success) setSavedAt(new Date().toLocaleTimeString('ja-JP'))
@@ -397,8 +405,9 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               </div>
 
               <form key={formKey} action={formAction} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-5">
+              <input type="hidden" name="planType" value={isPrevention ? 'prevention' : 'standard'} />
               <div className="text-center border-b border-gray-100 pb-3 relative">
-                <h3 className="font-bold text-gray-800 text-lg tracking-widest">通所介護計画書</h3>
+                <h3 className="font-bold text-gray-800 text-lg tracking-widest">{planTitle}</h3>
                 {effectivePlan?.updatedAt && (
                   <span className="text-xs text-gray-400">
                     最終更新: {new Date(effectivePlan.updatedAt).toLocaleString('ja-JP')}
@@ -435,7 +444,9 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">要介護</label>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">
+                    {isPrevention ? '要介護度' : '要介護'}
+                  </label>
                   <select ref={careLevelRef} name="careLevel" defaultValue={normalizeCareLevel(effectivePlan?.careLevel) || selectedResident.careLevel || ''}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
                     <option value="">未設定</option>
@@ -445,19 +456,60 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               </div>
               <p className="text-xs text-gray-400 -mt-2">利用者氏名: {selectedResident.name} 様</p>
 
-              <div>
-                <label className="text-xs font-semibold text-teal-800 block mb-1">
-                  【利用者及び家族の生活に対する意向を踏まえた課題分析の結果】
-                </label>
-                <textarea ref={needsAnalysisRef} name="needsAnalysis" defaultValue={effectivePlan?.needsAnalysis ?? ''} rows={3}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
-              </div>
+              {isPrevention && (
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 -mt-2">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">性別</label>
+                    <select name="gender" defaultValue={effectivePlan?.gender ?? ''}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
+                      <option value="">未設定</option>
+                      <option value="男">男</option>
+                      <option value="女">女</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">版数</label>
+                    <input type="number" min={1} name="version" defaultValue={effectivePlan?.version ?? 1}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                  </div>
+                </div>
+              )}
 
-              <div>
-                <label className="text-xs font-semibold text-teal-800 block mb-1">【総合的な援助の方針】</label>
+              {isPrevention && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-teal-800">【目標とする生活】</label>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-gray-600 w-8 pt-2 shrink-0">1日</span>
+                    <textarea name="dailyGoal" defaultValue={effectivePlan?.dailyGoal ?? ''} rows={2}
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-gray-600 w-8 pt-2 shrink-0">1年</span>
+                    <textarea name="yearlyGoal" defaultValue={effectivePlan?.yearlyGoal ?? ''} rows={2}
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
+                  </div>
+                </div>
+              )}
+
+              <div className={isPrevention ? 'order-none' : ''}>
+                <label className="text-xs font-semibold text-teal-800 block mb-1">
+                  {isPrevention
+                    ? '【総合的な方針（生活不活発病の改善・予防のポイント）】'
+                    : '【総合的な援助の方針】'}
+                </label>
                 <textarea ref={supportPolicyRef} name="supportPolicy" defaultValue={effectivePlan?.supportPolicy ?? ''} rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
               </div>
+
+              {!isPrevention && (
+                <div>
+                  <label className="text-xs font-semibold text-teal-800 block mb-1">
+                    【利用者及び家族の生活に対する意向を踏まえた課題分析の結果】
+                  </label>
+                  <textarea ref={needsAnalysisRef} name="needsAnalysis" defaultValue={effectivePlan?.needsAnalysis ?? ''} rows={3}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
+                </div>
+              )}
 
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -475,15 +527,103 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 )}
               </div>
 
+              {isPrevention && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-teal-800 block mb-1">【健康状態についての留意点】</label>
+                    <textarea name="healthNotes" defaultValue={effectivePlan?.healthNotes ?? ''} rows={3}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-teal-800 block mb-1">【総合的な課題】</label>
+                    <textarea ref={needsAnalysisRef} name="needsAnalysis" defaultValue={effectivePlan?.needsAnalysis ?? ''} rows={3}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-teal-800 block mb-1.5">【必要な事業プログラム】</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {PREVENTION_PROGRAMS.map(program => (
+                        <label key={program}
+                          className="flex items-center gap-1.5 text-xs text-gray-700 border border-gray-200 rounded-lg px-2.5 py-2 cursor-pointer hover:border-teal-400 transition">
+                          <input type="checkbox" name="programs" value={program}
+                            defaultChecked={selectedPrograms.includes(program)}
+                            className="w-3.5 h-3.5 accent-teal-600" />
+                          {program}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* 援助目標テーブル */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
                   <label className="text-xs font-semibold text-teal-800">【援助目標】</label>
-                  <button type="button" onClick={addGoal}
-                    className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium">
-                    <Plus size={13} /> 行を追加
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {isPrevention && (
+                      <span className="flex items-center gap-1 text-xs text-gray-600">
+                        利用時間
+                        <input type="time" name="serviceStartTime" defaultValue={effectivePlan?.serviceStartTime ?? ''}
+                          className="border border-gray-200 rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:border-teal-400" />
+                        から
+                        <input type="time" name="serviceEndTime" defaultValue={effectivePlan?.serviceEndTime ?? ''}
+                          className="border border-gray-200 rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:border-teal-400" />
+                      </span>
+                    )}
+                    <button type="button" onClick={addGoal}
+                      className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium">
+                      <Plus size={13} /> 行を追加
+                    </button>
+                  </div>
                 </div>
+                {isPrevention ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_0.6fr_0.8fr_auto] gap-2 px-1">
+                      <span className="text-[10px] text-gray-400">目標</span>
+                      <span className="text-[10px] text-gray-400">支援のポイント</span>
+                      <span className="text-[10px] text-gray-400">サービス内容（AI生成可）</span>
+                      <span className="text-[10px] text-gray-400">頻度</span>
+                      <span className="text-[10px] text-gray-400">期間</span>
+                      <span />
+                    </div>
+                    {goals.map((g, i) => (
+                      <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_0.6fr_0.8fr_auto] gap-2 p-2 bg-sky-50/40 rounded-lg border border-sky-100 items-start">
+                        <textarea name="goalGoal" value={g.goal ?? ''} rows={3}
+                          onChange={e => updateGoal(i, 'goal', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                        <textarea name="goalSupportPoint" value={g.supportPoint ?? ''} rows={3}
+                          onChange={e => updateGoal(i, 'supportPoint', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                        <div className="flex flex-col gap-1">
+                          <button type="button" onClick={() => handleSuggestServiceContent(i)}
+                            disabled={suggestingServiceIndex === i}
+                            className="self-start flex items-center gap-0.5 text-[10px] text-teal-600 hover:text-teal-800 font-medium disabled:opacity-50">
+                            {suggestingServiceIndex === i ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                            AI生成
+                          </button>
+                          <textarea name="goalService" value={g.serviceContent} rows={3}
+                            onChange={e => updateGoal(i, 'serviceContent', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400 resize-y" />
+                        </div>
+                        <input type="text" name="goalFrequency" value={g.frequency}
+                          onChange={e => updateGoal(i, 'frequency', e.target.value)}
+                          placeholder="週2回"
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
+                        <input type="text" name="goalPeriod" value={g.period ?? ''}
+                          onChange={e => updateGoal(i, 'period', e.target.value)}
+                          placeholder="令和7年3月17日〜令和7年9月30日"
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
+                        <button type="button" onClick={() => removeGoal(i)} disabled={goals.length === 1}
+                          className="flex items-center justify-center text-red-400 hover:text-red-600 disabled:opacity-30 px-1">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                 <div className="flex flex-col gap-2">
                   <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr_0.6fr_auto] gap-2 px-1">
                     <span className="text-[10px] text-gray-400">解決すべき課題（ニーズ）</span>
@@ -525,6 +665,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                     </div>
                   ))}
                 </div>
+                )}
                 {suggestServiceError && (
                   <p className="text-xs text-red-600 mt-1">{suggestServiceError}</p>
                 )}
@@ -560,7 +701,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
 
               {/* 説明・同意 */}
               <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex flex-col gap-3">
-                <p className="text-xs text-gray-600">上記の通所介護計画によりサービス提供を行います。</p>
+                <p className="text-xs text-gray-600">{isPrevention ? '上記の介護予防通所介護計画によりサービス提供を行います。' : '上記の通所介護計画によりサービス提供を行います。'}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-600 block mb-1">説明日</label>
