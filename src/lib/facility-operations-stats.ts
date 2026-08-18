@@ -76,7 +76,10 @@ export interface Composition {
   rows: CompositionRow[]
   columnTotals: number[]
   weightedColumnTotals: number[]
+  /** 時間区分別の定員。未設定の区分は在籍者数を自動反映する */
   columnCapacities: (number | null)[]
+  /** その区分の定員が在籍者数からの自動反映かどうか */
+  columnCapacityIsAuto: boolean[]
   grandTotal: number
   weightedGrandTotal: number
   capacity: number | null
@@ -399,7 +402,13 @@ export async function computeFacilityOperationsOverview(
       rows,
       columnTotals,
       weightedColumnTotals,
-      columnCapacities: categories.map(cat => capacityByCategory[cat] ?? null),
+      // 定員が未設定の区分は、利用者登録の在籍者数をそのまま定員として扱う
+      columnCapacities: categories.map(
+        (cat, i) => capacityByCategory[cat] ?? (columnTotals[i] > 0 ? columnTotals[i] : null),
+      ),
+      columnCapacityIsAuto: categories.map(
+        (cat, i) => capacityByCategory[cat] == null && columnTotals[i] > 0,
+      ),
       grandTotal: columnTotals.reduce((a, b) => a + b, 0),
       weightedGrandTotal: round1(weightedColumnTotals.reduce((a, b) => a + b, 0)),
       capacity,

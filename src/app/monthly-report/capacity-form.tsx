@@ -52,23 +52,24 @@ export default function CapacityForm({
               時間区分別の定員（任意・入力した区分のみ稼働率を計算します）
             </label>
             <p className="text-[10px] text-gray-400 mb-1.5">
-              未入力の区分は、利用者管理に登録されている現在の在籍者数を初期値として表示しています。必要に応じて調整してください。
+              未入力のままにすると、利用者管理に登録されている在籍者数が自動で定員として反映されます（利用者を追加・変更すると自動で追従します）。
+              数値を入力して保存した区分は、その値が優先されます。
             </p>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {SERVICE_TIME_CATEGORIES.map(cat => {
                 const saved = facility.capacityByCategory?.[cat]
                 const suggested = registeredCategoryCounts[cat]
-                const defaultValue = saved ?? suggested ?? ''
                 return (
                   <div key={cat}>
                     <label className="text-[10px] text-gray-500 block mb-0.5">
                       {CATEGORY_LABELS[cat]}
                       {saved == null && suggested != null && (
-                        <span className="text-teal-600">（登録{suggested}名）</span>
+                        <span className="text-teal-600">（自動 {suggested}名）</span>
                       )}
                     </label>
-                    <input type="number" min={0} name={`cap_${cat}`} defaultValue={defaultValue}
-                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-teal-400" />
+                    <input type="number" min={0} name={`cap_${cat}`} defaultValue={saved ?? ''}
+                      placeholder={suggested != null ? String(suggested) : ''}
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-teal-400 placeholder:text-teal-600/50" />
                   </div>
                 )
               })}

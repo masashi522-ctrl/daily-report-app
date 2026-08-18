@@ -193,8 +193,14 @@ export default async function MonthlyReportPage() {
                 <tr className="text-xs text-gray-500">
                   <td className="py-2 whitespace-nowrap">定員</td>
                   {composition.columnCapacities.map((cap, i) => (
-                    <td key={composition.categories[i]} className="py-2 text-right px-2">
+                    <td
+                      key={composition.categories[i]}
+                      className={`py-2 text-right px-2 ${
+                        composition.columnCapacityIsAuto[i] ? 'text-teal-600' : ''
+                      }`}
+                    >
                       {cap != null ? cap : '-'}
+                      {composition.columnCapacityIsAuto[i] && <span className="text-[10px]">*</span>}
                     </td>
                   ))}
                   <td className="py-2 text-right pl-2">{composition.capacity ?? '-'}</td>
@@ -202,6 +208,11 @@ export default async function MonthlyReportPage() {
               </tbody>
             </table>
           </div>
+        )}
+        {composition.columnCapacityIsAuto.some(Boolean) && (
+          <p className="text-[10px] text-teal-600 mt-2">
+            * 定員が未設定の区分は、利用者登録の在籍者数を定員として自動反映しています（定員設定で数値を入力すると、その値が優先されます）
+          </p>
         )}
       </div>
 
