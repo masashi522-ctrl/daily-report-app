@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { saveFacilityCapacity } from './actions'
 import { SERVICE_TIME_CATEGORIES, type Facility } from '@/types/database'
 
@@ -21,12 +21,7 @@ export default function CapacityForm({
   registeredCategoryCounts: Record<string, number>
 }) {
   const [state, formAction, pending] = useActionState(saveFacilityCapacity, null)
-  const [savedAt, setSavedAt] = useState<string | null>(null)
   const [open, setOpen] = useState(facility.capacity == null)
-
-  useEffect(() => {
-    if (state?.success) setSavedAt(new Date().toLocaleTimeString('ja-JP'))
-  }, [state])
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
@@ -83,7 +78,9 @@ export default function CapacityForm({
               className="bg-teal-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-teal-700 transition disabled:opacity-50">
               {pending ? '保存中...' : '保存する'}
             </button>
-            {savedAt && <span className="text-xs text-emerald-600">{savedAt} に保存しました</span>}
+            {state?.savedAt && (
+              <span className="text-xs text-emerald-600">{state.savedAt} に保存しました</span>
+            )}
           </div>
         </form>
       )}

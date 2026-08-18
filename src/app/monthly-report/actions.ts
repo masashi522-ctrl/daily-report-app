@@ -5,7 +5,7 @@ import { requireSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import { SERVICE_TIME_CATEGORIES } from '@/types/database'
 
-export type CapacityFormState = { error?: string; success?: boolean } | null
+export type CapacityFormState = { error?: string; savedAt?: string } | null
 
 export async function saveFacilityCapacity(
   prevState: CapacityFormState,
@@ -30,5 +30,5 @@ export async function saveFacilityCapacity(
   if (error) return { error: `保存に失敗しました: ${error.message}` }
 
   revalidatePath('/monthly-report')
-  return { success: true }
+  return { savedAt: new Date().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo' }) }
 }
