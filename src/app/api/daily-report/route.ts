@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import ExcelJS from 'exceljs'
 import Groq from 'groq-sdk'
 import type { Resident, DailyRecord } from '@/types/database'
-import { resolveGroqModel } from '@/lib/groq-model'
+import { resolveGroqModel, stripReasoning } from '@/lib/groq-model'
 
 const DOW_JA = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -13,6 +13,17 @@ function bathingLabel(bathing: string, skipReason: string | null): string {
   if (bathing === 'NOT_DONE') return '無（' + (skipReason ?? '理由不明') + '）'
   return '対象外'
 }
+
+// 連絡帳はご家族が読むものなので、やわらかく穏やかな文章になるよう指示する
+const TONE_RULES = `
+【文体・トーンのルール】
+・「です・ます」調で、やわらかく穏やかなトーンで書くこと。事務的で硬い言い切りが続かないようにすること
+・「〜が必要です」「〜してください」「〜すべきです」のような強い言い方は使わないこと
+・気になる点を伝えるときは、いきなり指摘から入らず、良い面や取り組まれている様子に触れてから「〜という場面もございました」とやわらかく続けること
+・「食事量が少ない」「入浴を拒否」などのネガティブな表現は、できるかぎり穏やかな表現に言い換えること（例：「ゆっくりと召し上がっていらっしゃいました」「本日はご希望によりシャワー浴でお過ごしいただきました」）
+・ただし、皮膚の異常・外傷・体調急変など、事実として観察された安全・健康上の所見は、やわらげて内容を弱めず、事実を正確に書くこと
+・数値をそのまま羅列せず、その日のご様子が伝わる文章にすること
+・出力は日本語のみ。見出し・ラベル・箇条書きは付けず、文章のみを出力すること`
 
 function sheetSafeName(name: string): string {
   return name.replace(/[:\\/?\[\]]/g, '').slice(0, 31)
@@ -55,19 +66,19 @@ async function generateAIText(
     client.chat.completions.create({
       model,
       max_tokens: 400,
-      messages: [{ role: 'user', content: 'あなたはデイサービスの介護記録担当スタッフです。以下の当日記録をもとに「日中のご様子・連絡事項」欄の文章を自然な介護記録文体で３〜５文で作成してください。文章のみ出力してください。\n\n' + context }],
+      messages: [{ role: 'user', content: 'あなたはデイサービスの介護記録担当スタッフです。以下の当日記録をもとに「日中のご様子・連絡事項」欄の文章を自然な介護記録文体で３〜５文で作成してください。文章のみ出力してください。\n' + TONE_RULES + '\n\n' + context }],
     }),
     record.trainingDone
       ? client.chat.completions.create({
           model,
           max_tokens: 200,
-          messages: [{ role: 'user', content: 'あなたはデイサービスの機能訓練担当スタッフです。以下の訓練記録をもとに「リハビリからの連絡事項」欄の文章を自然な記録文体で１〜２文で作成してください。文章のみ出力してください。\n\n' + context }],
+          messages: [{ role: 'user', content: 'あなたはデイサービスの機能訓練担当スタッフです。以下の訓練記録をもとに「リハビリからの連絡事項」欄の文章を自然な記録文体で１〜２文で作成してください。文章のみ出力してください。\n' + TONE_RULES + '\n\n' + context }],
         })
       : Promise.resolve(null),
   ])
   return {
-    daily: dailyRes.choices[0]?.message?.content ?? '',
-    rehab: rehabRes?.choices[0]?.message?.content ?? '',
+    daily: stripReasoning(dailyRes.choices[0]?.message?.content ?? ''),
+    rehab: stripReasoning(rehabRes?.choices[0]?.message?.content ?? ''),
   }
 }
 
