@@ -12,7 +12,7 @@ export default async function ReportPage({
 }: {
   searchParams: Promise<{ date?: string }>
 }) {
-  await requireSession()
+  const session = await requireSession()
   const params = await searchParams
   const today = params.date || toDateStr(new Date())
 
@@ -25,12 +25,13 @@ export default async function ReportPage({
 
   const recordedIds = (records ?? []).map(r => r.residentId)
 
-  // 記録がある利用者のみ取得
+  // 記録がある自施設の利用者のみ取得
   const { data: residents } = recordedIds.length > 0
     ? await supabase
         .from('Resident')
         .select('*')
         .in('id', recordedIds)
+        .eq('facilityId', session.facilityId)
         .eq('isActive', true)
         .order('sortOrder')
         .order('name')

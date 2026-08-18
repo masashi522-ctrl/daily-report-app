@@ -415,7 +415,7 @@ function buildSheet(
 }
 
 export async function GET(request: Request) {
-  await requireSession()
+  const session = await requireSession()
 
   const { searchParams } = new URL(request.url)
   const date = searchParams.get('date') ?? ''
@@ -427,7 +427,7 @@ export async function GET(request: Request) {
   }
 
   const [{ data: allResidents }, { data: allRecords }] = await Promise.all([
-    supabase.from('Resident').select('*').in('id', residentIds),
+    supabase.from('Resident').select('*').in('id', residentIds).eq('facilityId', session.facilityId),
     supabase.from('DailyRecord').select('*').in('residentId', residentIds).eq('date', date),
   ])
 
