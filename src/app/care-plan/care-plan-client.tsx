@@ -307,7 +307,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               ))}
             </div>
 
-            <div className="flex flex-col gap-1 max-h-[55vh] overflow-y-auto">
+            <div className="flex flex-col gap-1 max-h-[60vh] min-h-[10rem] overflow-y-auto overscroll-contain pr-1">
               {residents.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-4">利用者が登録されていません</p>
               )}
@@ -316,7 +316,8 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               )}
               {residentGroups.map(group => (
                 <div key={group.label} className="rounded-lg border border-gray-200 overflow-hidden mb-1">
-                  <div className={`flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${group.headerBg}`}>
+                  {/* スクロールしても、いま見ている区分が分かるように見出しを固定する */}
+                  <div className={`sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${group.headerBg}`}>
                     <span className="text-xs font-bold text-white">{group.label}</span>
                     <span className="text-[10px] text-white/80">{group.residents.length}名</span>
                   </div>
