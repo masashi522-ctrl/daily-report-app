@@ -111,6 +111,8 @@ export default function ResidentReport({
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [forceDetailed, setForceDetailed] = useState(false)
+  // 現場の記録がある月は、チェックしなくてもその内容は詳しく報告される
+  const hasRecords = stats.careNotes.length > 0 || stats.serviceGaps.length > 0
   const [downloadingFormat, setDownloadingFormat] = useState<'pdf' | 'word' | null>(null)
 
   async function handleGenerate() {
@@ -327,13 +329,22 @@ export default function ResidentReport({
             </button>
           </div>
         </div>
-        <label className="flex items-center gap-1.5 mb-3 cursor-pointer select-none w-fit print:hidden">
-          <input type="checkbox" checked={forceDetailed} onChange={e => setForceDetailed(e.target.checked)}
-            className="w-3.5 h-3.5 accent-blue-600" />
-          <span className="text-xs text-gray-600">
-            加算対象・ケアプラン更新月・状態に変化があった方 — 詳しく報告する
-          </span>
-        </label>
+        <div className="mb-3 print:hidden">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none w-fit">
+            <input type="checkbox" checked={forceDetailed} onChange={e => setForceDetailed(e.target.checked)}
+              className="w-3.5 h-3.5 accent-blue-600" />
+            <span className="text-xs text-gray-600">
+              加算対象・ケアプラン更新月・状態に変化があった方 — 詳しく報告する
+            </span>
+          </label>
+          <p className="text-[10px] text-gray-400 mt-1 ml-5">
+            {forceDetailed
+              ? '各見出しを3〜5文に増やし、今後の方針とケアマネジャーへの相談事項を必ず記載します。'
+              : hasRecords
+              ? '今月は現場の記録があるため、チェックしなくてもその内容は詳しく報告されます。'
+              : '通常の分量で作成します。'}
+          </p>
+        </div>
         {report ? (
           <div className="bg-slate-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border border-slate-100">
             {report}
