@@ -194,7 +194,7 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
               利用者管理で「機能訓練対象」に設定されている方のみ表示しています
             </p>
 
-            <div className="flex flex-col gap-1 max-h-[55vh] overflow-y-auto">
+            <div className="flex flex-col gap-1 h-[26rem] max-h-[65vh] overflow-y-auto overscroll-contain pr-1 border border-gray-100 rounded-lg p-1" style={{ scrollbarWidth: 'thin' }}>
               {residents.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-4">
                   加算対象の利用者がいません。利用者管理で「機能訓練対象」にチェックを入れてください

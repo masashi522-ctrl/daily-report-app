@@ -272,6 +272,19 @@ export interface CarePlan {
   updatedAt: string
 }
 
+// 計画書を新しい版として保存したときの控え。snapshotに保存時点のCarePlan全体を持つ
+export interface CarePlanHistoryEntry {
+  id: string
+  residentId: string
+  facilityId: string | null
+  version: number
+  /** 'standard' = 通所介護計画書 / 'prevention' = 介護予防通所介護計画書 */
+  planType: string
+  planDate: string | null
+  snapshot: CarePlan
+  createdAt: string
+}
+
 export interface ResidentMonthlyPhoto {
   id: string
   facilityId: string

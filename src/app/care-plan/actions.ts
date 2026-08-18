@@ -105,6 +105,41 @@ export async function saveCarePlan(
     if (error) return { error: describeError(error.message) }
   }
 
+  // 「新しい版として保存」が押されたときは、保存時点の内容を控えとして残す
+  if (formData.get('saveAsNewVersion') === '1') {
+    const { data: saved } = await supabase
+      .from('CarePlan')
+      .select('*')
+      .eq('residentId', residentId)
+      .maybeSingle()
+
+    const { data: latest } = await supabase
+      .from('CarePlanHistory')
+      .select('version')
+      .eq('residentId', residentId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const { error } = await supabase.from('CarePlanHistory').insert({
+      id: crypto.randomUUID(),
+      residentId,
+      facilityId: session.facilityId,
+      version: (latest?.version ?? 0) + 1,
+      planType: isPrevention ? 'prevention' : 'standard',
+      planDate,
+      snapshot: saved ?? payload,
+      createdAt: new Date().toISOString(),
+    })
+    if (error) {
+      return {
+        error: /relation .* does not exist|Could not find the table/i.test(error.message)
+          ? `内容は保存しましたが、版の控えを残せませんでした。CarePlanHistoryテーブルがデータベースにありません（${error.message}）。Supabaseでテーブルの作成が必要です。`
+          : `内容は保存しましたが、版の控えを残せませんでした: ${error.message}`,
+      }
+    }
+  }
+
   revalidatePath('/care-plan')
   return { success: true }
 }

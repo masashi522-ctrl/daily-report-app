@@ -19,18 +19,40 @@ export async function GET(request: Request) {
     .maybeSingle()
   if (!resident) return new Response('Resident not found', { status: 404 })
 
-  const { data: plan } = await supabase
-    .from('CarePlan')
-    .select('*')
-    .eq('residentId', residentId)
-    .maybeSingle()
+  // historyId が指定されたときは、その版の控えを出力する
+  const historyId = searchParams.get('historyId') ?? ''
+  let plan: unknown = null
+  let versionLabel = ''
+  let planTypeFromHistory: string | null = null
+
+  if (historyId) {
+    const { data: entry } = await supabase
+      .from('CarePlanHistory')
+      .select('*')
+      .eq('id', historyId)
+      .eq('residentId', residentId)
+      .maybeSingle()
+    if (!entry) return new Response('指定された版が見つかりません', { status: 404 })
+    plan = entry.snapshot
+    versionLabel = `_第${entry.version}版`
+    planTypeFromHistory = entry.planType as string
+  } else {
+    const { data } = await supabase
+      .from('CarePlan')
+      .select('*')
+      .eq('residentId', residentId)
+      .maybeSingle()
+    plan = data
+  }
   if (!plan) return new Response('介護計画書がまだ保存されていません', { status: 404 })
 
   // 要支援の方は介護予防通所介護計画書の様式で出力する
-  const isPrevention = !!(resident.careLevel as string | null)?.startsWith('要支援')
+  const isPrevention = planTypeFromHistory
+    ? planTypeFromHistory === 'prevention'
+    : !!(resident.careLevel as string | null)?.startsWith('要支援')
   const filenameBase = isPrevention
-    ? `介護予防通所介護計画書_${resident.name}`
-    : `介護計画書_${resident.name}`
+    ? `介護予防通所介護計画書_${resident.name}${versionLabel}`
+    : `介護計画書_${resident.name}${versionLabel}`
 
   const wb = isPrevention
     ? buildPreventionCarePlanExcel(resident as Resident, session.facilityName, plan as CarePlan)

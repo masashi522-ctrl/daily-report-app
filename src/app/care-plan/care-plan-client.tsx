@@ -2,9 +2,9 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Download, Camera, Loader2, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Download, Camera, Loader2, Sparkles, History } from 'lucide-react'
 import { saveCarePlan } from './actions'
-import { CARE_LEVEL_OPTIONS, PREVENTION_PROGRAMS, type CarePlan, type CarePlanGoal } from '@/types/database'
+import { CARE_LEVEL_OPTIONS, PREVENTION_PROGRAMS, type CarePlan, type CarePlanGoal, type CarePlanHistoryEntry } from '@/types/database'
 import { mergeGoalsBySameIssue } from '@/lib/care-plan-goals'
 
 interface Resident { id: string; name: string; furigana: string | null; careLevel: string | null }
@@ -14,6 +14,7 @@ interface Props {
   selectedResidentId: string
   selectedResident: Resident | null
   plan: CarePlan | null
+  history: CarePlanHistoryEntry[]
   facilityName: string
 }
 
@@ -67,7 +68,7 @@ const GOJUUON_ROWS = [
   { label: 'わ', chars: 'わをんワヲン' },
 ]
 
-export default function CarePlanClient({ residents, selectedResidentId, selectedResident, plan, facilityName }: Props) {
+export default function CarePlanClient({ residents, selectedResidentId, selectedResident, plan, history, facilityName }: Props) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState(saveCarePlan.bind(null, selectedResidentId), null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
@@ -315,7 +316,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               ))}
             </div>
 
-            <div className="flex flex-col gap-1 max-h-[60vh] min-h-[10rem] overflow-y-auto overscroll-contain pr-1">
+            <div className="flex flex-col gap-1 h-[26rem] max-h-[65vh] overflow-y-auto overscroll-contain pr-1 border border-gray-100 rounded-lg p-1" style={{ scrollbarWidth: 'thin' }}>
               {residents.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-4">利用者が登録されていません</p>
               )}
@@ -421,6 +422,43 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                     >
                       <Download size={13} /> Excelでダウンロード
                     </a>
+                  </div>
+                )}
+              </div>
+
+              {/* 版の履歴 */}
+              <div className="border border-amber-200 bg-amber-50/50 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <History size={14} className="text-amber-700" />
+                  <span className="text-xs font-semibold text-amber-800">保存済みの版</span>
+                  <span className="text-[10px] text-amber-700/70">{history.length}件</span>
+                </div>
+                {history.length === 0 ? (
+                  <p className="text-[11px] text-gray-500">
+                    まだ版が保存されていません。内容を入力して「新しい版として保存」を押すと、その時点の計画書が控えとして残ります。
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                    {history.map(h => (
+                      <div key={h.id}
+                        className="flex items-center justify-between gap-2 bg-white border border-amber-100 rounded-lg px-2.5 py-1.5">
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-gray-700">第{h.version}版</span>
+                          <span className="text-[10px] text-gray-500 ml-2">
+                            作成年月日: {h.planDate ? h.planDate.replace(/-/g, '/') : '未入力'}
+                          </span>
+                          <span className="text-[10px] text-gray-400 ml-2">
+                            保存: {new Date(h.createdAt).toLocaleString('ja-JP')}
+                          </span>
+                        </div>
+                        <a
+                          href={`/api/care-plan/export?residentId=${selectedResidentId}&historyId=${h.id}`}
+                          className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition shrink-0"
+                        >
+                          <Download size={11} /> Excel
+                        </a>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -735,13 +773,21 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{state.error}</div>
               )}
 
-              <div className="flex items-center gap-3 pt-1">
+              <div className="flex items-center gap-3 pt-1 flex-wrap">
                 <button type="submit" disabled={pending}
                   className="bg-teal-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
                   {pending ? '保存中...' : '保存する'}
                 </button>
+                <button type="submit" name="saveAsNewVersion" value="1" disabled={pending}
+                  className="flex items-center gap-1.5 border border-amber-300 bg-amber-50 text-amber-800 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition disabled:opacity-50">
+                  <History size={14} />
+                  第{history.length + 1}版として保存
+                </button>
                 {savedAt && <span className="text-xs text-emerald-600">{savedAt} に保存しました</span>}
               </div>
+              <p className="text-[10px] text-gray-400 -mt-2">
+                「保存する」は現在の内容を上書きします。計画を作り直したときは「第◯版として保存」を押すと、その時点の内容が控えとして残り、あとから確認・出力できます。
+              </p>
               </form>
             </>
           )}
