@@ -2,6 +2,11 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import WeightClient from './weight-client'
 
+// JST 今日の日付。レンダー中に現在時刻を読まないよう関数に切り出す
+function getJstToday() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
 export default async function WeightPage({
   searchParams,
 }: {
@@ -36,7 +41,7 @@ export default async function WeightPage({
     : null
 
   // JST 今日の日付
-  const jstToday = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const jstToday = getJstToday()
   const thisMonthStart = jstToday.slice(0, 7) + '-01'
   const thisMonthEnd   = jstToday
 

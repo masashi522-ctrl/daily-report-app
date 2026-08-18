@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useState, useTransition, useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { updateResident, generateFurigana } from './actions'
@@ -313,10 +314,10 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
           className="flex-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
           {pending ? '更新中...' : '更新する'}
         </button>
-        <a href="/residents"
+        <Link href="/residents"
           className="flex-1 text-center bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">
           キャンセル
-        </a>
+        </Link>
       </div>
     </form>
   )

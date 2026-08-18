@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { type Resident, type DailyRecord } from '@/types/database'
@@ -88,12 +89,12 @@ export default async function BathingPage({
             nonScheduledResidents={nonScheduledResidents}
             temporaryResidentIds={temporaryResidentIds}
           />
-          <a href={`/bathing?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()}`}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</a>
-          <a href="/bathing"
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</a>
-          <a href={`/bathing?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()}`}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</a>
+          <Link href={`/bathing?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()}`}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</Link>
+          <Link href="/bathing"
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</Link>
+          <Link href={`/bathing?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()}`}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</Link>
         </div>
       </div>
 
@@ -101,7 +102,7 @@ export default async function BathingPage({
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center text-gray-400">
           <p className="text-base">{dowLabel}曜日の入浴対象者がいません</p>
           <p className="text-xs mt-2">利用者管理で「入浴対象日」を設定するか、上の「臨時利用者を追加」から追加してください</p>
-          <a href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</a>
+          <Link href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</Link>
         </div>
       ) : (
         <BathingTable residents={residents as Resident[]} recordMap={recordMap} date={today} />

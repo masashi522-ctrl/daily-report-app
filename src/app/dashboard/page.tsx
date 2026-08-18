@@ -1,6 +1,6 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
-import { FOOD_TYPE_LABELS, BATHING_LABELS, type Resident, type DailyRecord } from '@/types/database'
+import { type Resident, type DailyRecord } from '@/types/database'
 import DailyRecordTable from './daily-record-table'
 import AddTemporaryModal from './add-temporary-modal'
 

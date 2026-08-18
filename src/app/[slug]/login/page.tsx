@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
@@ -20,7 +21,7 @@ export default async function FacilityLoginPage({
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-gray-500 px-4">
         <p className="text-base">このURLは存在しません</p>
-        <a href="/login" className="text-sm text-teal-600 underline">通常のログインへ</a>
+        <Link href="/login" className="text-sm text-teal-600 underline">通常のログインへ</Link>
       </div>
     )
   }

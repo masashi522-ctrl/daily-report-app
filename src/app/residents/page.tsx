@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import ResidentForm from './resident-form'
@@ -33,7 +34,7 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
               <>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-semibold text-gray-800">利用者を編集</h3>
-                  <a href="/residents" className="text-xs text-gray-400 hover:text-gray-600">✕ キャンセル</a>
+                  <Link href="/residents" className="text-xs text-gray-400 hover:text-gray-600">✕ キャンセル</Link>
                 </div>
                 <p className="text-xs text-blue-600 mb-4">{editingResident.name}</p>
                 <EditResidentForm resident={editingResident} />

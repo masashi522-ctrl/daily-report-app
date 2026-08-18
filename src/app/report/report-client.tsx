@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { type Resident } from '@/types/database'
 
@@ -48,7 +49,8 @@ export default function ReportClient({
   function toggle(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -102,12 +104,12 @@ export default function ReportClient({
           <p className="text-sm text-gray-500">{dateLabel}・利用者 {residents.length}名</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href={`/report?date=${prevDate(date)}`}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</a>
-          <a href="/report"
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</a>
-          <a href={`/report?date=${nextDate(date)}`}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</a>
+          <Link href={`/report?date=${prevDate(date)}`}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</Link>
+          <Link href="/report"
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</Link>
+          <Link href={`/report?date=${nextDate(date)}`}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</Link>
         </div>
       </div>
 
@@ -204,7 +206,7 @@ export default function ReportClient({
       {residents.length === 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400">
           <p>この日に記録のある利用者がいません</p>
-          <a href="/dashboard" className="mt-2 inline-block text-teal-600 underline text-sm">日次記録へ</a>
+          <Link href="/dashboard" className="mt-2 inline-block text-teal-600 underline text-sm">日次記録へ</Link>
         </div>
       )}
 

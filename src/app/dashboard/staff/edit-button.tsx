@@ -1,23 +1,29 @@
 'use client'
 
-import { useState, useActionState, useEffect } from 'react'
-import { updateStaff } from './actions'
+import { useState, useTransition } from 'react'
+import { updateStaff, type StaffFormState } from './actions'
 
 type Staff = { id: string; name: string; email: string; role: string }
 
 export default function EditButton({ staff, isAdmin }: { staff: Staff; isAdmin: boolean }) {
   const [open, setOpen] = useState(false)
-  const [state, action, pending] = useActionState(updateStaff, null)
+  const [state, setState] = useState<StaffFormState>(null)
+  const [pending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (state?.success) setOpen(false)
-  }, [state])
+  // 保存結果を受け取ってから閉じる。useEffect内でsetStateしないための書き方
+  const action = (formData: FormData) => {
+    startTransition(async () => {
+      const result = await updateStaff(null, formData)
+      setState(result)
+      if (result?.success) setOpen(false)
+    })
+  }
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setState(null); setOpen(true) }}
         className="text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition"
       >
         編集

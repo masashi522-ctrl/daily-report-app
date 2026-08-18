@@ -1,6 +1,14 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
-import { FOOD_TYPE_LABELS, BATHING_LABELS, type FoodType, type BathingStatus } from '@/types/database'
+import { BATHING_LABELS, type FoodType, type BathingStatus } from '@/types/database'
+
+// 既定の表示期間（直近30日）。レンダー中に現在時刻を読まないよう関数に切り出す
+function defaultRange() {
+  return {
+    today: new Date().toISOString().split('T')[0],
+    thirtyDaysAgo: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  }
+}
 
 export default async function HistoryPage({
   searchParams,
@@ -10,8 +18,7 @@ export default async function HistoryPage({
   const session = await requireSession()
   const params = await searchParams
 
-  const today = new Date().toISOString().split('T')[0]
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const { today, thirtyDaysAgo } = defaultRange()
 
   const from = params.from || thirtyDaysAgo
   const to = params.to || today

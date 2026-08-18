@@ -1,8 +1,8 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import { saveWeight, deleteWeight } from './actions'
+import { saveWeight, deleteWeight, type WeightFormState } from './actions'
 
 const GOJUUON_ROWS = [
   { label: 'あ', chars: 'あいうえおアイウエオ' },
@@ -176,15 +176,20 @@ export default function WeightClient({
   const [deletingDate, setDeletingDate] = useState<string | null>(null)
   const [deleteError,  setDeleteError]  = useState<string | null>(null)
 
-  const saveWeightBound = selectedResidentId ? saveWeight.bind(null, selectedResidentId) : saveWeight.bind(null, '')
-  const [formState, action, pending] = useActionState(saveWeightBound, null)
+  const [formState, setFormState] = useState<WeightFormState>(null)
+  const [pending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (formState?.success) {
-      setEditDate(today)
-      setEditWeight('')
-    }
-  }, [formState?.success, today])
+  // 保存に成功したら入力欄を初期化する。useEffect内でsetStateしないための書き方
+  const action = (formData: FormData) => {
+    startTransition(async () => {
+      const result = await saveWeight(selectedResidentId, null, formData)
+      setFormState(result)
+      if (result?.success) {
+        setEditDate(today)
+        setEditWeight('')
+      }
+    })
+  }
 
   // ── 月ナビ ──
   function goPrevMonth() {
@@ -476,7 +481,7 @@ export default function WeightClient({
                           </tr>
                         </thead>
                         <tbody>
-                          {monthRecords.map((r, i) => {
+                          {monthRecords.map(r => {
                             const prevRec = weightRecords
                               .filter(w => w.date < r.date)
                               .at(-1)

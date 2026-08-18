@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { type Resident, type DailyRecord } from '@/types/database'
@@ -77,12 +78,12 @@ export default async function TrainingPage({
           <p className="text-sm text-gray-500">{dateLabel}（{dowLabel}曜日）・ 訓練対象者 {residents.length}名</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href={`/training?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()}`}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</a>
-          <a href="/training"
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</a>
-          <a href={`/training?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()}`}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</a>
+          <Link href={`/training?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()}`}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</Link>
+          <Link href="/training"
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</Link>
+          <Link href={`/training?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()}`}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</Link>
         </div>
       </div>
 
@@ -92,7 +93,7 @@ export default async function TrainingPage({
             <>
               <p className="text-base">機能訓練対象者が登録されていません</p>
               <p className="text-xs mt-2">利用者管理で「機能訓練対象」にチェックを入れてください</p>
-              <a href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</a>
+              <Link href="/residents" className="mt-4 inline-block text-teal-600 underline text-sm">利用者管理へ</Link>
             </>
           ) : (
             <>

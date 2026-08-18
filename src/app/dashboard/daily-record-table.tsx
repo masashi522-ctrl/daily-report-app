@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { FOOD_TYPE_LABELS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
 import { isHospitalizedOn } from '@/lib/hospitalization'
@@ -260,7 +261,6 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
 // デスクトップ用: 数値入力（スピナーなし、色をinline styleで保証）
   const numBase = 'border border-gray-200 rounded px-1 py-0.5 text-center text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
   const selMd = 'w-full border border-gray-200 rounded-lg px-2 py-2 text-sm'
-  const selSm = 'border border-gray-200 rounded px-0.5 py-0.5 text-xs text-gray-700 w-full'
   const vRow  = 'grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 items-center'
   const vLbl  = 'text-xs text-gray-500 leading-tight'
   // テーブルヘッダー：カテゴリ別カラー
@@ -430,7 +430,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p>利用者が登録されていません</p>
-            <a href="/residents" className="text-blue-600 underline mt-2 inline-block">利用者を登録する</a>
+            <Link href="/residents" className="text-blue-600 underline mt-2 inline-block">利用者を登録する</Link>
           </div>
         )}
         {filtered.map(resident => {
@@ -598,7 +598,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p>{residents.length === 0 ? '利用者が登録されていません' : '該当する利用者がいません'}</p>
-            {residents.length === 0 && <a href="/residents" className="text-blue-600 underline mt-2 inline-block">利用者を登録する</a>}
+            {residents.length === 0 && <Link href="/residents" className="text-blue-600 underline mt-2 inline-block">利用者を登録する</Link>}
           </div>
         )}
         {filtered.length > 0 && (
