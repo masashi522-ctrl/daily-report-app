@@ -8,6 +8,13 @@ function toDateStr(d: Date) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 }
 
+// 日付文字列を日単位でずらす。サーバーのタイムゾーンに依存しないようローカル日付として扱う
+function shiftDate(date: string, days: number) {
+  const d = new Date(date + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toLocaleDateString('sv-SE')
+}
+
 export default async function FacilitySlugPage({
   params,
   searchParams,
@@ -74,8 +81,8 @@ export default async function FacilitySlugPage({
   const dateLabel = `${year}年${+month}月${+day}日`
   const dowLabel = ['日', '月', '火', '水', '木', '金', '土'][todayDow]
 
-  const prevDate = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()
-  const nextDate = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
+  const prevDate = shiftDate(today, -1)
+  const nextDate = shiftDate(today, 1)
 
   return (
     <div className="flex flex-col gap-4">

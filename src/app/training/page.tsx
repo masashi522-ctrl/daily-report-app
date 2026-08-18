@@ -8,6 +8,13 @@ function toDateStr(d: Date) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 }
 
+// 日付文字列を日単位でずらす。サーバーのタイムゾーンに依存しないようローカル日付として扱う
+function shiftDate(date: string, days: number) {
+  const d = new Date(date + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toLocaleDateString('sv-SE')
+}
+
 export default async function TrainingPage({
   searchParams,
 }: {
@@ -78,11 +85,11 @@ export default async function TrainingPage({
           <p className="text-sm text-gray-500">{dateLabel}（{dowLabel}曜日）・ 訓練対象者 {residents.length}名</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/training?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()}`}
+          <Link href={`/training?date=${shiftDate(today, -1)}`}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</Link>
           <Link href="/training"
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</Link>
-          <Link href={`/training?date=${(() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()}`}
+          <Link href={`/training?date=${shiftDate(today, 1)}`}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</Link>
         </div>
       </div>

@@ -2,11 +2,14 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { BATHING_LABELS, type FoodType, type BathingStatus } from '@/types/database'
 
-// 既定の表示期間（直近30日）。レンダー中に現在時刻を読まないよう関数に切り出す
+// 既定の表示期間（直近30日）。日本時間で判定する。
+// レンダー中に現在時刻を読まないよう関数に切り出している
 function defaultRange() {
+  const jst = (d: Date) => d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+  const now = new Date()
   return {
-    today: new Date().toISOString().split('T')[0],
-    thirtyDaysAgo: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    today: jst(now),
+    thirtyDaysAgo: jst(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)),
   }
 }
 

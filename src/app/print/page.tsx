@@ -10,6 +10,11 @@ import {
 } from '@/types/database'
 import PrintActions from './print-actions'
 
+// 日本時間の今日。レンダー中に現在時刻を読まないよう関数に切り出す
+function jstToday() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+}
+
 const thStyle: CSSProperties = {
   padding: '4px 3px',
   textAlign: 'center',
@@ -36,7 +41,7 @@ export default async function PrintPage({
 }) {
   const session = await requireSession()
   const params = await searchParams
-  const today = new Date().toISOString().split('T')[0]
+  const today = jstToday()
   const date = params.date || today
 
   const { data: residents } = await supabase
