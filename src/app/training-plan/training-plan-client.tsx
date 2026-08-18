@@ -139,7 +139,7 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-800">個別機能訓練計画書</h2>
-        <span className="text-sm text-gray-500">対象: {residents.length}名</span>
+        <span className="text-sm text-gray-500">加算対象: {residents.length}名</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -190,9 +190,15 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
               ))}
             </div>
 
+            <p className="text-[10px] text-gray-400 leading-snug">
+              利用者管理で「機能訓練対象」に設定されている方のみ表示しています
+            </p>
+
             <div className="flex flex-col gap-1 max-h-[55vh] overflow-y-auto">
               {residents.length === 0 && (
-                <p className="text-xs text-gray-400 text-center py-4">利用者が登録されていません</p>
+                <p className="text-xs text-gray-400 text-center py-4">
+                  加算対象の利用者がいません。利用者管理で「機能訓練対象」にチェックを入れてください
+                </p>
               )}
               {residents.length > 0 && filteredResidents.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-4">該当する利用者がいません</p>

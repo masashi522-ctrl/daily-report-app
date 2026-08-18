@@ -12,13 +12,14 @@ export default async function TrainingPlanPage({
 
   const { data: residentsRaw } = await supabase
     .from('Resident')
-    .select('id, name, furigana, careLevel')
+    .select('id, name, furigana, careLevel, trainingDays')
     .eq('isActive', true)
     .eq('facilityId', session.facilityId)
 
-  const residents = (residentsRaw ?? []).sort((a, b) =>
-    (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'),
-  )
+  // 個別機能訓練加算の対象者（利用者管理で「機能訓練対象」に設定されている方）のみを表示する
+  const residents = (residentsRaw ?? [])
+    .filter(r => !!r.trainingDays)
+    .sort((a, b) => (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'))
 
   let plan = null
   if (residentId) {

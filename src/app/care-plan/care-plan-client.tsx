@@ -231,6 +231,27 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
     return row ? row.chars.includes(searchChar) : true
   })
 
+  // 連絡帳と同じく、要介護・要支援・区分未設定でグループに分けて表示する
+  const residentGroups = [
+    {
+      label: '要介護',
+      headerBg: 'from-rose-500 to-pink-600',
+      residents: filteredResidents.filter(r => r.careLevel?.startsWith('要介護')),
+    },
+    {
+      label: '要支援',
+      headerBg: 'from-sky-500 to-blue-600',
+      residents: filteredResidents.filter(r => r.careLevel?.startsWith('要支援')),
+    },
+    {
+      label: '区分未設定',
+      headerBg: 'from-gray-400 to-gray-500',
+      residents: filteredResidents.filter(
+        r => !r.careLevel?.startsWith('要介護') && !r.careLevel?.startsWith('要支援'),
+      ),
+    },
+  ].filter(g => g.residents.length > 0)
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -293,18 +314,37 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
               {residents.length > 0 && filteredResidents.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-4">該当する利用者がいません</p>
               )}
-              {filteredResidents.map(r => (
-                <button
-                  key={r.id}
-                  onClick={() => router.push(`/care-plan?resident=${r.id}`)}
-                  className={`text-left px-3 py-2 rounded-lg text-sm transition ${
-                    r.id === selectedResidentId
-                      ? 'bg-teal-600 text-white font-medium'
-                      : 'text-gray-700 hover:bg-teal-50'
-                  }`}
-                >
-                  {r.name}
-                </button>
+              {residentGroups.map(group => (
+                <div key={group.label} className="rounded-lg border border-gray-200 overflow-hidden mb-1">
+                  <div className={`flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${group.headerBg}`}>
+                    <span className="text-xs font-bold text-white">{group.label}</span>
+                    <span className="text-[10px] text-white/80">{group.residents.length}名</span>
+                  </div>
+                  <div className="flex flex-col p-1 gap-0.5">
+                    {group.residents.map(r => (
+                      <button
+                        key={r.id}
+                        onClick={() => router.push(`/care-plan?resident=${r.id}`)}
+                        className={`text-left px-2.5 py-2 rounded-lg text-sm transition ${
+                          r.id === selectedResidentId
+                            ? 'bg-teal-600 text-white font-medium'
+                            : 'text-gray-700 hover:bg-teal-50'
+                        }`}
+                      >
+                        {r.name}
+                        {r.careLevel && (
+                          <span
+                            className={`ml-1.5 text-[10px] ${
+                              r.id === selectedResidentId ? 'text-white/80' : 'text-gray-400'
+                            }`}
+                          >
+                            {r.careLevel}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
