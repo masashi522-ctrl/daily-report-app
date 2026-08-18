@@ -2,7 +2,7 @@
 
 import Groq from 'groq-sdk'
 import { requireSession } from '@/lib/session'
-import { resolveGroqModel } from '@/lib/groq-model'
+import { resolveGroqModels, stripReasoning } from '@/lib/groq-model'
 
 export interface CareNote {
   date: string
@@ -274,17 +274,28 @@ ${hasNotable ? `・今月はこの利用者について詳しく報告する必�
 
   try {
     const client = new Groq({ apiKey })
-    const model = await resolveGroqModel(client)
-    const completion = await client.chat.completions.create({
-      model,
-      max_tokens: 1500,
-      messages: [
-        { role: 'system', content: systemMessage },
-        { role: 'user', content: prompt },
-      ],
-    })
-    const raw = completion.choices[0]?.message?.content
-    return raw ? sanitizeReportText(raw) : 'レポートの生成に失敗しました。'
+    const models = await resolveGroqModels(client)
+    // 本文が空で返るモデル（思考過程だけを返す推論型など）に当たった場合は次の候補を試す
+    const attempts: string[] = []
+    for (const model of models.slice(0, 3)) {
+      const completion = await client.chat.completions.create({
+        model,
+        max_tokens: 1500,
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: prompt },
+        ],
+      })
+      const choice = completion.choices[0]
+      const raw = stripReasoning(choice?.message?.content ?? '')
+      if (raw) {
+        console.log('[generateCareReport] 生成成功:', model)
+        return sanitizeReportText(raw)
+      }
+      attempts.push(`${model}（終了理由: ${choice?.finish_reason ?? '不明'}）`)
+      console.error('[generateCareReport] 空応答:', model, choice?.finish_reason)
+    }
+    return `【生成エラー】モデルから本文が返りませんでした。試したモデル: ${attempts.join(' / ')}`
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
     console.error('[generateCareReport] Groq API error:', detail)
