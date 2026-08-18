@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import ExcelJS from 'exceljs'
 import Groq from 'groq-sdk'
 import type { Resident, DailyRecord } from '@/types/database'
+import { resolveGroqModel } from '@/lib/groq-model'
 
 const DOW_JA = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -19,6 +20,7 @@ function sheetSafeName(name: string): string {
 
 async function generateAIText(
   client: Groq,
+  model: string,
   resident: Resident,
   record: DailyRecord,
   dateStr: string,
@@ -51,13 +53,13 @@ async function generateAIText(
 
   const [dailyRes, rehabRes] = await Promise.all([
     client.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model,
       max_tokens: 400,
       messages: [{ role: 'user', content: 'あなたはデイサービスの介護記録担当スタッフです。以下の当日記録をもとに「日中のご様子・連絡事項」欄の文章を自然な介護記録文体で３〜５文で作成してください。文章のみ出力してください。\n\n' + context }],
     }),
     record.trainingDone
       ? client.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          model,
           max_tokens: 200,
           messages: [{ role: 'user', content: 'あなたはデイサービスの機能訓練担当スタッフです。以下の訓練記録をもとに「リハビリからの連絡事項」欄の文章を自然な記録文体で１〜２文で作成してください。文章のみ出力してください。\n\n' + context }],
         })
@@ -439,12 +441,13 @@ export async function GET(request: Request) {
   const apiKey = process.env.GROQ_API_KEY
   if (apiKey) {
     const client = new Groq({ apiKey })
+    const model = await resolveGroqModel(client)
     await Promise.all(
       residents
         .filter(rr => recordMap.has(rr.id))
         .map(async rr => {
           try {
-            aiTexts.set(rr.id, await generateAIText(client, rr, recordMap.get(rr.id)!, date))
+            aiTexts.set(rr.id, await generateAIText(client, model, rr, recordMap.get(rr.id)!, date))
           } catch (err) {
             console.error('[daily-report] Groq error for', rr.name, ':', err)
             aiTexts.set(rr.id, { daily: '', rehab: '' })
