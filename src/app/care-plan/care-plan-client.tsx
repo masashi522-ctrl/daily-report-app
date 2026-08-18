@@ -324,7 +324,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 <p className="text-xs text-gray-400 text-center py-4">該当する利用者がいません</p>
               )}
               {residentGroups.map(group => (
-                <div key={group.label} className="rounded-lg border border-gray-200 overflow-hidden mb-1">
+                <div key={group.label} className="shrink-0 rounded-lg border border-gray-200 overflow-hidden mb-1">
                   {/* スクロールしても、いま見ている区分が分かるように見出しを固定する */}
                   <div className={`sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${group.headerBg}`}>
                     <span className="text-xs font-bold text-white">{group.label}</span>
@@ -335,7 +335,7 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                       <button
                         key={r.id}
                         onClick={() => router.push(`/care-plan?resident=${r.id}`)}
-                        className={`text-left px-2.5 py-2 rounded-lg text-sm transition ${
+                        className={`shrink-0 text-left px-2.5 py-2 rounded-lg text-sm transition ${
                           r.id === selectedResidentId
                             ? 'bg-teal-600 text-white font-medium'
                             : 'text-gray-700 hover:bg-teal-50'

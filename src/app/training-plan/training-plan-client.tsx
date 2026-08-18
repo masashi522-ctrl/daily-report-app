@@ -207,7 +207,7 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
                 <button
                   key={r.id}
                   onClick={() => router.push(`/training-plan?resident=${r.id}`)}
-                  className={`text-left px-3 py-2 rounded-lg text-sm transition ${
+                  className={`shrink-0 text-left px-3 py-2 rounded-lg text-sm transition ${
                     r.id === selectedResidentId
                       ? 'bg-teal-600 text-white font-medium'
                       : 'text-gray-700 hover:bg-teal-50'
