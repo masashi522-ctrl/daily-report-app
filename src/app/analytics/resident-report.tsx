@@ -339,7 +339,7 @@ export default function ResidentReport({
           </label>
           <p className="text-[10px] text-gray-400 mt-1 ml-5">
             {forceDetailed
-              ? '各見出しを3〜5文に増やし、今後の方針とケアマネジャーへの相談事項を必ず記載します。'
+              ? '各見出しを4〜6文に増やし、月前半と後半での様子の違いやご本人の表情・お言葉まで詳しくお伝えします。'
               : hasRecords
               ? '今月は現場の記録があるため、チェックしなくてもその内容は詳しく報告されます。'
               : '通常の分量で作成します。'}
