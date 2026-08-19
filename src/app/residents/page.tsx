@@ -14,7 +14,7 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
     .from('Resident')
     .select('*')
     .eq('facilityId', session.facilityId)
-    .order('sortOrder')
+    .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
 
   const editingResident = editId ? residents?.find(r => r.id === editId) : null

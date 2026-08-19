@@ -274,11 +274,6 @@ export default function ResidentForm() {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
       <GoalImageField gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={null} defaultSubGoalImage={null} />
-      <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">表示順</label>
-        <input name="sortOrder" type="number" defaultValue="0"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
-      </div>
       <button type="submit" disabled={pending}
         className="mt-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
         {pending ? '登録中...' : '追加する'}

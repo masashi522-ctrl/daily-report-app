@@ -31,7 +31,6 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const foodType = (formData.getAll('foodType') as string[]).join(',')
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
-  const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
   const attendanceDays          = (formData.getAll('attendanceDays') as string[]).join(',')
   const bathingDays             = (formData.getAll('bathingDays')    as string[]).join(',')
   const trainingDays            = formData.get('trainingTarget') ? '1' : null
@@ -58,7 +57,6 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     foodRestrictions: foodRestrictions || null,
     specialCondition: specialCondition || null,
     isActive: !serviceEndDate,
-    sortOrder,
     attendanceDays:      attendanceDays      || null,
     bathingDays:         bathingDays         || null,
     trainingDays:        trainingDays        || null,
@@ -120,7 +118,6 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const foodType = (formData.getAll('foodType') as string[]).join(',')
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
-  const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
   const attendanceDays          = (formData.getAll('attendanceDays') as string[]).join(',')
   const bathingDays             = (formData.getAll('bathingDays')    as string[]).join(',')
   const trainingDays            = formData.get('trainingTarget') ? '1' : null
@@ -147,7 +144,6 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     foodType,
     foodRestrictions: foodRestrictions || null,
     specialCondition: specialCondition || null,
-    sortOrder,
     attendanceDays:      attendanceDays      || null,
     bathingDays:         bathingDays         || null,
     trainingDays:        trainingDays        || null,

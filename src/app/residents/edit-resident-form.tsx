@@ -339,11 +339,6 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
       <GoalImageField gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={resident.goalImage} defaultSubGoalImage={resident.subGoalImage} />
-      <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">表示順</label>
-        <input name="sortOrder" type="number" defaultValue={resident.sortOrder}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
-      </div>
       <div className="flex gap-2 mt-1">
         <button type="submit" disabled={pending}
           className="flex-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">

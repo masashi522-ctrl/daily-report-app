@@ -61,7 +61,7 @@ export default async function FacilitySlugPage({
     .select('*')
     .eq('isActive', true)
     .eq('facilityId', session.facilityId)
-    .order('sortOrder')
+    .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
 
   const trainingResidents = (allResidents ?? []).filter((r: Resident) => !!r.trainingDays)

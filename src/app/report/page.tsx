@@ -33,7 +33,7 @@ export default async function ReportPage({
         .in('id', recordedIds)
         .eq('facilityId', session.facilityId)
         .eq('isActive', true)
-        .order('sortOrder')
+        .order('furigana', { ascending: true, nullsFirst: false })
         .order('name')
     : { data: [] }
 

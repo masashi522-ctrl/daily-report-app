@@ -95,6 +95,7 @@ export interface Resident {
   foodRestrictions: string | null
   specialCondition: string | null
   isActive: boolean
+  /** 旧「表示順」。現在は使用しておらず、一覧はすべてふりがな順に統一している */
   sortOrder: number
   attendanceDays: string | null
   bathingDays: string | null
