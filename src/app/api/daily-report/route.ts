@@ -4,8 +4,12 @@ import ExcelJS from 'exceljs'
 import Groq from 'groq-sdk'
 import type { Resident, DailyRecord } from '@/types/database'
 import { resolveGroqModel, stripReasoning } from '@/lib/groq-model'
+import { estimateTextHeight } from '@/lib/care-plan-document'
 
 const DOW_JA = ['日', '月', '火', '水', '木', '金', '土']
+
+// AI文章欄（A〜O列を結合）の横幅。行の高さの見積もりに使う
+const AI_TEXT_WIDTH_UNITS = 69
 
 
 function bathingLabel(bathing: string, skipReason: string | null): string {
@@ -23,7 +27,18 @@ const TONE_RULES = `
 ・「食事量が少ない」「入浴を拒否」などのネガティブな表現は、できるかぎり穏やかな表現に言い換えること（例：「ゆっくりと召し上がっていらっしゃいました」「本日はご希望によりシャワー浴でお過ごしいただきました」）
 ・ただし、皮膚の異常・外傷・体調急変など、事実として観察された安全・健康上の所見は、やわらげて内容を弱めず、事実を正確に書くこと
 ・数値をそのまま羅列せず、その日のご様子が伝わる文章にすること
-・出力は日本語のみ。見出し・ラベル・箇条書きは付けず、文章のみを出力すること`
+
+【書いてはいけない内容】
+・記録に無いことを書かないこと。会話の内容、表情、レクリエーションの種目など、
+　上のデータに書かれていない出来事を推測で作り出すことは禁止です
+・体温・血圧・脈拍・水分量などの数値を本文に書かないこと（記録欄に別途記載されています）
+・服薬の要否や体調の原因についての医療的な判断・助言を書かないこと。
+　気になる所見は「〜が見られました」と事実のみを伝えること
+・「以下のとおりです」「作成しました」などの前置き・後書きを書かないこと
+・指定された文数を守り、それ以上長く書かないこと
+
+【出力形式】
+・出力は日本語の文章のみ。見出し・ラベル・箇条書き・かぎかっこでの囲みは付けないこと`
 
 function sheetSafeName(name: string): string {
   return name.replace(/[:\\/?\[\]]/g, '').slice(0, 31)
@@ -65,13 +80,13 @@ async function generateAIText(
   const [dailyRes, rehabRes] = await Promise.all([
     client.chat.completions.create({
       model,
-      max_tokens: 400,
+      max_tokens: 1500,
       messages: [{ role: 'user', content: 'あなたはデイサービスの介護記録担当スタッフです。以下の当日記録をもとに「日中のご様子・連絡事項」欄の文章を自然な介護記録文体で３〜５文で作成してください。文章のみ出力してください。\n' + TONE_RULES + '\n\n' + context }],
     }),
     record.trainingDone
       ? client.chat.completions.create({
           model,
-          max_tokens: 200,
+          max_tokens: 800,
           messages: [{ role: 'user', content: 'あなたはデイサービスの機能訓練担当スタッフです。以下の訓練記録をもとに「リハビリからの連絡事項」欄の文章を自然な記録文体で１〜２文で作成してください。文章のみ出力してください。\n' + TONE_RULES + '\n\n' + context }],
         })
       : Promise.resolve(null),
@@ -399,15 +414,16 @@ function buildSheet(
   }
 
   // ━━━ 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 行の高さを固定すると長い文章が途中で切れて印刷されるため、文字数から高さを見積もる
   secHdr(r, '日中のご様子・連絡事項', 18); r++
-  ws.getRow(r).height = 90
+  ws.getRow(r).height = estimateTextHeight(aiDaily, AI_TEXT_WIDTH_UNITS, 10, 90)
   mg(`A${r}:O${r}`, `A${r}`, aiDaily,
     COL.valBg, COL.valFg, false, 10, 'left', 'top', allT, true)
   r++
 
   // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'リハビリからの連絡事項', 18); r++
-  ws.getRow(r).height = 60
+  ws.getRow(r).height = estimateTextHeight(aiRehab, AI_TEXT_WIDTH_UNITS, 10, 60)
   mg(`A${r}:O${r}`, `A${r}`, aiRehab,
     COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, 10, 'left', 'top', allT, true)
   r++
