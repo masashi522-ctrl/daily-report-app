@@ -367,12 +367,14 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
         {/* 色の意味の凡例 */}
         <div className="flex items-center gap-3 text-[10px] text-gray-500 flex-wrap">
           <span className="flex items-center gap-1">
+            <span className="text-[9px] font-bold px-1 rounded bg-red-500 text-white">再</span>
             <span className="inline-block w-3 h-3 rounded bg-red-50 border border-red-300" />
-            再検が必要な値（血圧 160以上/90以下・体温 37.5℃以上・脈拍 100以上/50以下）
+            要再検（血圧 160以上/90以下・体温 37.5℃以上・脈拍 100以上/50以下）
           </span>
           <span className="flex items-center gap-1">
+            <span className="text-amber-500">⚠</span>
             <span className="inline-block w-3 h-3 rounded bg-amber-50 border border-amber-300" />
-            未入力
+            記入漏れ
           </span>
         </div>
         {/* テキスト検索（名前ボタン絞り込み用） */}
@@ -419,22 +421,40 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
         {nameButtonList.length > 0 ? (
           <div className="flex flex-wrap gap-1 w-full">
             {nameButtonList.map(r => {
-              const absent = getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+              const draft = getDraft(r.id)
+              const absent = draft.isAbsent ?? recordMap[r.id]?.isAbsent ?? false
               const incomplete = !absent && getMissing(r.id).length > 0
+              const recheck = !absent && hasRecheck(draft)
               const isTemp = recordMap[r.id]?.isTemporaryAttendance === true
               const selected = selectedIds.has(r.id)
               return (
                 <button key={r.id} onClick={() => toggleResident(r.id)}
+                  title={[
+                    recheck ? '要再検' : '',
+                    incomplete ? `未入力: ${getMissing(r.id).join('・')}` : '',
+                  ].filter(Boolean).join(' / ')}
                   className={`text-xs px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
                     selected
                       ? 'bg-violet-600 text-white border-violet-600'
                       : absent
                       ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                      : recheck
+                      ? 'bg-red-50 text-red-700 border-red-300 hover:border-red-500'
+                      : incomplete
+                      ? 'bg-amber-50 text-amber-700 border-amber-300 hover:border-amber-500'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
                   }`}>
                   {absent && <span className="text-[9px]">欠</span>}
                   {isTemp && !absent && <span className="text-[9px] text-orange-500">臨</span>}
-                  {incomplete && !absent && <span className={selected ? 'text-amber-200' : 'text-amber-500'}>⚠</span>}
+                  {/* 再検は赤の「再」、記入漏れは黄の「⚠」で区別する */}
+                  {recheck && (
+                    <span className={`text-[9px] font-bold px-1 rounded ${
+                      selected ? 'bg-white text-red-600' : 'bg-red-500 text-white'
+                    }`}>再</span>
+                  )}
+                  {incomplete && (
+                    <span className={selected ? 'text-amber-200' : 'text-amber-500'}>⚠</span>
+                  )}
                   {r.name}
                 </button>
               )
