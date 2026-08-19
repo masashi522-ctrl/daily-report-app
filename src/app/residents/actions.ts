@@ -48,6 +48,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const bathingSpecialFreeText   = (formData.get('bathingSpecialFreeText') as string) || null
   const gender                   = (formData.get('gender') as string) || null
   const goalImage                = (formData.get('goalImage') as string)?.trim() || null
+  const subGoalImage             = (formData.get('subGoalImage') as string)?.trim() || null
 
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
@@ -74,6 +75,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     bathingSpecialFreeText,
     gender,
     goalImage,
+    subGoalImage,
     facilityId: session.facilityId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -135,6 +137,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const bathingSpecialFreeText   = (formData.get('bathingSpecialFreeText') as string) || null
   const gender                   = (formData.get('gender') as string) || null
   const goalImage                = (formData.get('goalImage') as string)?.trim() || null
+  const subGoalImage             = (formData.get('subGoalImage') as string)?.trim() || null
 
   if (!name) return { error: '名前は必須です' }
 
@@ -162,6 +165,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     bathingSpecialFreeText,
     gender,
     goalImage,
+    subGoalImage,
     updatedAt: new Date().toISOString(),
   }).eq('id', id).eq('facilityId', session.facilityId)
 

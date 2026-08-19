@@ -8,21 +8,26 @@ interface Suggestion {
   subs: string[]
 }
 
-// 利用者管理の「性別」「ゴール設定」欄。入力したゴールのイメージをもとにAIが提案する。
+// 利用者管理の「性別」「ゴール設定」欄。
+// メインのゴールのイメージとサブのゴールのイメージをそれぞれ設定でき、
+// 入力内容をもとにAIが両方の候補を提案する。
 // 新規登録フォームと編集フォームの両方から使う。
 export default function GoalImageField({
   gender,
   onGenderChange,
   genderSuggested,
   defaultGoalImage,
+  defaultSubGoalImage,
 }: {
   gender: string
   onGenderChange: (gender: string) => void
   /** 氏名からAIが推定した候補が入っているとき */
   genderSuggested: boolean
   defaultGoalImage: string | null
+  defaultSubGoalImage: string | null
 }) {
   const [goalImage, setGoalImage] = useState(defaultGoalImage ?? '')
+  const [subGoalImage, setSubGoalImage] = useState(defaultSubGoalImage ?? '')
   const [suggesting, setSuggesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null)
@@ -35,7 +40,7 @@ export default function GoalImageField({
       const res = await fetch('/api/resident/suggest-goal-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gender, goalImage }),
+        body: JSON.stringify({ gender, goalImage, subGoalImage }),
       })
       if (!res.ok) {
         const msg = await res.text()
@@ -49,8 +54,31 @@ export default function GoalImageField({
     }
   }
 
-  function applyText(text: string) {
-    setGoalImage(text)
+  // サブは1行につき1つ。すでに同じ内容が入っている場合は追加しない
+  function addSub(text: string) {
+    setSubGoalImage(prev => {
+      const lines = prev.split('\n').map(l => l.trim()).filter(Boolean)
+      if (lines.includes(text)) return prev
+      return [...lines, text].join('\n')
+    })
+  }
+
+  function SuggestionRow({ text }: { text: string }) {
+    return (
+      <div className="flex items-start justify-between gap-2 bg-white border border-teal-100 rounded-lg px-2.5 py-2">
+        <p className="text-sm text-gray-700">{text}</p>
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={() => setGoalImage(text)}
+            className="text-[10px] px-2 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-100 transition">
+            メインにする
+          </button>
+          <button type="button" onClick={() => addSub(text)}
+            className="text-[10px] px-2 py-1 rounded-lg border border-sky-300 text-sky-700 hover:bg-sky-100 transition">
+            サブに追加
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -72,60 +100,60 @@ export default function GoalImageField({
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-          <label className="text-xs font-medium text-gray-700">ゴール設定（ゴールのイメージ）</label>
+      <div className="border border-teal-100 rounded-lg p-3 bg-teal-50/30 flex flex-col gap-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="text-xs font-semibold text-teal-800">ゴール設定（ACP）</span>
           <button type="button" onClick={handleSuggest} disabled={suggesting || !goalImage.trim()}
             className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
             {suggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
             {suggesting ? '生成中...' : 'AIで提案'}
           </button>
         </div>
-        <textarea name="goalImage" value={goalImage} onChange={e => setGoalImage(e.target.value)} rows={3}
-          placeholder="例: 家族と一緒に近所を散歩できるようになりたい"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-y" />
-        <p className="text-[10px] text-gray-400 mt-1">
-          まず思いつくゴールのイメージを入力してから「AIで提案」を押すと、ACPの視点でメイン・サブのゴールのイメージを提案します。
-        </p>
-        {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-      </div>
 
-      {suggestion && (
-        <div className="bg-teal-50/60 border border-teal-200 rounded-lg p-3 flex flex-col gap-2.5">
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-xs font-semibold text-teal-800">メインのゴールのイメージ</span>
-              <button type="button" onClick={() => applyText(suggestion.main)}
-                className="text-[10px] px-2 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-100 transition">
-                この内容にする
-              </button>
+        <div>
+          <label className="text-xs font-medium text-gray-700 block mb-1">メインのゴールのイメージ</label>
+          <textarea name="goalImage" value={goalImage} onChange={e => setGoalImage(e.target.value)} rows={2}
+            placeholder="例: 家族と一緒に近所を散歩できるようになりたい"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-y" />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-gray-700 block mb-1">
+            サブのゴールのイメージ <span className="text-gray-400 font-normal">（1行に1つ）</span>
+          </label>
+          <textarea name="subGoalImage" value={subGoalImage} onChange={e => setSubGoalImage(e.target.value)} rows={3}
+            placeholder="例: 友人とお茶を楽しむ時間を続けたい"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sky-400 resize-y" />
+        </div>
+
+        <p className="text-[10px] text-gray-400">
+          メインのゴールのイメージを入力してから「AIで提案」を押すと、ACPの視点でメイン・サブの候補を提案します。
+        </p>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+
+        {suggestion && (
+          <div className="border border-teal-200 rounded-lg p-2.5 bg-white/70 flex flex-col gap-2.5">
+            <div>
+              <span className="text-xs font-semibold text-teal-800 block mb-1">メインのゴールのイメージ（提案）</span>
+              <SuggestionRow text={suggestion.main} />
             </div>
-            <p className="text-sm text-gray-700 bg-white border border-teal-100 rounded-lg px-2.5 py-2">
-              {suggestion.main}
+
+            {suggestion.subs.length > 0 && (
+              <div>
+                <span className="text-xs font-semibold text-sky-800 block mb-1">サブのゴールのイメージ（提案）</span>
+                <div className="flex flex-col gap-1.5">
+                  {suggestion.subs.map((sub, i) => (
+                    <SuggestionRow key={i} text={sub} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="text-[10px] text-gray-500">
+              各候補は「メインにする」「サブに追加」でそれぞれの欄に反映できます。そのまま使わず、ご本人の言葉に合わせて書き換えてください。
             </p>
           </div>
-
-          {suggestion.subs.length > 0 && (
-            <div>
-              <span className="text-xs font-semibold text-teal-800 block mb-1">サブのゴールのイメージ</span>
-              <div className="flex flex-col gap-1.5">
-                {suggestion.subs.map((sub, i) => (
-                  <div key={i} className="flex items-start justify-between gap-2 bg-white border border-teal-100 rounded-lg px-2.5 py-2">
-                    <p className="text-sm text-gray-700">{sub}</p>
-                    <button type="button" onClick={() => applyText(sub)}
-                      className="text-[10px] px-2 py-1 rounded-lg border border-teal-200 text-teal-700 hover:bg-teal-100 transition shrink-0">
-                      この内容にする
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <p className="text-[10px] text-gray-500">
-            「この内容にする」を押すと上の入力欄に反映されます。そのまま使わず、ご本人の言葉に合わせて書き換えてください。
-          </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

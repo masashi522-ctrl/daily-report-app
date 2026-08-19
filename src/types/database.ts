@@ -111,8 +111,10 @@ export interface Resident {
   serviceEndDate: string | null
   hospitalizations: HospitalizationPeriod[] | null
   gender: string | null
-  /** ACPの取り組みで設定するゴールのイメージ */
+  /** ACPの取り組みで設定するメインのゴールのイメージ */
   goalImage: string | null
+  /** サブのゴールのイメージ。1行に1つ */
+  subGoalImage: string | null
   createdAt: string
   updatedAt: string
 }

@@ -7,6 +7,7 @@ const FACILITY_TYPE = '通所介護（デイサービス）'
 interface RequestBody {
   gender?: string
   goalImage?: string
+  subGoalImage?: string
 }
 
 interface Suggestion {
@@ -37,10 +38,11 @@ export async function POST(request: Request) {
 
   const body: RequestBody = await request.json()
   const goalImage = (body.goalImage ?? '').trim()
+  const subGoalImage = (body.subGoalImage ?? '').trim()
   const gender = (body.gender ?? '').trim()
 
   if (!goalImage) {
-    return new Response('ゴールのイメージを入力してから提案してください', { status: 400 })
+    return new Response('メインのゴールのイメージを入力してから提案してください', { status: 400 })
   }
 
   const genderLabel = gender === '男' ? '男性' : gender === '女' ? '女性' : ''
@@ -58,8 +60,11 @@ export async function POST(request: Request) {
         content: [
           `ACPの取り組みをしています。${FACILITY_TYPE}の${genderLabel || ''}利用者です。ゴールのイメージをシンプルな形で提案して欲しい。`,
           '',
-          '担当職員が入力した、現時点でのゴールのイメージ（仮）は次のとおりです。',
+          '担当職員が入力した、現時点でのメインのゴールのイメージ（仮）は次のとおりです。',
           goalImage,
+          ...(subGoalImage
+            ? ['', 'すでに入力されているサブのゴールのイメージは次のとおりです。これらと重複しない内容を提案してください。', subGoalImage]
+            : []),
           '',
           'この内容をもとに、次の2種類を提案してください。',
           '- メインとなるゴールのイメージ: 1つ。ご本人が一番大切にしたいと思われる暮らしの姿',
