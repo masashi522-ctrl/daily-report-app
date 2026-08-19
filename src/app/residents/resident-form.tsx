@@ -1,8 +1,8 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useRef, useState, useTransition } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import { addResident, generateFurigana } from './actions'
+import { addResident, generateFurigana, guessGender } from './actions'
 import GoalImageField from './goal-image-field'
 import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, BATHING_CARE_ITEMS, BATHING_SPECIAL_ITEMS, type HospitalizationPeriod } from '@/types/database'
 
@@ -82,13 +82,34 @@ export default function ResidentForm() {
   const [furigana, setFurigana] = useState('')
   const [generating, startGenerate] = useTransition()
   const [hospitalizations, setHospitalizations] = useState<HospitalizationPeriod[]>([])
+  const [gender, setGender] = useState('')
+  const [genderSuggested, setGenderSuggested] = useState(false)
+  // 職員が選び直したかどうかを即座に判定するため、選択中の値をrefでも保持する
+  const genderRef = useRef('')
+
+  function changeGender(value: string) {
+    genderRef.current = value
+    setGender(value)
+    setGenderSuggested(false)
+  }
 
   function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
     const name = e.target.value.trim()
-    if (!name || furigana) return
+    if (!name) return
     startGenerate(async () => {
-      const result = await generateFurigana(name)
-      setFurigana(prev => prev || result)
+      if (!furigana) {
+        const result = await generateFurigana(name)
+        setFurigana(prev => prev || result)
+      }
+      // 性別が未選択のときだけ、氏名から候補を推定して入れる
+      if (!genderRef.current) {
+        const guessed = await guessGender(name)
+        if (guessed && !genderRef.current) {
+          genderRef.current = guessed
+          setGender(guessed)
+          setGenderSuggested(true)
+        }
+      }
     })
   }
 
@@ -252,7 +273,7 @@ export default function ResidentForm() {
         <textarea name="specialCondition" rows={2} placeholder="例: インスリン、SpO2測定"
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
-      <GoalImageField defaultGender={null} defaultGoalImage={null} />
+      <GoalImageField gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={null} />
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">表示順</label>
         <input name="sortOrder" type="number" defaultValue="0"

@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { toFurigana } from '@/lib/furigana'
+import Anthropic from '@anthropic-ai/sdk'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { HospitalizationPeriod } from '@/types/database'
@@ -217,4 +218,44 @@ export async function toggleActive(id: string, isActive: boolean) {
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+}
+
+// 氏名から性別を推定する。あくまで入力補助の候補であり、判断がつかない名前は空を返す。
+// 職員が画面で確認・修正できることを前提とした機能。
+export async function guessGender(name: string): Promise<string> {
+  await requireSession()
+  const trimmed = name.trim()
+  if (!trimmed) return ''
+
+  try {
+    const client = new Anthropic()
+    const response = await client.messages.create({
+      model: 'claude-opus-5',
+      max_tokens: 2000,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: 'low' },
+      messages: [
+        {
+          role: 'user',
+          content: [
+            '日本人の氏名から、一般的に想定される性別を推定してください。',
+            `氏名: ${trimmed}`,
+            '',
+            '出力は「男」「女」「不明」のいずれかのみ。説明は一切書かないでください。',
+            '薫・真・まこと・あきら・つかさ・ひろみ など、男女どちらにも使われる名前や、',
+            '判断の材料が乏しい場合は、推測せず必ず「不明」と答えてください。',
+          ].join('\n'),
+        },
+      ],
+    })
+
+    const textBlock = response.content.find(b => b.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') return ''
+    const answer = textBlock.text.trim()
+    if (answer.startsWith('男')) return '男'
+    if (answer.startsWith('女')) return '女'
+    return ''
+  } catch {
+    return ''
+  }
 }

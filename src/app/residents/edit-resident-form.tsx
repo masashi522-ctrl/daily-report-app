@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState, useState, useTransition, useEffect } from 'react'
+import { useActionState, useRef, useState, useTransition, useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import { updateResident, generateFurigana } from './actions'
+import { updateResident, generateFurigana, guessGender } from './actions'
 import GoalImageField from './goal-image-field'
 import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, BATHING_CARE_ITEMS, BATHING_SPECIAL_ITEMS, type Resident, type HospitalizationPeriod } from '@/types/database'
 
@@ -93,21 +93,54 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
   const checkedCareItems    = resident.bathingCareItems   ? resident.bathingCareItems.split(',')           : []
   const checkedSpecialItems = resident.bathingSpecialItems ? resident.bathingSpecialItems.split(',')       : []
 
+  const [gender, setGender] = useState(resident.gender ?? '')
+  const [genderSuggested, setGenderSuggested] = useState(false)
+  // 職員が選び直したかどうかを即座に判定するため、選択中の値をrefでも保持する
+  const genderRef = useRef(resident.gender ?? '')
+
+  function changeGender(value: string) {
+    genderRef.current = value
+    setGender(value)
+    setGenderSuggested(false)
+  }
+
   useEffect(() => {
-    if (resident.furigana) return
+    if (resident.furigana && genderRef.current) return
     startGenerate(async () => {
-      const result = await generateFurigana(resident.name)
-      setFurigana(prev => prev || result)
+      if (!resident.furigana) {
+        const result = await generateFurigana(resident.name)
+        setFurigana(prev => prev || result)
+      }
+      // 既存の利用者で性別が未登録なら、氏名から候補を推定して入れる
+      if (!genderRef.current) {
+        const guessed = await guessGender(resident.name)
+        if (guessed && !genderRef.current) {
+          genderRef.current = guessed
+          setGender(guessed)
+          setGenderSuggested(true)
+        }
+      }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
     const name = e.target.value.trim()
-    if (!name || furigana) return
+    if (!name) return
     startGenerate(async () => {
-      const result = await generateFurigana(name)
-      setFurigana(prev => prev || result)
+      if (!furigana) {
+        const result = await generateFurigana(name)
+        setFurigana(prev => prev || result)
+      }
+      // 性別が未選択のときだけ、氏名から候補を推定して入れる
+      if (!genderRef.current) {
+        const guessed = await guessGender(name)
+        if (guessed && !genderRef.current) {
+          genderRef.current = guessed
+          setGender(guessed)
+          setGenderSuggested(true)
+        }
+      }
     })
   }
 
@@ -305,7 +338,7 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
           placeholder="例: インスリン、SpO2測定"
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
-      <GoalImageField defaultGender={resident.gender} defaultGoalImage={resident.goalImage} />
+      <GoalImageField gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={resident.goalImage} />
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">表示順</label>
         <input name="sortOrder" type="number" defaultValue={resident.sortOrder}

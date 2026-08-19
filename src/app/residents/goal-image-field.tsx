@@ -11,13 +11,17 @@ interface Suggestion {
 // 利用者管理の「性別」「ゴール設定」欄。入力したゴールのイメージをもとにAIが提案する。
 // 新規登録フォームと編集フォームの両方から使う。
 export default function GoalImageField({
-  defaultGender,
+  gender,
+  onGenderChange,
+  genderSuggested,
   defaultGoalImage,
 }: {
-  defaultGender: string | null
+  gender: string
+  onGenderChange: (gender: string) => void
+  /** 氏名からAIが推定した候補が入っているとき */
+  genderSuggested: boolean
   defaultGoalImage: string | null
 }) {
-  const [gender, setGender] = useState(defaultGender ?? '')
   const [goalImage, setGoalImage] = useState(defaultGoalImage ?? '')
   const [suggesting, setSuggesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,12 +57,19 @@ export default function GoalImageField({
     <div className="flex flex-col gap-3">
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">性別</label>
-        <select name="gender" value={gender} onChange={e => setGender(e.target.value)}
-          className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
-          <option value="">未設定</option>
-          <option value="男">男</option>
-          <option value="女">女</option>
-        </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select name="gender" value={gender} onChange={e => onGenderChange(e.target.value)}
+            className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
+            <option value="">未設定</option>
+            <option value="男">男</option>
+            <option value="女">女</option>
+          </select>
+          {genderSuggested && (
+            <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-1">
+              氏名から推定した候補です。誤りがあれば修正してください
+            </span>
+          )}
+        </div>
       </div>
 
       <div>
