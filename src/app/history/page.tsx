@@ -1,6 +1,7 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { BATHING_LABELS, type FoodType, type BathingStatus } from '@/types/database'
+import HistoryResidentFilter from './resident-filter'
 
 // 既定の表示期間（直近30日）。日本時間で判定する。
 // レンダー中に現在時刻を読まないよう関数に切り出している
@@ -27,11 +28,14 @@ export default async function HistoryPage({
   const to = params.to || today
   const residentId = params.residentId || ''
 
-  const { data: residents } = await supabase
+  const { data: residentsRaw } = await supabase
     .from('Resident')
-    .select('id, name')
+    .select('id, name, furigana')
     .eq('facilityId', session.facilityId)
+    .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
+
+  const residents = residentsRaw ?? []
 
   const facilityResidentIds = (residents ?? []).map(r => r.id)
 
@@ -55,14 +59,7 @@ export default async function HistoryPage({
       <h2 className="text-xl font-bold text-gray-800">過去記録検索</h2>
 
       <form className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="text-xs text-gray-600 block mb-1">利用者</label>
-          <select name="residentId" defaultValue={residentId}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
-            <option value="">全員</option>
-            {residents?.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
-        </div>
+        <HistoryResidentFilter residents={residents} selectedId={residentId} />
         <div>
           <label className="text-xs text-gray-600 block mb-1">開始日</label>
           <input type="date" name="from" defaultValue={from}
@@ -125,7 +122,7 @@ export default async function HistoryPage({
               )
             })}
             {(!records || records.length === 0) && (
-              <tr><td colSpan={11} className="text-center py-8 text-gray-400">記録がありません</td></tr>
+              <tr><td colSpan={14} className="text-center py-8 text-gray-400">記録がありません</td></tr>
             )}
           </tbody>
         </table>
