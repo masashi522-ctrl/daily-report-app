@@ -585,6 +585,9 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
                     placeholder="特記事項（体重・SpO2等）"
                     className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm" />
+                  <textarea value={d.dailyNote ?? ''} onChange={e => upd(resident.id, 'dailyNote', e.target.value)}
+                    rows={3} placeholder="その日の様子（活動の様子・ご本人の言葉など）"
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm resize-y" />
                 </div>
               </div>
               )}
@@ -614,6 +617,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
               <col style={{ width: '86px' }} />   {/* 備考 */}
               <col style={{ width: '90px' }} />   {/* 特記 */}
+              <col style={{ width: '150px' }} />  {/* その日の様子 */}
               <col style={{ width: '90px' }} />   {/* 保存 */}
             </colgroup>
             <thead>
@@ -651,6 +655,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                 </th>
                 <th className={thNote}>備考</th>
                 <th className={thNote}>特記事項</th>
+                <th className={thNote}>その日の様子</th>
                 <th className={thSave}>保存</th>
               </tr>
             </thead>
@@ -820,6 +825,12 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     <td className={td}>
                       <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
                         placeholder="体重・SpO2等" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                    </td>
+                    {/* その日の様子 */}
+                    <td className={td}>
+                      <textarea value={d.dailyNote ?? ''} onChange={e => upd(resident.id, 'dailyNote', e.target.value)}
+                        rows={2} placeholder="活動の様子・ご本人の言葉など"
+                        className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs resize-y" />
                     </td>
                     {/* 保存 */}
                     <td className={`${td} text-center`}>

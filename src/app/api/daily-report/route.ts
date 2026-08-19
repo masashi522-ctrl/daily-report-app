@@ -31,6 +31,8 @@ const TONE_RULES = `
 【書いてはいけない内容】
 ・記録に無いことを書かないこと。会話の内容、表情、レクリエーションの種目など、
 　上のデータに書かれていない出来事を推測で作り出すことは禁止です
+・「その日の様子（職員の記録）」がある場合は、その内容を中心に文章を組み立てること。
+　記載がない場合は、無理に様子を描写せず、記録から言えることだけを簡潔に書くこと
 ・体温・血圧・脈拍・水分量などの数値を本文に書かないこと（記録欄に別途記載されています）
 ・服薬の要否や体調の原因についての医療的な判断・助言を書かないこと。
 　気になる所見は「〜が見られました」と事実のみを伝えること
@@ -74,6 +76,7 @@ async function generateAIText(
     '服薬: 朝' + (record.medicationMorning ? '有' : '無') + ' 昼' + (lunchMed ? '有' : '無') + ' 夕' + (record.medicationEvening ? '有' : '無'),
     '機能訓練: ' + (record.trainingDone ? '実施' + (trainingTime ? '（' + trainingTime + '）' : '') : '未実施'),
     record.specialNotes ? '特記事項: ' + record.specialNotes : '',
+    record.dailyNote ? 'その日の様子（職員の記録）: ' + record.dailyNote : '',
     resident.specialCondition ? '利用者特記: ' + resident.specialCondition : '',
   ].filter(Boolean).join('\n')
 

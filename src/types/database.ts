@@ -154,6 +154,8 @@ export interface DailyRecord {
   eyeDrops: string | null
   insulin: string | null
   specialNotes: string | null
+  /** その日の様子。連絡帳のAI文章の材料にも使う */
+  dailyNote: string | null
   // 出欠
   isAbsent: boolean
   absenceReason: string | null
