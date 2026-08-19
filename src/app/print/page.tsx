@@ -100,8 +100,7 @@ export default async function PrintPage({
             <col style={{ width: '4%' }} />   {/* 昼後 */}
             <col style={{ width: '4%' }} />   {/* 夕薬 */}
             <col style={{ width: '4%' }} />   {/* 口腔 */}
-            <col style={{ width: '13.5%' }} />{/* 備考 */}
-            <col style={{ width: '17%' }} />  {/* 特記 */}
+            <col style={{ width: '30.5%' }} />{/* 特記 */}
           </colgroup>
           <thead>
             <tr>
@@ -118,7 +117,6 @@ export default async function PrintPage({
               <th style={thStyle}>昼後</th>
               <th style={thStyle}>夕薬</th>
               <th style={thStyle}>口腔</th>
-              <th style={thStyle}>備考</th>
               <th style={thStyle}>特記事項</th>
             </tr>
           </thead>
@@ -175,7 +173,6 @@ export default async function PrintPage({
                   <td style={center}>{r?.medicationAfterLunch ? '○' : <span style={{ color: '#d1d5db' }}>-</span>}</td>
                   <td style={center}>{r?.medicationEvening ? '○' : <span style={{ color: '#d1d5db' }}>-</span>}</td>
                   <td style={center}>{r?.oralCare ? '○' : <span style={{ color: '#d1d5db' }}>-</span>}</td>
-                  <td style={left}>{r?.oralCareNote ?? ''}</td>
                   <td style={left}>{r?.specialNotes ?? ''}</td>
                 </tr>
               )

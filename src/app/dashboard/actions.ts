@@ -32,7 +32,6 @@ function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; da
     functionalTrainingStart: data.functionalTrainingStart ?? null,
     functionalTrainingEnd: data.functionalTrainingEnd ?? null,
     oralCare: data.oralCare ?? false,
-    oralCareNote: data.oralCareNote ?? null,
     spo2Before: data.spo2Before ?? null,
     spo2After: data.spo2After ?? null,
     weight: data.weight ?? null,

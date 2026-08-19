@@ -94,7 +94,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const todayNum = new Date(date + 'T00:00:00').getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
 
-  // 必須項目（備考・特記事項を除く）の未入力チェック
+  // 必須項目（特記事項・その日の様子を除く）の未入力チェック
   const REQUIRED: { key: keyof RecordDraft; label: string }[] = [
     { key: 'bpSystolic',    label: '血圧収縮AM' },
     { key: 'bpSystolicPm',  label: '血圧収縮PM' },
@@ -576,14 +576,11 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     </label>
                   ))}
                 </div>
-                {/* 備考・特記 */}
+                {/* 特記事項・その日の様子 */}
                 <div className="space-y-2 pt-2 border-t border-gray-200">
-                  <div className="text-[10px] font-bold text-gray-500">備考・特記</div>
-                  <input type="text" value={d.oralCareNote ?? ''} onChange={e => upd(resident.id, 'oralCareNote', e.target.value)}
-                    placeholder="備考"
-                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm" />
+                  <div className="text-[10px] font-bold text-gray-500">特記事項・その日の様子</div>
                   <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
-                    placeholder="特記事項（体重・SpO2等）"
+                    placeholder="特記事項（体重・SpO2・口腔ケアの気づき等）"
                     className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm" />
                   <textarea value={d.dailyNote ?? ''} onChange={e => upd(resident.id, 'dailyNote', e.target.value)}
                     rows={3} placeholder="その日の様子（活動の様子・ご本人の言葉など）"
@@ -615,7 +612,6 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               <col style={{ width: '92px' }} />   {/* 食事 */}
               <col style={{ width: '100px' }} />  {/* 水分 AM+PM */}
               <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
-              <col style={{ width: '86px' }} />   {/* 備考 */}
               <col style={{ width: '90px' }} />   {/* 特記 */}
               <col style={{ width: '150px' }} />  {/* その日の様子 */}
               <col style={{ width: '90px' }} />   {/* 保存 */}
@@ -653,7 +649,6 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     <span>朝</span><span>昼前</span><span>昼後</span><span>夕前</span><span>夕後</span><span>口腔</span>
                   </div>
                 </th>
-                <th className={thNote}>備考</th>
                 <th className={thNote}>特記事項</th>
                 <th className={thNote}>その日の様子</th>
                 <th className={thSave}>保存</th>
@@ -816,15 +811,11 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                         ))}
                       </div>
                     </td>
-                    {/* 備考 */}
-                    <td className={td}>
-                      <input type="text" value={d.oralCareNote ?? ''} onChange={e => upd(resident.id, 'oralCareNote', e.target.value)}
-                        placeholder="備考" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
-                    </td>
                     {/* 特記 */}
                     <td className={td}>
                       <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
-                        placeholder="体重・SpO2等" className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                        placeholder="体重・SpO2・口腔ケアの気づき等"
+                        className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
                     </td>
                     {/* その日の様子 */}
                     <td className={td}>

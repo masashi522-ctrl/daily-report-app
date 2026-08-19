@@ -143,7 +143,9 @@ export default async function AnalyticsPage({
         x.specialNotes?.trim() ? { date: x.date, label: '特記事項', text: x.specialNotes.trim() } : null,
         x.bathingNote?.trim() ? { date: x.date, label: '入浴', text: x.bathingNote.trim() } : null,
         x.trainingNote?.trim() ? { date: x.date, label: '機能訓練', text: x.trainingNote.trim() } : null,
-        x.oralCareNote?.trim() ? { date: x.date, label: '口腔ケア', text: x.oralCareNote.trim() } : null,
+        // 備考欄は特記事項に統合済み。統合前の記録が残っている場合のみ拾う
+        x.oralCareNote?.trim() ? { date: x.date, label: '備考', text: x.oralCareNote.trim() } : null,
+        x.dailyNote?.trim() ? { date: x.date, label: 'その日の様子', text: x.dailyNote.trim() } : null,
       ])
       .filter((v): v is { date: string; label: string; text: string } => v !== null)
 
