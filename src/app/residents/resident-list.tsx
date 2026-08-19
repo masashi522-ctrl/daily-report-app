@@ -158,6 +158,7 @@ export default function ResidentList({ residents, editId }: Props) {
               <th className="px-3 py-2.5 text-left text-sky-700 font-semibold">利用曜日</th>
               <th className="px-3 py-2.5 text-left text-red-600 font-semibold">禁止食品</th>
               <th className="px-3 py-2.5 text-left text-gray-600 font-semibold">特記事項</th>
+              <th className="px-3 py-2.5 text-left text-teal-700 font-semibold">ゴールのイメージ</th>
               <th className="px-3 py-2.5 text-center text-emerald-700 font-semibold">状態</th>
               <th className="px-3 py-2.5 text-center text-gray-600 font-semibold">操作</th>
             </tr>
@@ -176,6 +177,26 @@ export default function ResidentList({ residents, editId }: Props) {
                 </td>
                 <td className="px-3 py-2 text-red-600 text-xs">{r.foodRestrictions ?? '-'}</td>
                 <td className="px-3 py-2 text-gray-500 text-xs max-w-[120px] truncate">{r.specialCondition ?? '-'}</td>
+                <td className="px-3 py-2 text-xs max-w-[260px]">
+                  {r.goalImage || r.subGoalImage ? (
+                    <div className="flex flex-col gap-0.5">
+                      {r.goalImage && (
+                        <div className="flex items-start gap-1">
+                          <span className="text-[9px] text-teal-700 bg-teal-50 border border-teal-200 rounded px-1 py-px shrink-0 mt-px">メイン</span>
+                          <span className="text-gray-700">{r.goalImage}</span>
+                        </div>
+                      )}
+                      {(r.subGoalImage ?? '').split('\n').map((s: string) => s.trim()).filter(Boolean).map((sub: string, si: number) => (
+                        <div key={si} className="flex items-start gap-1">
+                          <span className="text-[9px] text-sky-700 bg-sky-50 border border-sky-200 rounded px-1 py-px shrink-0 mt-px">サブ</span>
+                          <span className="text-gray-600">{sub}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-center">
                   <form action={toggleActive.bind(null, r.id, !r.isActive)}>
                     <button className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -203,7 +224,7 @@ export default function ResidentList({ residents, editId }: Props) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-8 text-gray-400">
+                <td colSpan={8} className="text-center py-8 text-gray-400">
                   {appliedText || gojuuonRow ? '該当する利用者が見つかりません' : '利用者が登録されていません'}
                 </td>
               </tr>
@@ -255,6 +276,25 @@ export default function ResidentList({ residents, editId }: Props) {
                 <div className="col-span-2">
                   <p className="text-xs text-gray-400">特記事項</p>
                   <p className="text-xs text-gray-600 mt-0.5">{r.specialCondition}</p>
+                </div>
+              )}
+              {(r.goalImage || r.subGoalImage) && (
+                <div className="col-span-2">
+                  <p className="text-xs text-gray-400">ゴールのイメージ</p>
+                  <div className="flex flex-col gap-1 mt-0.5">
+                    {r.goalImage && (
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-[9px] text-teal-700 bg-teal-50 border border-teal-200 rounded px-1 py-px shrink-0 mt-px">メイン</span>
+                        <span className="text-xs text-gray-700">{r.goalImage}</span>
+                      </div>
+                    )}
+                    {(r.subGoalImage ?? '').split('\n').map((s: string) => s.trim()).filter(Boolean).map((sub: string, si: number) => (
+                      <div key={si} className="flex items-start gap-1.5">
+                        <span className="text-[9px] text-sky-700 bg-sky-50 border border-sky-200 rounded px-1 py-px shrink-0 mt-px">サブ</span>
+                        <span className="text-xs text-gray-600">{sub}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
