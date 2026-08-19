@@ -81,6 +81,10 @@ export const SERVICE_START_TIMES = (() => {
 
 export const SERVICE_TIME_CATEGORIES = ['3-4', '4-5', '5-6', '6-7', '7-8', '8-9'] as const
 
+// 排便の記録項目
+export const BOWEL_AMOUNT_OPTIONS = ['少量', '片手', '両手', '多量'] as const
+export const BOWEL_QUALITY_OPTIONS = ['コロ便', '硬便', '普通', '軟便', '水様便'] as const
+
 export interface HospitalizationPeriod {
   admissionDate: string
   dischargeDate: string | null
@@ -156,6 +160,10 @@ export interface DailyRecord {
   specialNotes: string | null
   /** その日の様子。連絡帳のAI文章の材料にも使う */
   dailyNote: string | null
+  /** 排便の量（少量・片手・両手・多量） */
+  bowelAmount: string | null
+  /** 排便の質（コロ便・硬便・普通・軟便・水様便） */
+  bowelQuality: string | null
   // 出欠
   isAbsent: boolean
   absenceReason: string | null

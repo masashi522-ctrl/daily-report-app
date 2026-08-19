@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { FOOD_TYPE_LABELS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
+import { FOOD_TYPE_LABELS, BOWEL_AMOUNT_OPTIONS, BOWEL_QUALITY_OPTIONS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
 import { isHospitalizedOn } from '@/lib/hospitalization'
 import { saveRecord, saveAllRecords } from './actions'
 
@@ -660,6 +660,24 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     </select>
                   </div>
                 </div>
+                {/* 排便 */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-orange-100">
+                  <div className="col-span-2 text-[10px] font-bold text-orange-600 -mb-1">排便</div>
+                  <div>
+                    <span className="text-xs text-gray-500 mb-0.5 block">量</span>
+                    <select value={d.bowelAmount ?? ''} onChange={e => upd(resident.id, 'bowelAmount', e.target.value || null)} className={selMd}>
+                      <option value="">-</option>
+                      {BOWEL_AMOUNT_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 mb-0.5 block">質</span>
+                    <select value={d.bowelQuality ?? ''} onChange={e => upd(resident.id, 'bowelQuality', e.target.value || null)} className={selMd}>
+                      <option value="">-</option>
+                      {BOWEL_QUALITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                </div>
                 {/* 服薬・口腔ケア */}
                 <div className="grid grid-cols-6 gap-1 pt-2 border-t border-violet-100">
                   <div className="col-span-6 text-[10px] font-bold text-violet-600 -mb-1">服薬・口腔ケア</div>
@@ -714,6 +732,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               <col style={{ width: '112px' }} />  {/* 体温 AM+PM */}
               <col style={{ width: '92px' }} />   {/* 食事 */}
               <col style={{ width: '100px' }} />  {/* 水分 AM+PM */}
+              <col style={{ width: '120px' }} />  {/* 排便 */}
               <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
               <col style={{ width: '90px' }} />   {/* 特記 */}
               <col style={{ width: '150px' }} />  {/* その日の様子 */}
@@ -745,6 +764,10 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                 <th className={thFluid}>
                   <div>水分 ml</div>
                   <div className="flex justify-around text-[9px] font-normal opacity-70"><span>AM</span><span>PM</span></div>
+                </th>
+                <th className={thFluid}>
+                  <div>排便</div>
+                  <div className="flex justify-around text-[9px] font-normal opacity-70"><span>量</span><span>質</span></div>
                 </th>
                 <th className={thMed}>
                   <div>服薬・口腔</div>
@@ -904,6 +927,21 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                           className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[46px]">
                           <option value="">PM</option>
                           {FLUID_SELECT.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                    </td>
+                    {/* 排便 量/質 */}
+                    <td className={td}>
+                      <div className="flex items-center gap-1 justify-center">
+                        <select value={d.bowelAmount ?? ''} onChange={e => upd(resident.id, 'bowelAmount', e.target.value || null)}
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[52px]">
+                          <option value="">量</option>
+                          {BOWEL_AMOUNT_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                        <select value={d.bowelQuality ?? ''} onChange={e => upd(resident.id, 'bowelQuality', e.target.value || null)}
+                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[60px]">
+                          <option value="">質</option>
+                          {BOWEL_QUALITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </div>
                     </td>

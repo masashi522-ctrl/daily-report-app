@@ -39,6 +39,8 @@ function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; da
     insulin: data.insulin ?? null,
     specialNotes: data.specialNotes ?? null,
     dailyNote: data.dailyNote ?? null,
+    bowelAmount: data.bowelAmount ?? null,
+    bowelQuality: data.bowelQuality ?? null,
     isAbsent: data.isAbsent ?? false,
     absenceReason: data.absenceReason ?? null,
     updatedAt: new Date().toISOString(),
