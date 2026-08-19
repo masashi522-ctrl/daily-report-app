@@ -301,8 +301,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const vRow  = 'grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 items-center'
   const vLbl  = 'text-xs text-gray-500 leading-tight'
   // テーブルヘッダー：カテゴリ別カラー
-  const thBase   = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b whitespace-nowrap'
-  const thName   = `${thBase} bg-slate-100   text-slate-700  border-slate-200`
+  const thBase   = 'px-1 py-1.5 font-semibold text-center text-[11px] border-b whitespace-nowrap sticky top-0 z-20'
+  const thName   = `${thBase} bg-slate-100   text-slate-700  border-slate-200 sticky left-0 z-30`
   const thVital  = `${thBase} bg-rose-50     text-rose-700   border-rose-100`
 const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
   const thFluid  = `${thBase} bg-sky-50      text-sky-700    border-sky-100`
@@ -715,7 +715,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
       </div>
 
       {/* ── デスクトップ：1行テーブル（横スクロールあり・幅広め） ── */}
-      <div className="hidden md:block rounded-xl border border-gray-200 bg-white shadow-sm overflow-x-auto">
+      <div className="hidden md:block rounded-xl border border-gray-200 bg-white shadow-sm overflow-auto max-h-[calc(100vh-13rem)] overscroll-contain">
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p>{residents.length === 0 ? '利用者が登録されていません' : '該当する利用者がいません'}</p>
@@ -792,9 +792,11 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   : missing.length === 0 ? base
                   : missing[0] === '未記録' ? 'bg-orange-50 hover:bg-orange-100/60'
                   : 'bg-amber-50/70 hover:bg-amber-100/60'
+                // 名前列は左端に固定表示するため、下の内容が透けない不透明な背景色にする
+                const nameCellBg = rowBg.replace(/\/\d+/g, '')
                 return (<tr key={resident.id} id={`resident-${resident.id}`} className={`${rowBg} transition border-t border-gray-100 ${isAbsent ? 'opacity-60' : ''}`}>
-                    {/* 名前 */}
-                    <td className={td}>
+                    {/* 名前（横スクロール時も見えるよう左端に固定） */}
+                    <td className={`${td} sticky left-0 z-10 ${nameCellBg}`}>
                       <div className={`font-semibold leading-tight text-[11px] truncate ${isAbsent ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{resident.name}</div>
                       {isHospitalized && (
                         <div className="text-[9px] text-amber-700 font-semibold">入院中</div>
