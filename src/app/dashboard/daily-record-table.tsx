@@ -90,6 +90,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [todayOnly, setTodayOnly] = useState(true)
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [incompleteOnly, setIncompleteOnly] = useState(false)
+  const [recheckOnly, setRecheckOnly] = useState(false)
 
   const todayNum = new Date(date + 'T00:00:00').getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
@@ -122,12 +123,45 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   function tempAlertPm(d: RecordDraft): boolean {
     return d.tempAfternoon != null && (d.tempAfternoon < 30 || d.tempAfternoon > 42)
   }
+  // 発熱の目安（37.5℃以上）。再検・様子観察の対象
+  function feverAlertAm(d: RecordDraft): boolean {
+    return d.tempMorning != null && d.tempMorning >= 37.5 && d.tempMorning <= 42
+  }
+  function feverAlertPm(d: RecordDraft): boolean {
+    return d.tempAfternoon != null && d.tempAfternoon >= 37.5 && d.tempAfternoon <= 42
+  }
+  // 脈拍の目安（100以上または50以下）。再検の対象
+  function pulseAlertAm(d: RecordDraft): boolean {
+    return d.pulse != null && (d.pulse >= 100 || d.pulse <= 50)
+  }
+  function pulseAlertPm(d: RecordDraft): boolean {
+    return d.pulsePm != null && (d.pulsePm >= 100 || d.pulsePm <= 50)
+  }
+  // 再検が必要な値がひとつでもあるか
+  function hasRecheck(d: RecordDraft): boolean {
+    return bpAlertAm(d) || bpAlertPm(d) ||
+      feverAlertAm(d) || feverAlertPm(d) ||
+      pulseAlertAm(d) || pulseAlertPm(d)
+  }
+
+  function missingKeys(id: string): (keyof RecordDraft)[] {
+    const d = getDraft(id)
+    return REQUIRED.filter(f => (d as Record<string, unknown>)[f.key] == null).map(f => f.key)
+  }
 
   function getMissing(id: string): string[] {
     const d = getDraft(id)
     const hasRecord = !!recordMap[id]
     if (!hasRecord) return ['未記録']
     return REQUIRED.filter(f => (d as Record<string, unknown>)[f.key] == null).map(f => f.label)
+  }
+
+  // 入力欄の背景色。再検が必要な値は赤、未入力は黄で示す
+  function cellTone(id: string, keys: (keyof RecordDraft)[], alert: boolean, isAbsent: boolean): string {
+    if (isAbsent) return ''
+    if (alert) return 'bg-red-50'
+    const missing = missingKeys(id)
+    return keys.some(k => missing.includes(k)) ? 'bg-amber-50' : ''
   }
 
   function matchRow(r: Resident) {
@@ -153,11 +187,10 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     } else if (searchText) {
       if (!r.name.includes(searchText) && !(r.furigana ?? '').includes(searchText)) return false
     }
-    if (incompleteOnly) {
-      const d = getDraft(r.id)
-      const absent = d.isAbsent ?? recordMap[r.id]?.isAbsent ?? false
-      return !absent && getMissing(r.id).length > 0
-    }
+    const d = getDraft(r.id)
+    const absent = d.isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+    if (incompleteOnly && (absent || getMissing(r.id).length === 0)) return false
+    if (recheckOnly && (absent || !hasRecheck(d))) return false
     return true
   })
 
@@ -169,6 +202,10 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const incompleteCount = scheduledToday.filter(r => {
     const absent = getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
     return !absent && getMissing(r.id).length > 0
+  }).length
+  const recheckCount = scheduledToday.filter(r => {
+    const absent = getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+    return !absent && hasRecheck(getDraft(r.id))
   }).length
 
   // 名前ボタン用：曜日+50音+テキストで絞り込む
@@ -316,6 +353,27 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
               ⚠ 未入力 {incompleteCount}名{incompleteOnly ? ' ✕' : ''}
             </button>
           )}
+          {recheckCount > 0 && (
+            <button onClick={() => setRecheckOnly(v => !v)}
+              className={`px-2.5 py-1 rounded-full font-bold transition ${
+                recheckOnly
+                  ? 'bg-red-600 text-white'
+                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+              }`}>
+              ⚠ 要再検 {recheckCount}名{recheckOnly ? ' ✕' : ''}
+            </button>
+          )}
+        </div>
+        {/* 色の意味の凡例 */}
+        <div className="flex items-center gap-3 text-[10px] text-gray-500 flex-wrap">
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-3 rounded bg-red-50 border border-red-300" />
+            再検が必要な値（血圧 160以上/90以下・体温 37.5℃以上・脈拍 100以上/50以下）
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-3 rounded bg-amber-50 border border-amber-300" />
+            未入力
+          </span>
         </div>
         {/* テキスト検索（名前ボタン絞り込み用） */}
         <div className="flex items-center gap-2 w-full">
@@ -473,6 +531,31 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     {!isAbsent && bpAlertPm(d) && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
                         血圧再検PM
+                      </span>
+                    )}
+                    {!isAbsent && feverAlertAm(d) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
+                        発熱・再検AM
+                      </span>
+                    )}
+                    {!isAbsent && feverAlertPm(d) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
+                        発熱・再検PM
+                      </span>
+                    )}
+                    {!isAbsent && pulseAlertAm(d) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
+                        脈拍再検AM
+                      </span>
+                    )}
+                    {!isAbsent && pulseAlertPm(d) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse">
+                        脈拍再検PM
+                      </span>
+                    )}
+                    {!isAbsent && (tempAlertAm(d) || tempAlertPm(d)) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-orange-500 text-white">
+                        体温の入力を確認
                       </span>
                     )}
                   </div>
@@ -690,6 +773,11 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                               {missing[0] === '未記録' ? '⚠ 未記録' : `⚠ ${missing.length}項目未入力`}
                             </div>
                           )}
+                          {hasRecheck(d) && (
+                            <div className="text-[9px] font-bold mt-0.5 text-white bg-red-500 rounded px-1 inline-block">
+                              要再検
+                            </div>
+                          )}
                         </>
                       )}
                       <button
@@ -701,7 +789,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       </button>
                     </td>
                     {/* 血圧AM */}
-                    <td className={`${td} ${bpAlertAm(d) && !isAbsent ? 'bg-red-50' : ''}`}>
+                    <td className={`${td} ${cellTone(resident.id, ['bpSystolic', 'bpDiastolic'], bpAlertAm(d), isAbsent)}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-bp-sys" placeholder="収縮" min={70} max={200}
                           value={d.bpSystolic ?? ''} onChange={numHandler(resident.id, 'bpSystolic')}
@@ -718,7 +806,7 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       )}
                     </td>
                     {/* 血圧PM */}
-                    <td className={`${td} ${bpAlertPm(d) && !isAbsent ? 'bg-red-50' : ''}`}>
+                    <td className={`${td} ${cellTone(resident.id, ['bpSystolicPm', 'bpDiastolicPm'], bpAlertPm(d), isAbsent)}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-bp-sys" placeholder="収縮" min={70} max={200}
                           value={d.bpSystolicPm ?? ''} onChange={numHandler(resident.id, 'bpSystolicPm')}
@@ -734,30 +822,38 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       )}
                     </td>
                     {/* 脈拍 AM/PM */}
-                    <td className={td}>
+                    <td className={`${td} ${cellTone(resident.id, ['pulse', 'pulsePm'], pulseAlertAm(d) || pulseAlertPm(d), isAbsent)}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-pulse" placeholder="AM" min={30} max={200}
                           value={d.pulse ?? ''} onChange={numHandler(resident.id, 'pulse')}
-                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
+                          className={`${numBase} ${pulseAlertAm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '48px', ...(pulseAlertAm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                         <input type="number" list="dl-pulse" placeholder="PM" min={30} max={200}
                           value={d.pulsePm ?? ''} onChange={numHandler(resident.id, 'pulsePm')}
-                          className={numBase} style={{ ...inputStyle, width: '48px' }} />
+                          className={`${numBase} ${pulseAlertPm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '48px', ...(pulseAlertPm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                       </div>
+                      {(pulseAlertAm(d) || pulseAlertPm(d)) && !isAbsent && (
+                        <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">脈拍再検</div>
+                      )}
                     </td>
                     {/* 体温 AM/PM */}
-                    <td className={`${td} ${(tempAlertAm(d) || tempAlertPm(d)) && !isAbsent ? 'bg-red-50' : ''}`}>
+                    <td className={`${td} ${cellTone(resident.id, ['tempMorning', 'tempAfternoon'], tempAlertAm(d) || tempAlertPm(d) || feverAlertAm(d) || feverAlertPm(d), isAbsent)}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <input type="number" list="dl-temp" placeholder="AM" step="0.1" min={35} max={42}
                           value={d.tempMorning ?? ''} onChange={numHandler(resident.id, 'tempMorning')}
-                          className={`${numBase} ${tempAlertAm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
-                          style={{ ...inputStyle, width: '48px', ...(tempAlertAm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
+                          className={`${numBase} ${tempAlertAm(d) || feverAlertAm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '48px', ...(tempAlertAm(d) || feverAlertAm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                         <input type="number" list="dl-temp" placeholder="PM" step="0.1" min={35} max={42}
                           value={d.tempAfternoon ?? ''} onChange={numHandler(resident.id, 'tempAfternoon')}
-                          className={`${numBase} ${tempAlertPm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
-                          style={{ ...inputStyle, width: '48px', ...(tempAlertPm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
+                          className={`${numBase} ${tempAlertPm(d) || feverAlertPm(d) ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
+                          style={{ ...inputStyle, width: '48px', ...(tempAlertPm(d) || feverAlertPm(d) ? { color: '#b91c1c', WebkitTextFillColor: '#b91c1c' } : {}) }} />
                       </div>
                       {(tempAlertAm(d) || tempAlertPm(d)) && !isAbsent && (
                         <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">体温確認</div>
+                      )}
+                      {!tempAlertAm(d) && !tempAlertPm(d) && (feverAlertAm(d) || feverAlertPm(d)) && !isAbsent && (
+                        <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">発熱・再検</div>
                       )}
                     </td>
                     {/* 食事 主/副 */}
