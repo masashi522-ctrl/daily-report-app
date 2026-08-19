@@ -45,6 +45,8 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
   const bathingSpecialItems      = (formData.getAll('bathingSpecialItems') as string[]).join(',') || null
   const bathingSpecialFreeText   = (formData.get('bathingSpecialFreeText') as string) || null
+  const gender                   = (formData.get('gender') as string) || null
+  const goalImage                = (formData.get('goalImage') as string)?.trim() || null
 
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
@@ -69,6 +71,8 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     bathingCareItems,
     bathingSpecialItems,
     bathingSpecialFreeText,
+    gender,
+    goalImage,
     facilityId: session.facilityId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -128,6 +132,8 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
   const bathingSpecialItems      = (formData.getAll('bathingSpecialItems') as string[]).join(',') || null
   const bathingSpecialFreeText   = (formData.get('bathingSpecialFreeText') as string) || null
+  const gender                   = (formData.get('gender') as string) || null
+  const goalImage                = (formData.get('goalImage') as string)?.trim() || null
 
   if (!name) return { error: '名前は必須です' }
 
@@ -153,6 +159,8 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     bathingCareItems,
     bathingSpecialItems,
     bathingSpecialFreeText,
+    gender,
+    goalImage,
     updatedAt: new Date().toISOString(),
   }).eq('id', id).eq('facilityId', session.facilityId)
 

@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { addResident, generateFurigana } from './actions'
+import GoalImageField from './goal-image-field'
 import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME_CATEGORIES, BATHING_CARE_ITEMS, BATHING_SPECIAL_ITEMS, type HospitalizationPeriod } from '@/types/database'
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -251,6 +252,7 @@ export default function ResidentForm() {
         <textarea name="specialCondition" rows={2} placeholder="例: インスリン、SpO2測定"
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
+      <GoalImageField defaultGender={null} defaultGoalImage={null} />
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">表示順</label>
         <input name="sortOrder" type="number" defaultValue="0"

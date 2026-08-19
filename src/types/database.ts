@@ -110,6 +110,9 @@ export interface Resident {
   serviceStartDate: string | null
   serviceEndDate: string | null
   hospitalizations: HospitalizationPeriod[] | null
+  gender: string | null
+  /** ACPの取り組みで設定するゴールのイメージ */
+  goalImage: string | null
   createdAt: string
   updatedAt: string
 }
