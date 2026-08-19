@@ -21,7 +21,7 @@ const GOJUUON_ROWS = [
   { label: 'わ', chars: 'わをんワヲン' },
 ]
 
-// 過去記録の利用者選択。他の画面と同じく、名前検索と50音で絞り込めるようにする。
+// 過去記録の利用者選択。利用者管理の検索バーと同じ見た目・操作に揃えている。
 // 選択した利用者は hidden input で親のGETフォームに渡す。
 export default function HistoryResidentFilter({
   residents,
@@ -31,7 +31,7 @@ export default function HistoryResidentFilter({
   selectedId: string
 }) {
   const [currentId, setCurrentId] = useState(selectedId)
-  const [searchText, setSearchText] = useState('')
+  const [inputText, setInputText] = useState('')
   const [appliedText, setAppliedText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
 
@@ -52,45 +52,29 @@ export default function HistoryResidentFilter({
     <div className="w-full flex flex-col gap-2">
       <input type="hidden" name="residentId" value={currentId} />
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-gray-600">利用者</span>
-        <span className={`text-sm font-medium px-2 py-1 rounded-lg ${
-          currentId ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-600'
-        }`}>
-          {currentId ? selectedName : '全員'}
-        </span>
-        {currentId && (
-          <button type="button" onClick={() => setCurrentId('')}
-            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100">
-            全員に戻す
-          </button>
-        )}
-      </div>
-
-      {/* 名前検索 */}
+      {/* テキスト検索（利用者管理と同じ配置） */}
       <div className="flex items-center gap-2">
         <input
           type="text"
-          value={searchText}
-          onChange={e => setSearchText(e.target.value)}
+          value={inputText}
+          onChange={e => setInputText(e.target.value)}
           onKeyDown={e => {
-            // Enterでフォームが送信されないようにし、名前の絞り込みだけを行う
+            // Enterで記録の検索が走らないようにし、名前の絞り込みだけを行う
             if (e.key === 'Enter') {
               e.preventDefault()
-              setAppliedText(searchText)
+              setAppliedText(inputText)
             }
           }}
-          placeholder="名前で絞り込む..."
-          className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+          placeholder="名前で検索..."
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-400"
           style={{ fontSize: '16px' }}
         />
-        <button type="button" onClick={() => setAppliedText(searchText)}
-          className="px-3 py-2 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700 whitespace-nowrap">
-          絞り込む
-        </button>
+        <button type="button" onClick={() => setAppliedText(inputText)}
+          className="px-3 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 whitespace-nowrap"
+        >検索</button>
         {appliedText && (
-          <button type="button" onClick={() => { setSearchText(''); setAppliedText('') }}
-            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2 rounded-lg hover:bg-gray-100">
+          <button type="button" onClick={() => { setInputText(''); setAppliedText('') }}
+            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2 rounded-lg hover:bg-gray-100 whitespace-nowrap">
             ✕
           </button>
         )}
@@ -102,8 +86,8 @@ export default function HistoryResidentFilter({
         <button type="button" onClick={() => setGojuuonRow(null)}
           className={`text-xs px-2 py-1 rounded border font-medium transition ${
             gojuuonRow === null
-              ? 'bg-blue-700 text-white border-blue-700'
-              : 'bg-white text-gray-500 border-gray-200 hover:border-blue-400'
+              ? 'bg-violet-700 text-white border-violet-700'
+              : 'bg-white text-gray-500 border-gray-200 hover:border-violet-400'
           }`}
         >全</button>
         {GOJUUON_ROWS.map(row => (
@@ -111,20 +95,30 @@ export default function HistoryResidentFilter({
             onClick={() => setGojuuonRow(gojuuonRow === row.label ? null : row.label)}
             className={`text-xs px-2 py-1 rounded border transition ${
               gojuuonRow === row.label
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-violet-400 hover:text-violet-600'
             }`}
           >{row.label}</button>
         ))}
       </div>
 
-      {/* 名前ボタン */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs text-gray-400">{filtered.length}/{residents.length}名 表示中</p>
+        <p className="text-xs text-gray-500">
+          対象:{' '}
+          <span className={currentId ? 'font-medium text-violet-700' : 'text-gray-600'}>
+            {currentId ? `${selectedName} 様` : '全員'}
+          </span>
+        </p>
+      </div>
+
+      {/* 氏名ボタン（クリックで対象を選択） */}
       <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto overscroll-contain">
         <button type="button" onClick={() => setCurrentId('')}
           className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
             currentId === ''
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+              ? 'bg-violet-600 text-white border-violet-600'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
           }`}>
           全員
         </button>
@@ -132,8 +126,8 @@ export default function HistoryResidentFilter({
           <button key={r.id} type="button" onClick={() => setCurrentId(r.id)}
             className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
               currentId === r.id
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600'
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
             }`}>
             {r.name}
           </button>
