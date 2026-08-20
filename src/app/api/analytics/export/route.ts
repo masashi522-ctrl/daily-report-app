@@ -9,7 +9,7 @@ function avg(arr: (number | null | undefined)[]) {
 function countOf(arr: boolean[]) { return arr.filter(Boolean).length }
 
 export async function GET(request: Request) {
-  await requireSession()
+  const session = await requireSession()
 
   const { searchParams } = new URL(request.url)
   const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()))
@@ -20,11 +20,19 @@ export async function GET(request: Request) {
   const lastDay = new Date(year, month, 0).getDate()
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-  const { data: residents } = await supabase.from('Resident').select('id, name').eq('isActive', true).order('name')
+  const { data: residents } = await supabase
+    .from('Resident').select('id, name').eq('isActive', true).eq('facilityId', session.facilityId).order('name')
+  const facilityResidentIds = (residents ?? []).map(x => x.id)
 
-  let query = supabase.from('DailyRecord').select('*').gte('date', from).lte('date', to)
+  // 他施設の利用者IDを直接指定されても出力しない
+  if (residentId && !facilityResidentIds.includes(residentId)) {
+    return new Response('利用者が見つかりません', { status: 404 })
+  }
+
+  let query = supabase
+    .from('DailyRecord').select('*').gte('date', from).lte('date', to).in('residentId', facilityResidentIds)
   if (residentId) query = query.eq('residentId', residentId)
-  const { data: records } = await query
+  const { data: records } = facilityResidentIds.length > 0 ? await query : { data: [] }
 
   const r = records ?? []
   const total = r.length
