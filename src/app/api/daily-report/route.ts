@@ -361,12 +361,13 @@ function buildSheet(
     COL.valBg, COL.valFg, false, 10)
   r++
 
-  // ━━━ Row 11: 排便・排尿（手書き欄） ━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ Row 11: 排便・排尿（排尿は手書き欄） ━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 20
   mg(`A${r}:D${r}`, `A${r}`, '排便・排尿', COL.lblBg, COL.lblFg, true, 8)
   mg(`E${r}:F${r}`, `E${r}`, '排　便', COL.lblBg, COL.lblFg, false, 8)
-  mg(`G${r}:H${r}`, `G${r}`, '', COL.valBg, COL.valFg, false, 10)
-  mg(`I${r}:J${r}`, `I${r}`, '', COL.valBg, COL.valFg, false, 10)
+  // 日次記録の排便（量・質）を差し込む。未記録なら手書きできるよう空欄のまま
+  mg(`G${r}:H${r}`, `G${r}`, record?.bowelAmount ?? '', COL.valBg, COL.valFg, false, 10)
+  mg(`I${r}:J${r}`, `I${r}`, record?.bowelQuality ?? '', COL.valBg, COL.valFg, false, 10)
   mg(`K${r}:L${r}`, `K${r}`, '排　尿', COL.lblBg, COL.lblFg, false, 8)
   mg(`M${r}:O${r}`, `M${r}`, '', COL.valBg, COL.valFg, false, 10)
   r++
