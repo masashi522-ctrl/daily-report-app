@@ -221,9 +221,10 @@ function buildSheet(
   r++
 
   // ━━━ Row 2: 利用者名 ＋ 日付 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 18
+  // 氏名は誰の連絡帳か一目で分かるよう大きめに（余白が窮屈にならない高さに合わせる）
+  ws.getRow(r).height = 26
   mg(`A${r}:G${r}`, `A${r}`, resident.name + '　様',
-    COL.valBg, COL.valFg, true, 11, 'left', 'middle')
+    COL.valBg, COL.valFg, true, 16, 'left', 'middle')
   sc(`H${r}`, 'R',     COL.lblBg, COL.lblFg, false, 8)
   sc(`I${r}`, reiwa,   COL.valBg, COL.valFg, false, 9)
   sc(`J${r}`, '年',    COL.lblBg, COL.lblFg, false, 8)
