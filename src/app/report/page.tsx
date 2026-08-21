@@ -2,6 +2,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { type Resident } from '@/types/database'
 import ReportClient from './report-client'
+import { isLineConfigured } from '@/lib/line'
 
 function toDateStr(d: Date) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -41,6 +42,7 @@ export default async function ReportPage({
     <ReportClient
       residents={(residents ?? []) as Resident[]}
       date={today}
+      lineConfigured={isLineConfigured()}
     />
   )
 }

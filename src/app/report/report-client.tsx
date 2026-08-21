@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { type Resident } from '@/types/database'
+import { sendFamilyLine, type SendResult } from './line-actions'
 
 const DOW = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -28,12 +29,17 @@ type Group = { label: string; residents: Resident[] }
 export default function ReportClient({
   residents,
   date,
+  lineConfigured,
 }: {
   residents: Resident[]
   date: string
+  lineConfigured: boolean
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sendResults, setSendResults] = useState<SendResult[] | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
 
   const [y, m, d] = date.split('-').map(Number)
   const dow = new Date(date + 'T00:00:00').getDay()
@@ -92,6 +98,23 @@ export default function ReportClient({
       alert('連絡帳の生成に失敗しました。再度お試しください。')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleSendLine() {
+    if (selectedIds.size === 0 || sending) return
+    setSending(true)
+    setSendResults(null)
+    setSendError(null)
+    try {
+      const res = await sendFamilyLine([...selectedIds], date)
+      if (res.error) setSendError(res.error)
+      else setSendResults(res.results)
+    } catch (e) {
+      console.error(e)
+      setSendError('送信に失敗しました。再度お試しください。')
+    } finally {
+      setSending(false)
     }
   }
 
@@ -246,6 +269,41 @@ export default function ReportClient({
             1シートにつき1名・AIによる日中のご様子を自動生成します
           </p>
         )}
+
+        {/* ── ご家族へLINEで送信 ── */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={handleSendLine}
+            disabled={selectedIds.size === 0 || sending || !lineConfigured}
+            className="w-full py-2.5 rounded-xl border border-teal-300 bg-white text-teal-700 text-sm font-medium hover:bg-teal-50 transition disabled:opacity-40 disabled:hover:bg-white flex items-center justify-center gap-2"
+          >
+            {sending ? 'ご家族へ送信中...' : `選択した${selectedIds.size || ''}名のご家族へLINEで送る`}
+          </button>
+          <p className="text-center text-xs text-gray-400 mt-1.5">
+            {lineConfigured
+              ? '利用者管理で「有効化」と「連絡帳／活動写真」にチェックがあり、LINE連携済みのご家族にのみ送信します'
+              : 'LINE公式アカウントの設定が未登録のため、まだ送信できません'}
+          </p>
+
+          {sendError && (
+            <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">{sendError}</div>
+          )}
+
+          {sendResults && (
+            <div className="mt-2 flex flex-col gap-1">
+              {sendResults.map(r => (
+                <div key={r.residentId} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-white flex items-start justify-between gap-2">
+                  <span className="font-medium text-gray-700 shrink-0">{r.residentName}</span>
+                  <span className={r.errors.length > 0 ? 'text-red-600 text-right' : r.sent > 0 ? 'text-teal-700 text-right' : 'text-gray-400 text-right'}>
+                    {r.errors.length > 0
+                      ? r.errors.join(' / ')
+                      : r.sent > 0 ? `${r.sent}名へ送信しました` : r.skipped ?? '送信対象外'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

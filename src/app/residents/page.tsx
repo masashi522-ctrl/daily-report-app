@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase'
 import ResidentForm from './resident-form'
 import EditResidentForm from './edit-resident-form'
 import ResidentList from './resident-list'
+import FamilyContactPanel from './family-contact-panel'
+import { isLineConfigured } from '@/lib/line'
+import type { FamilyContact, Resident } from '@/types/database'
 
 export default async function ResidentsPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const session = await requireSession()
@@ -18,6 +21,13 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
     .order('name')
 
   const editingResident = editId ? residents?.find(r => r.id === editId) : null
+
+  // 編集中の利用者のご家族だけを読み込む
+  const { data: familyContacts } = editingResident
+    ? await supabase.from('FamilyContact').select('*')
+        .eq('residentId', editingResident.id).eq('facilityId', session.facilityId)
+        .order('createdAt', { ascending: true })
+    : { data: [] }
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,6 +48,11 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
                 </div>
                 <p className="text-xs text-blue-600 mb-4">{editingResident.name}</p>
                 <EditResidentForm resident={editingResident} />
+                <FamilyContactPanel
+                  resident={editingResident as Resident}
+                  contacts={(familyContacts ?? []) as FamilyContact[]}
+                  lineConfigured={isLineConfigured()}
+                />
               </>
             ) : (
               <>

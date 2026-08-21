@@ -120,6 +120,12 @@ export interface Resident {
   goalImage: string | null
   /** サブのゴールのイメージ。1行に1つ */
   subGoalImage: string | null
+  /** ご家族へのLINE連絡を有効にするか。オフなら何も送信しない */
+  familyContactEnabled: boolean
+  /** 連絡帳を共有するか。有効化と両方オンのときだけ送信する */
+  shareDailyReport: boolean
+  /** 活動写真を共有するか。有効化と両方オンのときだけ送信する */
+  shareActivityPhoto: boolean
   createdAt: string
   updatedAt: string
 }
@@ -313,6 +319,56 @@ export interface ResidentMonthlyPhoto {
   createdAt: string
 }
 
+export const FAMILY_RELATIONSHIPS = [
+  '長男', '長女', '次男', '次女', '三男', '三女',
+  '夫', '妻', '孫', '兄', '姉', '弟', '妹', '甥', '姪', 'その他',
+] as const
+export type FamilyRelationship = typeof FAMILY_RELATIONSHIPS[number]
+
+/** LINEでの連絡先となるご家族 */
+export interface FamilyContact {
+  id: string
+  facilityId: string
+  residentId: string
+  name: string
+  relationship: string | null
+  /** 検索用のLINE ID。台帳としての控えで、送信には使えない */
+  lineId: string | null
+  /** 友だち追加時に発行される内部ユーザーID。実際の送信先 */
+  lineUserId: string | null
+  phone: string | null
+  isActive: boolean
+  /** lineUserId が紐づいた日時。未連携なら null */
+  linkedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** 友だち追加をご家族に紐づけるための連携コード */
+export interface FamilyLinkCode {
+  code: string
+  familyContactId: string
+  facilityId: string
+  expiresAt: string
+  usedAt: string | null
+  createdAt: string
+}
+
+export type FamilyMessageKind = 'REPORT' | 'PHOTO'
+export type FamilyMessageStatus = 'SENT' | 'FAILED'
+
+export interface FamilyMessageLog {
+  id: string
+  facilityId: string
+  residentId: string
+  familyContactId: string
+  date: string
+  kind: FamilyMessageKind
+  status: FamilyMessageStatus
+  error: string | null
+  sentAt: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -322,6 +378,9 @@ export interface Database {
       TrainingPlan: { Row: TrainingPlan; Insert: Omit<TrainingPlan, 'createdAt' | 'updatedAt'>; Update: Partial<TrainingPlan> }
       CarePlan: { Row: CarePlan; Insert: Omit<CarePlan, 'createdAt' | 'updatedAt'>; Update: Partial<CarePlan> }
       ResidentMonthlyPhoto: { Row: ResidentMonthlyPhoto; Insert: Omit<ResidentMonthlyPhoto, 'id' | 'createdAt'>; Update: Partial<ResidentMonthlyPhoto> }
+      FamilyContact: { Row: FamilyContact; Insert: Omit<FamilyContact, 'id' | 'createdAt' | 'updatedAt'>; Update: Partial<FamilyContact> }
+      FamilyLinkCode: { Row: FamilyLinkCode; Insert: Omit<FamilyLinkCode, 'createdAt'>; Update: Partial<FamilyLinkCode> }
+      FamilyMessageLog: { Row: FamilyMessageLog; Insert: Omit<FamilyMessageLog, 'id' | 'sentAt'>; Update: Partial<FamilyMessageLog> }
     }
   }
 }
