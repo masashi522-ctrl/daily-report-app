@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { isResidentInFacility } from '@/lib/facility-guard'
 import { revalidatePath } from 'next/cache'
 import type { TrainingPlanGoal } from '@/types/database'
 
@@ -13,6 +14,9 @@ export async function saveTrainingPlan(
   formData: FormData,
 ): Promise<TrainingPlanFormState> {
   const session = await requireSession()
+  if (!(await isResidentInFacility(residentId, session.facilityId))) {
+    return { error: 'この利用者は操作できません' }
+  }
 
   const planDate                   = (formData.get('planDate') as string) || null
   const previousPlanDate           = (formData.get('previousPlanDate') as string) || null

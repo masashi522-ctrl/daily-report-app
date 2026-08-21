@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { isResidentInFacility, residentIdsInFacility } from '@/lib/facility-guard'
 import { revalidatePath } from 'next/cache'
 import type { DailyRecord } from '@/types/database'
 
@@ -22,7 +23,10 @@ export interface SaveBathingResult {
 }
 
 export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathingResult> {
-  await requireSession()
+  const session = await requireSession()
+  if (!(await isResidentInFacility(draft.residentId, session.facilityId))) {
+    return { data: null, error: 'この利用者は操作できません' }
+  }
 
   const payload = {
     bathing: draft.bathing ?? 'NOT_APPLICABLE',
@@ -88,8 +92,14 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathin
 }
 
 export async function saveAllBathing(drafts: BathingDraft[]): Promise<SaveBathingResult[]> {
-  await requireSession()
-  const results = await Promise.all(drafts.map(saveBathingRecord))
+  const session = await requireSession()
+  const allowed = await residentIdsInFacility(drafts.map(d => d.residentId), session.facilityId)
+
+  const results = await Promise.all(drafts.map(d =>
+    allowed.has(d.residentId)
+      ? saveBathingRecord(d)
+      : Promise.resolve<SaveBathingResult>({ data: null, error: 'この利用者は操作できません' })
+  ))
   revalidatePath('/bathing')
   revalidatePath('/analytics')
   return results

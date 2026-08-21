@@ -58,7 +58,10 @@ export async function updateStaff(_prevState: StaffFormState, formData: FormData
     updates.password = await bcrypt.hash(password, 10)
   }
 
-  const { error } = await supabase.from('Staff').update(updates).eq('id', id)
+  // 他施設の職員を id 指定で書き換えられないよう、自施設に限定する
+  const { data: updated, error } = await supabase
+    .from('Staff').update(updates).eq('id', id).eq('facilityId', session.facilityId).select('id')
+  if (!error && (updated?.length ?? 0) === 0) return { error: 'この職員は操作できません' }
   if (error) {
     if (error.message.includes('duplicate') || error.message.includes('unique')) {
       return { error: 'このメールアドレスはすでに登録されています' }
@@ -73,7 +76,8 @@ export async function updateStaff(_prevState: StaffFormState, formData: FormData
 export async function deleteStaff(id: string) {
   const session = await requireSession()
   if (session.role !== 'ADMIN' && session.userId !== id) return
-  await supabase.from('Staff').delete().eq('id', id)
+  // 他施設の職員を id 指定で削除できないよう、自施設に限定する
+  await supabase.from('Staff').delete().eq('id', id).eq('facilityId', session.facilityId)
   revalidatePath('/dashboard/staff')
 }
 

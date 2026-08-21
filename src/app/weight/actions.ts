@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { isResidentInFacility } from '@/lib/facility-guard'
 import { revalidatePath } from 'next/cache'
 
 export type WeightFormState = { error?: string; success?: boolean } | null
@@ -11,7 +12,10 @@ export async function saveWeight(
   prevState: WeightFormState,
   formData: FormData,
 ): Promise<WeightFormState> {
-  await requireSession()
+  const session = await requireSession()
+  if (!(await isResidentInFacility(residentId, session.facilityId))) {
+    return { error: 'この利用者は操作できません' }
+  }
 
   const date = (formData.get('date') as string)?.trim()
   const weightStr = formData.get('weight') as string
@@ -61,8 +65,11 @@ export async function saveWeight(
 }
 
 export async function deleteWeight(residentId: string, date: string): Promise<{ error?: string }> {
-  await requireSession()
+  const session = await requireSession()
   if (!residentId || !date) return { error: '無効なリクエストです' }
+  if (!(await isResidentInFacility(residentId, session.facilityId))) {
+    return { error: 'この利用者は操作できません' }
+  }
 
   const { error } = await supabase
     .from('DailyRecord')

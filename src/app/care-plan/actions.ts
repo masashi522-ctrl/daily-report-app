@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { isResidentInFacility } from '@/lib/facility-guard'
 import { revalidatePath } from 'next/cache'
 import type { CarePlanGoal } from '@/types/database'
 
@@ -13,6 +14,9 @@ export async function saveCarePlan(
   formData: FormData,
 ): Promise<CarePlanFormState> {
   const session = await requireSession()
+  if (!(await isResidentInFacility(residentId, session.facilityId))) {
+    return { error: 'この利用者は操作できません' }
+  }
 
   const planDate              = (formData.get('planDate') as string) || null
   const staffName             = (formData.get('staffName') as string)?.trim() || null

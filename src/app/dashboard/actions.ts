@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { isResidentInFacility, residentIdsInFacility } from '@/lib/facility-guard'
 import { revalidatePath } from 'next/cache'
 import type { DailyRecord } from '@/types/database'
 
@@ -49,8 +50,21 @@ function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; da
 
 export async function saveRecord(data: Partial<DailyRecord> & { residentId: string; date: string }) {
   const session = await requireSession()
+  if (!(await isResidentInFacility(data.residentId, session.facilityId))) return
 
-  const record = buildRecordFields(data, session.userId)
+  await saveRecordInternal(data, session.userId)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
+}
+
+// 施設チェック済みの前提で保存する。一括保存から件数分呼ばれるため再検証しない
+async function saveRecordInternal(
+  data: Partial<DailyRecord> & { residentId: string; date: string },
+  staffId: string,
+) {
+  const record = buildRecordFields(data, staffId)
 
   // Look up existing record to avoid overwriting fields managed by other pages
   const { data: rows } = await supabase
@@ -80,22 +94,29 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
       createdAt: new Date().toISOString(),
     })
   }
-
-  revalidatePath('/dashboard')
-  revalidatePath('/weight')
-  revalidatePath('/analytics')
 }
 
 export async function saveAllRecords(
   records: (Partial<DailyRecord> & { residentId: string; date: string })[]
 ) {
   if (records.length === 0) return
-  await Promise.all(records.map(r => saveRecord(r)))
+  const session = await requireSession()
+
+  const allowed = await residentIdsInFacility(records.map(r => r.residentId), session.facilityId)
+  await Promise.all(
+    records.filter(r => allowed.has(r.residentId)).map(r => saveRecordInternal(r, session.userId))
+  )
+
   revalidatePath('/dashboard')
+  revalidatePath('/weight')
+  revalidatePath('/analytics')
 }
 
 export async function addTemporaryAttendance({ residentId, date }: { residentId: string; date: string }): Promise<{ success: boolean; error?: string }> {
-  await requireSession()
+  const session = await requireSession()
+  if (!(await isResidentInFacility(residentId, session.facilityId))) {
+    return { success: false, error: 'この利用者は操作できません' }
+  }
 
   const { data: rows } = await supabase
     .from('DailyRecord').select('id').eq('date', date).eq('residentId', residentId)
@@ -143,7 +164,8 @@ export async function addTemporaryAttendance({ residentId, date }: { residentId:
 }
 
 export async function removeTemporaryAttendance({ residentId, date }: { residentId: string; date: string }) {
-  await requireSession()
+  const session = await requireSession()
+  if (!(await isResidentInFacility(residentId, session.facilityId))) return
 
   const { data: rows } = await supabase
     .from('DailyRecord').select('id').eq('date', date).eq('residentId', residentId).limit(1)
