@@ -16,9 +16,9 @@ export default function AddTemporaryModal({ date, nonScheduledResidents, tempora
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
+  // 追加済みと未追加でリストを分けると、1人追加するたびに残りの行が上下にずれて
+  // 次のクリックが別人に当たってしまう。並び順は固定し、行の中身だけを切り替える
   const temporarySet = new Set(temporaryResidentIds)
-  const currentTemporary = nonScheduledResidents.filter(r => temporarySet.has(r.id))
-  const available = nonScheduledResidents.filter(r => !temporarySet.has(r.id))
 
   function handleAdd(residentId: string) {
     setPendingId(residentId)
@@ -73,53 +73,49 @@ export default function AddTemporaryModal({ date, nonScheduledResidents, tempora
               {errorMsg && (
                 <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">{errorMsg}</div>
               )}
-              {/* 本日追加済み */}
-              {currentTemporary.length > 0 && (
+              {nonScheduledResidents.length > 0 ? (
                 <div>
-                  <p className="text-xs font-semibold text-orange-600 mb-2">本日追加済み</p>
+                  {/* 件数は常に表示する。追加時に現れると見出しの行数が変わり一覧がずれるため */}
+                  <p className="text-xs font-semibold text-gray-500 mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                    追加できる利用者
+                    <span className="ml-1.5 text-orange-600">本日 {temporaryResidentIds.length}名 追加済み</span>
+                  </p>
                   <div className="space-y-1.5">
-                    {currentTemporary.map(r => (
-                      <div key={r.id} className="flex items-center justify-between bg-orange-50 rounded-lg px-3 py-2 border border-orange-200">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-200 text-orange-700 font-semibold">臨時</span>
-                          <span className="text-sm font-medium text-gray-800">{r.name}</span>
-                        </div>
-                        <button
-                          onClick={() => handleRemove(r.id)}
-                          disabled={pendingId === r.id}
-                          className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40 px-2 py-0.5 rounded border border-red-200 hover:bg-red-50 transition"
+                    {nonScheduledResidents.map(r => {
+                      const isTemp = temporarySet.has(r.id)
+                      const isPending = pendingId === r.id
+                      return (
+                        <div
+                          key={r.id}
+                          className={`flex items-center justify-between rounded-lg px-3 py-2 border transition ${
+                            isTemp ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200'
+                          }`}
                         >
-                          {pendingId === r.id ? '処理中...' : '解除'}
-                        </button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-medium text-gray-800 truncate">{r.name}</span>
+                            {isTemp && (
+                              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-200 text-orange-700 font-semibold">臨時</span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => (isTemp ? handleRemove(r.id) : handleAdd(r.id))}
+                            disabled={isPending}
+                            className={`shrink-0 ml-2 text-xs font-medium px-2 py-0.5 rounded border transition disabled:opacity-40 ${
+                              isTemp
+                                ? 'text-red-500 border-red-200 hover:text-red-700 hover:bg-red-50'
+                                : 'text-teal-600 border-teal-200 hover:text-teal-800 hover:bg-teal-50'
+                            }`}
+                          >
+                            {isPending ? '処理中...' : isTemp ? '解除' : '＋ 追加'}
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
-              )}
-
-              {/* 追加可能な利用者 */}
-              {available.length > 0 ? (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-2">追加できる利用者</p>
-                  <div className="space-y-1.5">
-                    {available.map(r => (
-                      <button
-                        key={r.id}
-                        onClick={() => handleAdd(r.id)}
-                        disabled={pendingId === r.id}
-                        className="w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200 hover:border-teal-400 hover:bg-teal-50 transition disabled:opacity-40 text-left"
-                      >
-                        <span className="text-sm font-medium text-gray-800">{r.name}</span>
-                        <span className="text-xs text-teal-600 font-medium">
-                          {pendingId === r.id ? '追加中...' : '＋ 追加'}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : currentTemporary.length === 0 ? (
+              ) : (
                 <p className="text-sm text-gray-400 text-center py-6">追加できる利用者がいません</p>
-              ) : null}
+              )}
             </div>
 
             <div className="px-5 py-3 border-t border-gray-100">
