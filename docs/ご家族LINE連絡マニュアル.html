@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ご家族LINE連絡マニュアル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --ground:      #fbfcfc;
+    --surface:     #ffffff;
+    --surface-2:   #f2f6f5;
+    --line:        #dde5e3;
+    --line-soft:   #e9efee;
+    --ink:         #16211f;
+    --ink-2:       #46534f;
+    --ink-3:       #77837f;
+    --teal:        #0f766e;
+    --teal-soft:   #e6f2f0;
+    --teal-ink:    #0b5952;
+    --line-green:  #06c755;
+    --line-soft-bg:#e7f9ee;
+    --line-ink:    #04893c;
+    --warn:        #b45309;
+    --warn-bg:     #fdf4e7;
+    --warn-line:   #f0d8b4;
+    --stop:        #b3261e;
+    --stop-bg:     #fdeeed;
+    --stop-line:   #f2cfcc;
+    --shadow:      0 1px 2px rgba(16,33,31,.05), 0 8px 24px -16px rgba(16,33,31,.28);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #101817;
+      --surface:     #16211f;
+      --surface-2:   #1c2a27;
+      --line:        #2b3a37;
+      --line-soft:   #233130;
+      --ink:         #e8efed;
+      --ink-2:       #a8b6b2;
+      --ink-3:       #7d8b87;
+      --teal:        #4fbfb2;
+      --teal-soft:   #17322f;
+      --teal-ink:    #7ed6cb;
+      --line-green:  #3ad977;
+      --line-soft-bg:#12301f;
+      --line-ink:    #62e295;
+      --warn:        #e0a45c;
+      --warn-bg:     #2c2114;
+      --warn-line:   #4a3820;
+      --stop:        #ef8b83;
+      --stop-bg:     #2e1917;
+      --stop-line:   #4d2a26;
+      --shadow:      0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #101817;
+    --surface:     #16211f;
+    --surface-2:   #1c2a27;
+    --line:        #2b3a37;
+    --line-soft:   #233130;
+    --ink:         #e8efed;
+    --ink-2:       #a8b6b2;
+    --ink-3:       #7d8b87;
+    --teal:        #4fbfb2;
+    --teal-soft:   #17322f;
+    --teal-ink:    #7ed6cb;
+    --line-green:  #3ad977;
+    --line-soft-bg:#12301f;
+    --line-ink:    #62e295;
+    --warn:        #e0a45c;
+    --warn-bg:     #2c2114;
+    --warn-line:   #4a3820;
+    --stop:        #ef8b83;
+    --stop-bg:     #2e1917;
+    --stop-line:   #4d2a26;
+    --shadow:      0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Noto Sans JP", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.9;
+    margin: 0;
+    padding: 0 20px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  h1, h2, h3, .num, .eyebrow {
+    font-family: "Zen Kaku Gothic New", "Noto Sans JP", system-ui, sans-serif;
+  }
+
+  /* ── 表紙 ───────────────────────────────── */
+  .cover {
+    padding: 72px 0 40px;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .eyebrow {
+    font-size: 13px; font-weight: 700; letter-spacing: .14em;
+    color: var(--teal); margin: 0;
+  }
+  h1 {
+    font-size: clamp(30px, 6vw, 44px); font-weight: 900; line-height: 1.3;
+    margin: 0; text-wrap: balance; letter-spacing: .01em;
+  }
+  .lede { margin: 0; color: var(--ink-2); font-size: 16px; max-width: 60ch; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 20px;
+    font-size: 13px; color: var(--ink-3); margin-top: 6px;
+  }
+
+  /* ── 目次 ───────────────────────────────── */
+  nav.toc {
+    margin: 32px 0 0; padding: 20px 24px;
+    background: var(--surface-2); border-radius: 12px;
+  }
+  nav.toc p { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--ink-3); }
+  nav.toc ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 4px; }
+  nav.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px solid transparent; }
+  nav.toc a:hover, nav.toc a:focus-visible { border-bottom-color: var(--teal); color: var(--teal-ink); }
+
+  /* ── セクション ─────────────────────────── */
+  section { margin-top: 64px; }
+  h2 {
+    font-size: 24px; font-weight: 900; margin: 0 0 6px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--line);
+    text-wrap: balance;
+  }
+  h2 .who {
+    display: inline-block; vertical-align: 3px; margin-right: 10px;
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+    padding: 3px 9px; border-radius: 999px;
+  }
+  .who.staff  { background: var(--teal-soft); color: var(--teal-ink); }
+  .who.family { background: var(--line-soft-bg); color: var(--line-ink); }
+  .who.admin  { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+
+  h3 { font-size: 17px; font-weight: 700; margin: 32px 0 8px; }
+  p { margin: 0 0 14px; }
+  .sub { color: var(--ink-2); font-size: 14.5px; }
+
+  /* ── 手順 ───────────────────────────────── */
+  ol.steps { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 20px; counter-reset: s; }
+  ol.steps > li {
+    counter-increment: s; position: relative; padding-left: 52px;
+  }
+  ol.steps > li::before {
+    content: counter(s);
+    position: absolute; left: 0; top: 1px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--teal); color: #fff;
+    font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+  ol.steps.green > li::before { background: var(--line-green); color: #04331a; }
+  ol.steps > li > strong { display: block; font-weight: 700; font-size: 16.5px; margin-bottom: 2px; }
+  ol.steps > li > .sub { margin: 0; }
+
+  /* ── 判定図 ─────────────────────────────── */
+  .gate {
+    margin: 24px 0 0; padding: 24px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+  }
+  .gate-rows { display: flex; flex-direction: column; gap: 10px; }
+  .gate-row {
+    display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start;
+    padding: 12px 14px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
+  }
+  .tick {
+    width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+    background: var(--teal); color: #fff; font-size: 15px; font-weight: 700;
+  }
+  .gate-row b { font-weight: 700; }
+  .gate-row span { display: block; color: var(--ink-2); font-size: 14px; line-height: 1.7; }
+  .gate-and {
+    text-align: center; font-family: "IBM Plex Mono", monospace; font-size: 12px;
+    letter-spacing: .2em; color: var(--ink-3); margin: 2px 0;
+  }
+  .gate-out {
+    margin-top: 14px; padding: 14px; border-radius: 10px; text-align: center;
+    background: var(--line-soft-bg); color: var(--line-ink); font-weight: 700;
+    border: 1px solid color-mix(in srgb, var(--line-green) 30%, transparent);
+  }
+
+  /* ── 画面の写し ─────────────────────────── */
+  .screen {
+    margin: 18px 0; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--surface); overflow: hidden; box-shadow: var(--shadow);
+  }
+  .screen-bar {
+    padding: 9px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+    font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--ink-2);
+  }
+  .screen-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .chk { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
+  .chk .box {
+    flex: none; width: 18px; height: 18px; margin-top: 4px; border-radius: 4px;
+    border: 1.5px solid var(--teal); display: grid; place-items: center;
+    color: #fff; font-size: 12px; line-height: 1;
+  }
+  .chk .box.on { background: var(--teal); }
+  .chk .box.on::after { content: "✓"; }
+  .chk.indent { padding-left: 26px; }
+  .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .field {
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px;
+    font-size: 14px; color: var(--ink-2); background: var(--ground);
+  }
+  .field b { display: block; font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: .06em; }
+
+  /* ── 表 ─────────────────────────────────── */
+  .tablewrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 460px; background: var(--surface); }
+  th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th { background: var(--surface-2); font-weight: 700; font-size: 13px; letter-spacing: .04em; color: var(--ink-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.k { font-weight: 700; white-space: nowrap; }
+
+  /* ── 注意書き ───────────────────────────── */
+  .note {
+    margin: 20px 0; padding: 16px 20px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--surface-2);
+  }
+  .note > p:last-child { margin-bottom: 0; }
+  .note .head { font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .note.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .note.warn .head { color: var(--warn); }
+  .note.stop { background: var(--stop-bg); border-color: var(--stop-line); }
+  .note.stop .head { color: var(--stop); }
+  .note.tip  { background: var(--teal-soft); border-color: color-mix(in srgb, var(--teal) 26%, transparent); }
+  .note.tip .head { color: var(--teal-ink); }
+
+  /* ── ご家族へ渡す案内 ───────────────────── */
+  .handout {
+    margin: 22px 0; padding: 26px 28px; border-radius: 14px;
+    background: var(--surface); border: 2px dashed var(--line-green);
+  }
+  .handout h3 { margin-top: 0; color: var(--line-ink); font-size: 16px; }
+  .handout ol { padding-left: 1.4em; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .handout .cut { font-size: 11px; letter-spacing: .3em; color: var(--ink-3); text-align: center; margin: 0 0 14px; font-family: "IBM Plex Mono", monospace; }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .9em; background: var(--surface-2); border: 1px solid var(--line-soft);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  .code-big {
+    font-family: "IBM Plex Mono", monospace; font-weight: 600;
+    letter-spacing: .28em; font-size: 21px; color: var(--teal-ink);
+    background: var(--teal-soft); padding: 6px 14px; border-radius: 8px;
+    display: inline-block; border: 1px solid color-mix(in srgb, var(--teal) 26%, transparent);
+  }
+
+  ul.plain { margin: 0 0 14px; padding-left: 1.3em; }
+  ul.plain li { margin-bottom: 6px; }
+
+  footer {
+    margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-3);
+  }
+  a { color: var(--teal-ink); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  @media (max-width: 560px) {
+    body { padding: 0 16px 64px; }
+    .cover { padding-top: 48px; }
+    ol.steps > li { padding-left: 44px; }
+    ol.steps > li::before { width: 28px; height: 28px; font-size: 14px; }
+    .handout { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="cover">
+    <p class="eyebrow">デイサービス管理</p>
+    <h1>ご家族へのLINE連絡<br>登録・操作マニュアル</h1>
+    <p class="lede">その日の連絡帳と活動のお写真を、ご家族のLINEへお届けするための手順です。登録は利用者管理から、送信は連絡帳の画面から行います。</p>
+    <div class="meta">
+      <span>対象：デイサービス職員</span>
+      <span>2026年8月版</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <p>もくじ</p>
+    <ol>
+      <li><a href="#about">はじめに ─ LINE IDだけでは送れません</a></li>
+      <li><a href="#gate">送信される条件</a></li>
+      <li><a href="#step1">利用者ごとの設定をする</a></li>
+      <li><a href="#step2">ご家族を登録する</a></li>
+      <li><a href="#step3">連携コードを発行して渡す</a></li>
+      <li><a href="#family">ご家族にしていただくこと</a></li>
+      <li><a href="#send">連絡帳を送る</a></li>
+      <li><a href="#content">送られる内容・送られない内容</a></li>
+      <li><a href="#trouble">困ったときは</a></li>
+      <li><a href="#admin">はじめて使う前に（管理者）</a></li>
+    </ol>
+  </nav>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="about">
+    <h2>はじめに ─ LINE IDだけでは送れません</h2>
+    <p>最初に、とても大事なことをお伝えします。</p>
+    <p><strong>ご家族のLINE ID（<code>@</code>から始まるID）を登録しただけでは、メッセージは届きません。</strong>LINEには、IDを宛先にして送る仕組みがそもそも用意されていないためです。</p>
+    <p>メッセージをお送りできるようになるのは、<strong>ご家族が施設のLINE公式アカウントを友だち追加し、連携コードを送ってくださったあと</strong>です。この手続きを済ませて初めて、送信先が決まります。</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>登録する項目</th><th>役割</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">氏名・続柄</td><td>どなたのご家族かを職員が把握するため</td></tr>
+          <tr><td class="k">電話番号</td><td>LINEが使えないときの連絡先として</td></tr>
+          <tr><td class="k">LINE ID</td><td>ご本人確認のための控え。<strong>送信には使いません</strong></td></tr>
+          <tr><td class="k">連携コード</td><td>ご家族に伝えて、友だち追加と結びつけるための8桁のコード</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note tip">
+      <div class="head">覚えていただきたいこと</div>
+      <p>登録が終わっても、<strong>「未連携」と表示されているうちは届きません。</strong>ご家族に連携コードを送っていただき、「LINE連携済み」に変われば準備完了です。</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="gate">
+    <h2>送信される条件</h2>
+    <p>送信ボタンを押しても、<strong>次の3つがすべてそろっている利用者だけ</strong>にお送りします。ひとつでも欠けていると、その方は送信されません。</p>
+
+    <div class="gate">
+      <div class="gate-rows">
+        <div class="gate-row">
+          <div class="tick">✓</div>
+          <div>
+            <b>ご家族への連絡を有効にする</b>
+            <span>利用者管理でチェックを入れます。ここがオフなら、他のチェックが入っていても一切送りません</span>
+          </div>
+        </div>
+        <div class="gate-and">かつ</div>
+        <div class="gate-row">
+          <div class="tick">✓</div>
+          <div>
+            <b>連絡帳を共有する ／ 活動写真を共有する</b>
+            <span>どちらか、または両方にチェック。チェックを入れたものだけが送られます</span>
+          </div>
+        </div>
+        <div class="gate-and">かつ</div>
+        <div class="gate-row">
+          <div class="tick">✓</div>
+          <div>
+            <b>LINE連携済みのご家族が登録されている</b>
+            <span>友だち追加と連携コードの送信が済んでいる方が、1人以上いること</span>
+          </div>
+        </div>
+      </div>
+      <div class="gate-out">この3つがそろって、はじめて送信されます</div>
+    </div>
+
+    <p class="sub">利用者管理の画面には、いまどの状態かが常に表示されます。「送信されます（LINE連携済み 2名）」と出ていれば準備ができています。「有効にすると送信できます」と出ていたら、まだ送られません。</p>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="step1">
+    <h2><span class="who staff">職員</span>利用者ごとの設定をする</h2>
+
+    <ol class="steps">
+      <li>
+        <strong>利用者管理を開く</strong>
+        <p class="sub">画面上のメニューから「利用者管理」を選びます。</p>
+      </li>
+      <li>
+        <strong>設定したい利用者の「編集」を押す</strong>
+        <p class="sub">名前で検索するか、50音のタブから探せます。</p>
+      </li>
+      <li>
+        <strong>下の方の「ご家族への連絡（LINE）」を見る</strong>
+        <p class="sub">編集画面をいちばん下までスクロールすると出てきます。</p>
+      </li>
+      <li>
+        <strong>チェックを入れる</strong>
+        <p class="sub">まず「ご家族への連絡を有効にする」にチェック。すると下の2つが選べるようになります。チェックはその場で自動保存されるので、保存ボタンを押す必要はありません。</p>
+      </li>
+    </ol>
+
+    <div class="screen">
+      <div class="screen-bar">利用者管理 ▸ 編集 ▸ ご家族への連絡（LINE）</div>
+      <div class="screen-body">
+        <div class="chk"><span class="box on"></span><span><strong>ご家族への連絡を有効にする</strong></span></div>
+        <div class="chk indent"><span class="box on"></span><span>連絡帳を共有する</span></div>
+        <div class="chk indent"><span class="box"></span><span>活動写真を共有する</span></div>
+        <p class="sub" style="margin:6px 0 0 26px;">送信されます（LINE連携済み 1名）</p>
+      </div>
+    </div>
+
+    <div class="note">
+      <div class="head">チェックが灰色で押せないとき</div>
+      <p>「ご家族への連絡を有効にする」がオフになっています。先にそちらにチェックを入れてください。</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="step2">
+    <h2><span class="who staff">職員</span>ご家族を登録する</h2>
+    <p>同じ画面の下にある「ご家族を追加」から登録します。<strong>お一人の利用者に、複数のご家族を登録できます。</strong>登録した全員に同じ内容が届きます。</p>
+
+    <div class="screen">
+      <div class="screen-bar">ご家族を追加</div>
+      <div class="screen-body">
+        <div class="field-row">
+          <div class="field"><b>氏名（必須）</b>山田 太郎</div>
+          <div class="field"><b>続柄</b>長男</div>
+          <div class="field"><b>LINE ID</b>@yamada</div>
+          <div class="field"><b>電話番号</b>090-1234-5678</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="sub">必須は氏名だけです。続柄は一覧から選べます（長男・長女・夫・妻・孫など）。LINE IDと電話番号は、あとから編集で追加しても構いません。</p>
+
+    <h3>登録したあとにできること</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>ボタン</th><th>できること</th></tr></thead>
+        <tbody>
+          <tr><td class="k">編集</td><td>氏名・続柄・LINE ID・電話番号を直す</td></tr>
+          <tr><td class="k">削除</td><td>登録を消す。以降そのご家族には届かなくなります</td></tr>
+          <tr><td class="k">連携コードを発行</td><td>友だち追加と結びつけるための8桁のコードを出す</td></tr>
+          <tr><td class="k">LINE連携を解除</td><td>結びつきを外す。機種変更や誤連携のときに使います</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="step3">
+    <h2><span class="who staff">職員</span>連携コードを発行して渡す</h2>
+    <p>登録したご家族の欄にある「連携コードを発行」を押すと、8桁のコードが表示されます。</p>
+
+    <p style="text-align:center; margin:24px 0;"><span class="code-big">K7RM2XPQ</span></p>
+
+    <p>このコードをご家族にお伝えください。お電話でも、紙に書いてお渡ししても構いません。<strong>有効期限は30日間です。</strong></p>
+
+    <div class="note warn">
+      <div class="head">読み間違いにご注意ください</div>
+      <p>コードは数字とアルファベットの大文字が混ざります。紛らわしい文字（<code>O</code>と<code>0</code>、<code>I</code>と<code>1</code>）は使わないようにしていますが、口頭で伝えるときは「ケー・ナナ・アール・エム…」と一字ずつお伝えいただくと確実です。</p>
+    </div>
+
+    <div class="note">
+      <div class="head">期限が切れてしまったら</div>
+      <p>もう一度「連携コードを発行」を押してください。新しいコードが出て、古いコードは使えなくなります。</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="family">
+    <h2><span class="who family">ご家族</span>ご家族にしていただくこと</h2>
+    <p>下の枠は、そのままご家族にお渡しできる案内です。印刷してお配りいただけます。</p>
+
+    <div class="handout">
+      <p class="cut">✂ - - - - - - - - - - - - - - - - - - - - - - - -</p>
+      <h3>連絡帳をLINEでお受け取りいただくには</h3>
+      <ol class="steps green" style="gap:16px;">
+        <li>
+          <strong>施設のLINE公式アカウントを友だち追加します</strong>
+          <p class="sub">施設からお渡しするQRコードを、LINEアプリの「ホーム」→右上の人型のマーク→「QRコード」から読み取ってください。</p>
+        </li>
+        <li>
+          <strong>お伝えした8桁のコードをトークに送ります</strong>
+          <p class="sub">友だち追加したアカウントのトーク画面を開き、コードをそのまま入力して送信してください。</p>
+        </li>
+        <li>
+          <strong>「連携が完了しました」と返信が来たら準備完了です</strong>
+          <p class="sub">翌日以降、その日のご様子をお届けします。</p>
+        </li>
+      </ol>
+      <p class="sub" style="margin-top:18px;">ご不明な点は施設までお問い合わせください。なお、このアカウントにメッセージをお送りいただいてもお返事はできません。ご連絡はお電話でお願いいたします。</p>
+      <p class="cut" style="margin:14px 0 0;">✂ - - - - - - - - - - - - - - - - - - - - - - - -</p>
+    </div>
+
+    <div class="note tip">
+      <div class="head">連携できたか確かめる</div>
+      <p>利用者管理の編集画面を開き直してください。そのご家族の表示が「未連携」から<strong>「LINE連携済み」</strong>に変わっていれば成功です。</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="send">
+    <h2><span class="who staff">職員</span>連絡帳を送る</h2>
+
+    <ol class="steps">
+      <li>
+        <strong>メニューから「連絡帳」を開く</strong>
+        <p class="sub">送りたい日付になっているか確認してください。前日分を送るときは「◀ 前日」で移動します。</p>
+      </li>
+      <li>
+        <strong>送りたい利用者を選ぶ</strong>
+        <p class="sub">お名前をタップして選びます。「すべて選択」もできます。</p>
+      </li>
+      <li>
+        <strong>「ご家族へLINEで送る」を押す</strong>
+        <p class="sub">画面のいちばん下、Excelのダウンロードボタンの下にあります。</p>
+      </li>
+      <li>
+        <strong>結果を確認する</strong>
+        <p class="sub">利用者ごとに結果が一覧で出ます。送信できなかった方は理由が表示されます。</p>
+      </li>
+    </ol>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>表示</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td class="k">2名へ送信しました</td><td>登録されているご家族2名に届きました</td></tr>
+          <tr><td class="k">ご家族連絡が有効になっていません</td><td>利用者管理で「有効にする」にチェックが必要です</td></tr>
+          <tr><td class="k">LINE連携済みのご家族が登録されていません</td><td>ご家族の友だち追加とコード送信がまだです</td></tr>
+          <tr><td class="k">連絡帳・活動写真のどちらも共有対象になっていません</td><td>どちらかにチェックを入れてください</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note warn">
+      <div class="head">送信前に記録の入力を終えてください</div>
+      <p>送信した時点の記録をもとに画像を作ります。あとから記録を直しても、<strong>すでに送った内容は変わりません</strong>。訂正が必要なときは、記録を直してからもう一度送信してください。</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="content">
+    <h2>送られる内容・送られない内容</h2>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>種類</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="k">連絡帳</td>
+            <td>その日の記録を、スマホで読みやすい縦長の画像にしてお送りします。体温・血圧・脈拍・お食事・水分・入浴・口腔ケア・お薬・排便・機能訓練と、「日中のご様子・連絡事項」が入ります</td>
+          </tr>
+          <tr>
+            <td class="k">活動写真</td>
+            <td>集計・分析の画面で登録した、<strong>その月の</strong>お写真をお送りします</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note stop">
+      <div class="head">「特記事項」は送られません</div>
+      <p>特記事項は職員どうしで共有するためのメモで、紙の連絡帳にも印字していません。ご家族にお伝えする内容は、やわらかい文章に書き直したうえで「日中のご様子・連絡事項」に入ります。</p>
+      <p style="margin-bottom:0;">そのため、<strong>ご家族に必ずお伝えしたいことは「その日の様子」欄に書いてください。</strong>特記事項だけに書くと届きません。</p>
+    </div>
+
+    <div class="note">
+      <div class="head">一度に送れるのは5件までです</div>
+      <p>LINEの仕様による制限です。連絡帳を優先し、残りの枠でお写真を送ります。写真が5枚登録されていても、連絡帳と一緒に送る場合は4枚までとなります。</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="trouble">
+    <h2>困ったときは</h2>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:38%">こんなとき</th><th>確認すること</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="k">送信ボタンが押せない</td>
+            <td>利用者が選ばれていないか、LINEの設定がまだ済んでいません。ボタンの下の説明文をご確認ください</td>
+          </tr>
+          <tr>
+            <td class="k">「未連携」のまま変わらない</td>
+            <td>ご家族が友だち追加を済ませているか、コードを正しく送っているかご確認ください。期限切れなら再発行します</td>
+          </tr>
+          <tr>
+            <td class="k">ご家族が機種変更した</td>
+            <td>「LINE連携を解除」を押してから、連携コードを再発行してお渡しください</td>
+          </tr>
+          <tr>
+            <td class="k">急に届かなくなった</td>
+            <td>ご家族がアカウントをブロックされた可能性があります。ブロックされると連携が自動的に外れ、「未連携」に戻ります</td>
+          </tr>
+          <tr>
+            <td class="k">間違ったご家族に紐づいた</td>
+            <td>「LINE連携を解除」で外し、正しいご家族に連携コードを発行し直してください</td>
+          </tr>
+          <tr>
+            <td class="k">写真が送られない</td>
+            <td>集計・分析の画面で、<strong>その月の</strong>写真が登録されているかご確認ください。先月の写真は送られません</td>
+          </tr>
+          <tr>
+            <td class="k">送りたくない日がある</td>
+            <td>その日は送信ボタンを押さなければ届きません。自動送信はしていません</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
+  <section id="admin">
+    <h2><span class="who admin">管理者</span>はじめて使う前に</h2>
+    <p>施設として初めて使い始めるときだけ必要な作業です。日々の運用では不要です。</p>
+
+    <ol class="steps">
+      <li>
+        <strong>LINE公式アカウントをつくる</strong>
+        <p class="sub">LINE Developers で Messaging API のチャネルを作成します。無料で、法人審査も不要です。</p>
+      </li>
+      <li>
+        <strong>チャネルアクセストークンとチャネルシークレットを登録する</strong>
+        <p class="sub">Vercel の環境変数に登録します。この2つは<strong>パスワードと同じ扱い</strong>です。メールやチャットに貼らないでください。</p>
+      </li>
+      <li>
+        <strong>Webhookを設定する</strong>
+        <p class="sub">ご家族の友だち追加を受け取るための設定です。あわせて「応答メッセージ」をオフにします。</p>
+      </li>
+      <li>
+        <strong>友だち追加用のQRコードを印刷しておく</strong>
+        <p class="sub">ご家族にお渡しするものです。案内の紙と一緒に用意しておくと便利です。</p>
+      </li>
+    </ol>
+
+    <div class="note warn">
+      <div class="head">送信できる通数に上限があります</div>
+      <p>LINE公式アカウントの無料プランは<strong>月200通まで</strong>です。1通は「ご家族お一人へのメッセージ」で数えます。</p>
+      <p style="margin-bottom:0;">たとえば利用者20名にお一人ずつご家族が登録されている場合、平日20日間毎日お送りすると400通となり、上限を超えます。<strong>対象の方や送る頻度を決めてから運用を始めてください。</strong>超える見込みがあれば有料プランをご検討ください。</p>
+    </div>
+
+    <p class="sub">くわしい手順は、システム担当者向けの資料 <code>docs/line-setup.md</code> にまとめてあります。</p>
+  </section>
+
+  <footer>
+    <p>このマニュアルは「デイサービス管理」のご家族LINE連絡機能について書かれています。<br>操作でご不明な点や、書かれていない事象が起きた場合は、システム担当者までお知らせください。</p>
+  </footer>
+
+</div>
+
+</body>
+</html>
