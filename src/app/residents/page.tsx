@@ -47,12 +47,13 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
                   <Link href="/residents" className="text-xs text-gray-400 hover:text-gray-600">✕ キャンセル</Link>
                 </div>
                 <p className="text-xs text-blue-600 mb-4">{editingResident.name}</p>
-                <EditResidentForm resident={editingResident} />
-                <FamilyContactPanel
-                  resident={editingResident as Resident}
-                  contacts={(familyContacts ?? []) as FamilyContact[]}
-                  lineConfigured={isLineConfigured()}
-                />
+                <EditResidentForm resident={editingResident}>
+                  <FamilyContactPanel
+                    resident={editingResident as Resident}
+                    contacts={(familyContacts ?? []) as FamilyContact[]}
+                    lineConfigured={isLineConfigured()}
+                  />
+                </EditResidentForm>
               </>
             ) : (
               <>

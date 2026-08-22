@@ -78,7 +78,17 @@ function HospitalizationEditor({
   )
 }
 
-export default function EditResidentForm({ resident }: { resident: Resident }) {
+const FORM_ID = 'edit-resident-form'
+
+export default function EditResidentForm({
+  resident,
+  children,
+}: {
+  resident: Resident
+  /** フォームの下・更新ボタンの上に差し込む欄（ご家族への連絡など）。
+   *  入れ子の form は無効になるため、form の外に置いて form 属性でつなぐ */
+  children?: React.ReactNode
+}) {
   const updateResidentWithId = updateResident.bind(null, resident.id)
   const [state, action, pending] = useActionState(updateResidentWithId, null)
   const [furigana, setFurigana] = useState(resident.furigana ?? '')
@@ -157,7 +167,8 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
   }
 
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <>
+    <form id={FORM_ID} action={action} className="flex flex-col gap-3">
       {state?.error && (
         <div className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           {state.error}
@@ -339,16 +350,21 @@ export default function EditResidentForm({ resident }: { resident: Resident }) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
       <GoalImageField gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={resident.goalImage} defaultSubGoalImage={resident.subGoalImage} />
-      <div className="flex gap-2 mt-1">
-        <button type="submit" disabled={pending}
-          className="flex-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
-          {pending ? '更新中...' : '更新する'}
-        </button>
-        <Link href="/residents"
-          className="flex-1 text-center bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">
-          キャンセル
-        </Link>
-      </div>
     </form>
+
+    {children}
+
+    {/* 更新ボタンは画面のいちばん下に置く。form の外にあるため form 属性で結びつける */}
+    <div className="flex gap-2 mt-5">
+      <button type="submit" form={FORM_ID} disabled={pending}
+        className="flex-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
+        {pending ? '更新中...' : '更新する'}
+      </button>
+      <Link href="/residents"
+        className="flex-1 text-center bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">
+        キャンセル
+      </Link>
+    </div>
+    </>
   )
 }
