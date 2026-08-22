@@ -310,6 +310,7 @@
       <li><a href="#step3">連携コードを発行して渡す</a></li>
       <li><a href="#family">ご家族にしていただくこと</a></li>
       <li><a href="#send">連絡帳を送る</a></li>
+      <li><a href="#check">送信できたか確認する</a></li>
       <li><a href="#content">送られる内容・送られない内容</a></li>
       <li><a href="#trouble">困ったときは</a></li>
       <li><a href="#admin">はじめて使う前に（管理者）</a></li>
@@ -546,6 +547,80 @@
   </section>
 
   <!-- ───────────────────────────────────── -->
+  <section id="check">
+    <h2><span class="who staff">職員</span>送信できたか確認する</h2>
+    <p>メニューの<strong>「家族連絡」</strong>で、直近2週間のうち誰にいつ何が届いたかを一覧で確認できます。送信直後だけでなく、あとから見返すこともできます。</p>
+
+    <div class="screen">
+      <div class="screen-bar">家族連絡</div>
+      <div class="screen-body">
+        <p class="sub" style="margin:0;">直近2週間のLINE送信状況 ・ 送信 24件 ・ 失敗 1件</p>
+        <div class="tablewrap" style="margin:0;">
+          <table style="min-width:0;">
+            <thead><tr><th>利用者</th><th>8/18</th><th>8/19</th><th>8/20</th><th>8/21</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="k">折元 和子<br><span style="font-weight:400;font-size:11px;color:var(--ink-3);">連絡帳 写真 2名</span></td>
+                <td>帳写</td><td>帳</td><td>帳</td><td>帳</td>
+              </tr>
+              <tr>
+                <td class="k">高山 信子<br><span style="font-weight:400;font-size:11px;color:var(--ink-3);">未連携</span></td>
+                <td>·</td><td>·</td><td>·</td><td>·</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h3>マスの見かた</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:30%">表示</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td class="k">帳</td><td>連絡帳を送りました</td></tr>
+          <tr><td class="k">写</td><td>活動写真を送りました</td></tr>
+          <tr><td class="k">帳写</td><td>連絡帳と活動写真の両方を送りました</td></tr>
+          <tr><td class="k">×（赤）</td><td>送信に失敗しました。押すと理由が分かります</td></tr>
+          <tr><td class="k">·（点）</td><td>その日は送っていません</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>マスを押すと送信内容が見られます</h3>
+    <p>日付のマスを押すと、その日にお送りした内容が表示されます。</p>
+    <ul class="plain">
+      <li><strong>送信先</strong> ─ どのご家族に、いつ、何を送ったか。失敗していればその理由も</li>
+      <li><strong>連絡帳</strong> ─ 実際にお送りした画像そのもの</li>
+      <li><strong>活動写真</strong> ─ 一緒にお送りした写真</li>
+    </ul>
+    <p class="sub">ご家族から「どんな内容でしたか」とお問い合わせをいただいたときに、そのまま画面でご確認いただけます。</p>
+
+    <h3>利用者名の下のしるし</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:30%">しるし</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td class="k">連絡なし</td><td>「ご家族への連絡を有効にする」がオフです</td></tr>
+          <tr><td class="k">未連携</td><td>有効になっていますが、LINE連携済みのご家族がいません</td></tr>
+          <tr><td class="k">連絡帳 / 写真 / ◯名</td><td>共有する内容と、連携済みのご家族の人数</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note tip">
+      <div class="head">設定漏れを見つけるのに使えます</div>
+      <p>「連絡が有効な利用者のみ表示」にチェックを入れると、送る予定の方だけが並びます。そこに<strong>「未連携」</strong>が残っていれば、ご家族への連携コードのご案内がまだということです。</p>
+      <p style="margin-bottom:0;">利用者の絞り込みは、他の画面と同じ<strong>名前検索と50音タブ</strong>が使えます。</p>
+    </div>
+
+    <div class="note">
+      <div class="head">古い送信は内容を表示できません</div>
+      <p>2026年8月22日より前にお送りした分は、送信した記録は残っていますが、内容の画像は保存していないため表示できません。</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────── -->
   <section id="content">
     <h2>送られる内容・送られない内容</h2>
 
@@ -610,6 +685,14 @@
             <td>集計・分析の画面で、<strong>その月の</strong>写真が登録されているかご確認ください。先月の写真は送られません</td>
           </tr>
           <tr>
+            <td class="k">送ったはずなのに家族連絡に出ない</td>
+            <td>送信結果が「対象外」だった可能性があります。連絡帳の画面で送信したときの結果表示をご確認ください</td>
+          </tr>
+          <tr>
+            <td class="k">マスを押しても内容が出ない</td>
+            <td>2026年8月22日より前の送信は、内容の画像を保存していないため表示できません</td>
+          </tr>
+          <tr>
             <td class="k">送りたくない日がある</td>
             <td>その日は送信ボタンを押さなければ届きません。自動送信はしていません</td>
           </tr>
@@ -648,7 +731,10 @@
       <p style="margin-bottom:0;">たとえば利用者20名にお一人ずつご家族が登録されている場合、平日20日間毎日お送りすると400通となり、上限を超えます。<strong>対象の方や送る頻度を決めてから運用を始めてください。</strong>超える見込みがあれば有料プランをご検討ください。</p>
     </div>
 
-    <p class="sub">くわしい手順は、システム担当者向けの資料 <code>docs/line-setup.md</code> にまとめてあります。</p>
+    <div class="note tip">
+      <div class="head">くわしい手順は別の資料にあります</div>
+      <p style="margin-bottom:0;">アカウントの作り方から登録・動作確認までを、画面ごとに追った<strong>「LINE公式アカウント開設手順」</strong>をご用意しています。施設ごとに1回ずつ、30分程度の作業です。</p>
+    </div>
   </section>
 
   <footer>
