@@ -40,7 +40,9 @@ function shouldSend(resident: Resident) {
   }
 }
 
-async function uploadReportImage(facilityId: string, residentId: string, date: string, png: Buffer): Promise<string> {
+async function uploadReportImage(
+  facilityId: string, residentId: string, date: string, png: Buffer,
+): Promise<{ path: string; url: string }> {
   const objectPath = `line/${facilityId}/${residentId}/${date}-${crypto.randomUUID()}.png`
   const { error } = await supabase.storage.from(BUCKET).upload(objectPath, png, {
     contentType: 'image/png',
@@ -50,17 +52,26 @@ async function uploadReportImage(facilityId: string, residentId: string, date: s
 
   const { data, error: signErr } = await supabase.storage.from(BUCKET).createSignedUrl(objectPath, IMAGE_TTL_SEC)
   if (signErr || !data?.signedUrl) throw new Error('画像のURL発行に失敗しました')
-  return data.signedUrl
+  // path は送信履歴に残し、あとから家族連絡の画面で見られるようにする
+  return { path: objectPath, url: data.signedUrl }
 }
 
 async function log(
   facilityId: string, residentId: string, familyContactId: string,
   date: string, kind: 'REPORT' | 'PHOTO', status: 'SENT' | 'FAILED', error: string | null,
+  imagePaths: { report?: string | null; photos?: string[] } | null = null,
 ) {
-  await supabase.from('FamilyMessageLog').insert({
+  const base = {
     id: crypto.randomUUID(), facilityId, residentId, familyContactId,
     date, kind, status, error, sentAt: new Date().toISOString(),
-  })
+  }
+
+  const { error: insErr } = await supabase.from('FamilyMessageLog').insert({ ...base, imagePaths })
+  if (!insErr) return
+
+  // imagePaths 列を追加する前でも履歴だけは残す
+  console.error('[family-line] 履歴の保存に失敗、imagePaths なしで再試行:', insErr.message)
+  await supabase.from('FamilyMessageLog').insert(base)
 }
 
 /** 指定した利用者のご家族へ、連絡帳と活動写真をLINEで送る */
@@ -113,6 +124,7 @@ export async function sendFamilyLine(residentIds: string[], date?: string): Prom
 
     // ── 連絡帳の画像 ──
     let reportUrl: string | null = null
+    let reportPath: string | null = null
     if (want.report) {
       try {
         let ai = { daily: '', rehab: '' }
@@ -124,7 +136,9 @@ export async function sendFamilyLine(residentIds: string[], date?: string): Prom
           }
         }
         const png = buildDailyReportImage(resident, record, targetDate, facilityName, ai.daily, ai.rehab)
-        reportUrl = await uploadReportImage(session.facilityId, resident.id, targetDate, png)
+        const uploaded = await uploadReportImage(session.facilityId, resident.id, targetDate, png)
+        reportUrl = uploaded.url
+        reportPath = uploaded.path
       } catch (err) {
         result.errors.push(`連絡帳の作成に失敗: ${err instanceof Error ? err.message : String(err)}`)
       }
@@ -132,6 +146,7 @@ export async function sendFamilyLine(residentIds: string[], date?: string): Prom
 
     // ── 活動写真（当月の登録分） ──
     const photoUrls: string[] = []
+    const photoPaths: string[] = []
     if (want.photo) {
       const { data: photos } = await supabase
         .from('ResidentMonthlyPhoto')
@@ -142,7 +157,7 @@ export async function sendFamilyLine(residentIds: string[], date?: string): Prom
 
       for (const p of photos ?? []) {
         const { data } = await supabase.storage.from(BUCKET).createSignedUrl(p.storagePath, IMAGE_TTL_SEC)
-        if (data?.signedUrl) photoUrls.push(data.signedUrl)
+        if (data?.signedUrl) { photoUrls.push(data.signedUrl); photoPaths.push(p.storagePath) }
       }
     }
 
@@ -159,16 +174,20 @@ export async function sendFamilyLine(residentIds: string[], date?: string): Prom
       messages.push({ type: 'image', originalContentUrl: url, previewImageUrl: url })
     }
 
+    // 送った枚数だけを履歴に残す（5件の上限で送れなかった写真は含めない）
+    const sentPhotoPaths = photoPaths.slice(0, messages.length - (reportUrl ? 1 : 0))
+    const paths = { report: reportPath, photos: sentPhotoPaths }
+
     for (const contact of contacts) {
       try {
         await pushMessages(contact.lineUserId!, messages)
         result.sent++
-        if (reportUrl) await log(session.facilityId, resident.id, contact.id, targetDate, 'REPORT', 'SENT', null)
-        if (photoUrls.length > 0) await log(session.facilityId, resident.id, contact.id, targetDate, 'PHOTO', 'SENT', null)
+        if (reportUrl) await log(session.facilityId, resident.id, contact.id, targetDate, 'REPORT', 'SENT', null, paths)
+        if (sentPhotoPaths.length > 0) await log(session.facilityId, resident.id, contact.id, targetDate, 'PHOTO', 'SENT', null, paths)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         result.errors.push(`${contact.name}: ${msg}`)
-        await log(session.facilityId, resident.id, contact.id, targetDate, reportUrl ? 'REPORT' : 'PHOTO', 'FAILED', msg)
+        await log(session.facilityId, resident.id, contact.id, targetDate, reportUrl ? 'REPORT' : 'PHOTO', 'FAILED', msg, paths)
       }
     }
 

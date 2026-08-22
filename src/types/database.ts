@@ -366,6 +366,8 @@ export interface FamilyMessageLog {
   kind: FamilyMessageKind
   status: FamilyMessageStatus
   error: string | null
+  /** 送信した画像の保存先。閲覧時に署名付きURLを作り直す */
+  imagePaths: { report?: string | null; photos?: string[] } | null
   sentAt: string
 }
 
