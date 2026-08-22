@@ -44,8 +44,10 @@ function buildSheet(
       // 真ん中で切ればA5の連絡帳が2部になる
       fitToWidth: 1,
       fitToHeight: 1,
-      // 用紙いっぱいに印刷するため余白は最小にする
-      margins: { left: 0, right: 0, top: 0, bottom: 0, header: 0, footer: 0 },
+      // 端が切れないよう最小限の余白を取り、余りは左右均等に配る
+      margins: { left: 0.2, right: 0.2, top: 0.2, bottom: 0.2, header: 0, footer: 0 },
+      horizontalCentered: true,
+      verticalCentered: true,
     },
   })
 
@@ -61,22 +63,23 @@ function buildSheet(
   // ── 列幅（A-O 15列、A5用に調整） ───────────────────────────────
   // A:B = section/am-pm label  C = 担当者  D = spacer
   // E:G = 時間  H:J = 体温  K:M = 血圧  N:O = 脈拍
+  // 高さが先に上限に達して幅が余っていたため、列を広げて紙の幅も使い切る
   ws.columns = [
-    { width: 5   },  // A
-    { width: 4   },  // B
-    { width: 6   },  // C  担当者ドロップダウン
-    { width: 2   },  // D  スペーサー
-    { width: 4.5 },  // E
-    { width: 4.5 },  // F
-    { width: 4.5 },  // G
-    { width: 4.5 },  // H
-    { width: 4.5 },  // I
-    { width: 4.5 },  // J
-    { width: 5   },  // K
-    { width: 4.5 },  // L
-    { width: 4.5 },  // M
-    { width: 5.5 },  // N
-    { width: 5.5 },  // O
+    { width: 5.8 },  // A
+    { width: 4.6 },  // B
+    { width: 6.9 },  // C  担当者ドロップダウン
+    { width: 2.3 },  // D  スペーサー
+    { width: 5.2 },  // E
+    { width: 5.2 },  // F
+    { width: 5.2 },  // G
+    { width: 5.2 },  // H
+    { width: 5.2 },  // I
+    { width: 5.2 },  // J
+    { width: 5.8 },  // K
+    { width: 5.2 },  // L
+    { width: 5.2 },  // M
+    { width: 6.3 },  // N
+    { width: 6.3 },  // O
   ]
 
   // ── ヘルパー ────────────────────────────────────────────────────
@@ -374,8 +377,12 @@ function buildSheet(
   duplicateToRight(ws, r, mergedRanges)
 }
 
-/** 左半分の列数（A〜O の15列）。右半分はこの数だけずらした位置に作る */
+/** 左半分の列数（A〜O の15列） */
 const BLOCK_COLS = 15
+/** 左右の間に入れる区切り列の幅。ここで切り分ける */
+const GUTTER_WIDTH = 2.5
+/** 右半分は区切り列の分も含めてずらす */
+const COL_OFFSET = BLOCK_COLS + 1
 
 function colName(n: number): string {
   let s = ''
@@ -392,9 +399,17 @@ function colName(n: number): string {
  * A4横1枚に同じ内容が2部並び、真ん中で切ればA5の連絡帳が2部になる。
  */
 function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: string[]) {
-  // 列幅
+  // 列幅（区切り列 → 右半分）
+  ws.getColumn(BLOCK_COLS + 1).width = GUTTER_WIDTH
   for (let c = 1; c <= BLOCK_COLS; c++) {
-    ws.getColumn(c + BLOCK_COLS).width = ws.getColumn(c).width
+    ws.getColumn(c + COL_OFFSET).width = ws.getColumn(c).width
+  }
+
+  // 区切り列は罫線も色も付けず、切り取り位置が分かるようにする
+  for (let row = 1; row <= lastRow; row++) {
+    const cell = ws.getCell(row, BLOCK_COLS + 1)
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }
+    cell.border = {}
   }
 
   // 先に結合してから値を入れる。逆にすると、結合で消えるセルに書いた値が
@@ -405,8 +420,8 @@ function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: 
     if (!m) continue
     const toNum = (letters: string) =>
       letters.split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0)
-    const c1 = toNum(m[1]) + BLOCK_COLS
-    const c2 = toNum(m[3]) + BLOCK_COLS
+    const c1 = toNum(m[1]) + COL_OFFSET
+    const c2 = toNum(m[3]) + COL_OFFSET
     const r1 = Number(m[2])
     const r2 = Number(m[4])
     ws.mergeCells(`${colName(c1)}${r1}:${colName(c2)}${r2}`)
@@ -421,7 +436,7 @@ function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: 
   // セルの値と書式
   for (let row = 1; row <= lastRow; row++) {
     for (let c = 1; c <= BLOCK_COLS; c++) {
-      const dstCol = c + BLOCK_COLS
+      const dstCol = c + COL_OFFSET
       if (slaves.has(`${row}:${dstCol}`)) continue
       const src = ws.getCell(row, c)
       const dst = ws.getCell(row, dstCol)
