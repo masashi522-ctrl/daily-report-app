@@ -38,12 +38,20 @@ const TIME_CHANGE_RE = new RegExp(
   `${TIME_LABEL}[\\s:：]*([0-9]{1,2}[:：][0-9]{2})\\s*${TIME_SEPARATOR}\\s*([0-9]{1,2}[:：][0-9]{2})`,
 )
 
+/** 'H:MM' に整える（全角コロンや1桁の時を揃える） */
+function normalizeTime(t: string): string {
+  const [h, m] = t.split(/[:：]/).map(Number)
+  return `${h}:${String(m).padStart(2, '0')}`
+}
+
 /**
- * 特記事項に書かれた当日の利用時間。
+ * 特記事項に書かれた当日の利用時間（開始・終了）。
  * 「利用時間 9:30-15:00」「提供時間 9:30〜15:00」「時間変更 9:30～15:00」を読む。
  * 見出しの無い時刻は読まない（血糖値の測定時刻などと区別できないため）。
  */
-export function serviceHoursFromNotes(notes: string | null | undefined): number | null {
+export function serviceTimeRangeFromNotes(
+  notes: string | null | undefined,
+): { start: string; end: string } | null {
   if (!notes) return null
   const m = TIME_CHANGE_RE.exec(notes)
   if (!m) return null
@@ -51,6 +59,15 @@ export function serviceHoursFromNotes(notes: string | null | undefined): number 
   const s = toMinutes(m[1])
   const e = toMinutes(m[2])
   if (s == null || e == null || e <= s) return null
+  return { start: normalizeTime(m[1]), end: normalizeTime(m[2]) }
+}
+
+/** 特記事項に書かれた当日の利用時間（時間単位） */
+export function serviceHoursFromNotes(notes: string | null | undefined): number | null {
+  const range = serviceTimeRangeFromNotes(notes)
+  if (!range) return null
+  const s = toMinutes(range.start)!
+  const e = toMinutes(range.end)!
   return (e - s) / 60
 }
 

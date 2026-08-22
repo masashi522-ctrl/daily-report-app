@@ -5,6 +5,7 @@ import type { Resident, DailyRecord } from '@/types/database'
 import { estimateTextHeight } from '@/lib/care-plan-document'
 // 文章とラベルの決まりごとは、LINEで送る画像と共通のものを使う
 import { DOW_JA, bathingLabel, sheetSafeName, generateAIText, createGroqClient } from '@/lib/daily-report-ai'
+import { serviceTimeRangeFromNotes } from '@/lib/attendance-stats'
 
 // AI文章欄（A〜O列を結合）の横幅。行の高さの見積もりに使う
 const AI_TEXT_WIDTH_UNITS = 69
@@ -48,9 +49,11 @@ function buildSheet(
   const [yr, mo, dy] = date.split('-').map(Number)
   const dow = new Date(date + 'T00:00:00').getDay()
   const reiwa = yr - 2018
-  const startTime = resident.serviceStartTime ?? ''
-  const endTime = resident.serviceEndTime ?? ''
-  const cat = resident.serviceTimeCategory ?? ''
+  // その日だけ利用時間が変わったときは、特記事項の記載を優先する
+  const changed = serviceTimeRangeFromNotes(record?.specialNotes)
+  const startTime = changed?.start ?? resident.serviceStartTime ?? ''
+  const endTime = changed?.end ?? resident.serviceEndTime ?? ''
+  const cat = changed ? '' : (resident.serviceTimeCategory ?? '')
 
   // ── 列幅（A-O 15列、A5用に調整） ───────────────────────────────
   // A:B = section/am-pm label  C = 担当者  D = spacer
@@ -147,7 +150,7 @@ function buildSheet(
 
   // ━━━ Row 3: サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = 15
-  mg(`A${r}:F${r}`, `A${r}`, '《サービス提供時間 / 時間区分》',
+  mg(`A${r}:F${r}`, `A${r}`, changed ? '《サービス提供時間（本日変更）》' : '《サービス提供時間 / 時間区分》',
     COL.lblBg, COL.lblFg, false, 7, 'left')
   mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 9)
   sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 8)

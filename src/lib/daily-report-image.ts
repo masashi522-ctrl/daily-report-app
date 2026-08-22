@@ -2,6 +2,7 @@ import 'server-only'
 import path from 'path'
 import { createCanvas, GlobalFonts, type SKRSContext2D, type Canvas } from '@napi-rs/canvas'
 import type { Resident, DailyRecord } from '@/types/database'
+import { serviceTimeRangeFromNotes } from './attendance-stats'
 
 // 連絡帳をLINEで送るための画像を作る。
 // A5の用紙をそのまま縮小するとスマホでは字が小さくて読めないため、
@@ -164,7 +165,17 @@ function render(
   const fluid = (record.fluidIntakeAm ?? 0) + (record.fluidIntakePm ?? 0)
   const lunchMed = record.medicationBeforeLunch || record.medicationAfterLunch
 
+  // 紙の連絡帳と同じく提供時間を載せる。その日だけ変わった場合は
+  // 特記事項の記載を優先する
+  const changed = serviceTimeRangeFromNotes(record.specialNotes)
+  const start = changed?.start ?? resident.serviceStartTime
+  const end = changed?.end ?? resident.serviceEndTime
+
   const rows: Row[] = [
+    {
+      label: changed ? '利用時間※' : '利用時間',
+      value: start && end ? `${start} 〜 ${end}` : '―',
+    },
     { label: '体温', value: `午前 ${temp(record.tempMorning)} ／ 午後 ${temp(record.tempAfternoon)}` },
     { label: '血圧', value: `午前 ${bp(record.bpSystolic, record.bpDiastolic)} ／ 午後 ${bp(record.bpSystolicPm, record.bpDiastolicPm)}` },
     { label: '脈拍', value: `午前 ${num(record.pulse, '')} ／ 午後 ${num(record.pulsePm, '')}` },
@@ -195,6 +206,15 @@ function render(
     y += rowH
   }
   y += 40
+
+  if (changed) {
+    if (!measure) {
+      ctx.fillStyle = C.muted
+      ctx.font = '26px MPLUS1p'
+      ctx.fillText('※ 本日は利用時間が変更になりました', PAD + 20, y + 24)
+    }
+    y += 46
+  }
 
   // ── 日中のご様子 ────────────────────────────────────────────
   // 特記事項（specialNotes）は職員向けのメモで、紙の連絡帳にも印字していない。
