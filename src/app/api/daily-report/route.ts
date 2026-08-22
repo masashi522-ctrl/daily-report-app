@@ -37,14 +37,15 @@ function buildSheet(
 ) {
   const ws = wb.addWorksheet(sheetSafeName(resident.name), {
     pageSetup: {
-      paperSize: 11,  // A5
-      orientation: 'portrait',
+      paperSize: 9,  // A4
+      orientation: 'landscape',
       fitToPage: true,
+      // A4横（297mm）にA5縦（148mm）がちょうど2枚並ぶ。左右に同じ内容を出し、
+      // 真ん中で切ればA5の連絡帳が2部になる
       fitToWidth: 1,
-      // 縦を無制限にすると、行が少し増えただけで2ページ目に流れてしまう。
-      // AI文章の長さで高さが変わるため、A5・1枚に必ず収まるよう縦も1に固定する
       fitToHeight: 1,
-      margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
+      // 用紙いっぱいに印刷するため余白は最小にする
+      margins: { left: 0, right: 0, top: 0, bottom: 0, header: 0, footer: 0 },
     },
   })
 
@@ -108,6 +109,9 @@ function buildSheet(
     return cell
   }
 
+  // 右半分へ複製するために、結合した範囲を控えておく
+  const mergedRanges: string[] = []
+
   function mg(
     range: string, addr: string,
     value: string | number | null,
@@ -118,6 +122,7 @@ function buildSheet(
     wrap = false,
   ) {
     ws.mergeCells(range)
+    mergedRanges.push(range)
     return sc(addr, value, bg, fg, bold, size, h, v, border, wrap)
   }
 
@@ -221,7 +226,7 @@ function buildSheet(
   r++
 
   // 健康チェック 担当者: AM-PM 行の C列を縦マージしてドロップダウン
-  ws.mergeCells(`C${amRow}:C${pmRow}`)
+  ws.mergeCells(`C${amRow}:C${pmRow}`); mergedRanges.push(`C${amRow}:C${pmRow}`)
   const vitalsStaffCell = ws.getCell(`C${amRow}`)
   vitalsStaffCell.value = ''
   vitalsStaffCell.fill = { type: 'pattern', pattern: 'solid', fgColor: ac(COL.valBg) }
@@ -314,7 +319,7 @@ function buildSheet(
   const trainEndRow = r - 1
 
   // 機能訓練 A:B 縦マージ
-  ws.mergeCells(`A${trainStartRow}:B${trainEndRow}`)
+  ws.mergeCells(`A${trainStartRow}:B${trainEndRow}`); mergedRanges.push(`A${trainStartRow}:B${trainEndRow}`)
   const trainLblCell = ws.getCell(`A${trainStartRow}`)
   trainLblCell.value = '機能訓練'
   trainLblCell.fill = { type: 'pattern', pattern: 'solid', fgColor: ac(COL.lblBg) }
@@ -323,7 +328,7 @@ function buildSheet(
   trainLblCell.border = allT
 
   // 機能訓練 担当者 C列縦マージ＋ドロップダウン
-  ws.mergeCells(`C${trainStartRow}:C${trainEndRow}`)
+  ws.mergeCells(`C${trainStartRow}:C${trainEndRow}`); mergedRanges.push(`C${trainStartRow}:C${trainEndRow}`)
   const trainStaffCell = ws.getCell(`C${trainStartRow}`)
   trainStaffCell.value = ''
   trainStaffCell.fill = { type: 'pattern', pattern: 'solid', fgColor: ac(COL.valBg) }
@@ -365,6 +370,65 @@ function buildSheet(
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
   ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
+
+  duplicateToRight(ws, r, mergedRanges)
+}
+
+/** 左半分の列数（A〜O の15列）。右半分はこの数だけずらした位置に作る */
+const BLOCK_COLS = 15
+
+function colName(n: number): string {
+  let s = ''
+  while (n > 0) {
+    const r = (n - 1) % 26
+    s = String.fromCharCode(65 + r) + s
+    n = Math.floor((n - 1) / 26)
+  }
+  return s
+}
+
+/**
+ * 左半分（A〜O）に組み立てた連絡帳を、そのまま右半分（P〜AD）へ複製する。
+ * A4横1枚に同じ内容が2部並び、真ん中で切ればA5の連絡帳が2部になる。
+ */
+function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: string[]) {
+  // 列幅
+  for (let c = 1; c <= BLOCK_COLS; c++) {
+    ws.getColumn(c + BLOCK_COLS).width = ws.getColumn(c).width
+  }
+
+  // 先に結合してから値を入れる。逆にすると、結合で消えるセルに書いた値が
+  // 先頭セルを上書きしてしまう
+  const slaves = new Set<string>()
+  for (const range of mergedRanges) {
+    const m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(range)
+    if (!m) continue
+    const toNum = (letters: string) =>
+      letters.split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0)
+    const c1 = toNum(m[1]) + BLOCK_COLS
+    const c2 = toNum(m[3]) + BLOCK_COLS
+    const r1 = Number(m[2])
+    const r2 = Number(m[4])
+    ws.mergeCells(`${colName(c1)}${r1}:${colName(c2)}${r2}`)
+    for (let r = r1; r <= r2; r++) {
+      for (let c = c1; c <= c2; c++) {
+        if (r === r1 && c === c1) continue
+        slaves.add(`${r}:${c}`)
+      }
+    }
+  }
+
+  // セルの値と書式
+  for (let row = 1; row <= lastRow; row++) {
+    for (let c = 1; c <= BLOCK_COLS; c++) {
+      const dstCol = c + BLOCK_COLS
+      if (slaves.has(`${row}:${dstCol}`)) continue
+      const src = ws.getCell(row, c)
+      const dst = ws.getCell(row, dstCol)
+      dst.value = src.value
+      dst.style = { ...src.style }
+    }
+  }
 }
 
 export async function GET(request: Request) {
