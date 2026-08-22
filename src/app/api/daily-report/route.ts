@@ -513,6 +513,10 @@ function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: 
       const current = src.value
       const result = current == null || typeof current === 'object' ? '' : current
       dst.value = { formula: `IF(${ref}="","",${ref})`, result }
+
+      // 担当者欄のプルダウンも引き継ぐ。ふだんは左側の内容が写るが、
+      // 右側だけ別の担当者にしたいときは選び直せるようにしておく
+      if (src.dataValidation) dst.dataValidation = { ...src.dataValidation }
     }
   }
 }
