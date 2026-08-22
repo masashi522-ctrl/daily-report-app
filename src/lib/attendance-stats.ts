@@ -93,9 +93,9 @@ export function serviceHoursOf(r: TimeFields, notes?: string | null): number | n
   return null
 }
 
-/** 5.4 → '5.4時間' */
+/** 5.4 → '5.40時間'（小数点第2位まで） */
 export function formatHours(hours: number | null): string {
-  return hours == null ? '―' : `${hours.toFixed(1)}時間`
+  return hours == null ? '―' : `${hours.toFixed(2)}時間`
 }
 
 export type DaySummary = {
