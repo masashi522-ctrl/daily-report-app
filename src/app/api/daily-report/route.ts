@@ -433,15 +433,17 @@ function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: 
     }
   }
 
-  // セルの値と書式
+  // セルの値と書式。
+  // 書式は結合に隠れるセルにも入れる（罫線や背景は隠れたセル側にも
+  // 持たせないと、結合範囲の内側で線が欠けてずれて見える）。
+  // 値は先頭セルだけに入れる（隠れたセルへ書くと先頭を上書きしてしまう）
   for (let row = 1; row <= lastRow; row++) {
     for (let c = 1; c <= BLOCK_COLS; c++) {
       const dstCol = c + COL_OFFSET
-      if (slaves.has(`${row}:${dstCol}`)) continue
       const src = ws.getCell(row, c)
       const dst = ws.getCell(row, dstCol)
-      dst.value = src.value
       dst.style = { ...src.style }
+      if (!slaves.has(`${row}:${dstCol}`)) dst.value = src.value
     }
   }
 }
