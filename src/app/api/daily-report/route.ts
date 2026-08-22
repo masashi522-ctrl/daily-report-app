@@ -119,23 +119,27 @@ function buildSheet(
     return sc(addr, value, bg, fg, bold, size, h, v, border, wrap)
   }
 
+  // ExcelJSが書き出した行の高さは、Excel上では指定値の約2/3で表示される。
+  // 詰まって見えるのを防ぐため、指定するときに打ち消しておく
+  const H = (points: number) => points * 1.5
+
   // セクションヘッダー（A-O 全幅）
   function secHdr(row: number, label: string, h2 = 18) {
-    ws.getRow(row).height = h2
+    ws.getRow(row).height = H(h2)
     mg(`A${row}:O${row}`, `A${row}`, label, COL.hdrBg, COL.hdrFg, true, 9, 'left')
   }
 
   let r = 1
 
   // ━━━ Row 1: タイトル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 22
+  ws.getRow(r).height = H(22)
   mg(`A${r}:O${r}`, `A${r}`, 'デイサービス　連絡帳',
     COL.titleBg, COL.titleFg, true, 12, 'center', 'middle', allB2)
   r++
 
   // ━━━ Row 2: 利用者名 ＋ 日付 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 氏名は誰の連絡帳か一目で分かるよう大きめに（余白が窮屈にならない高さに合わせる）
-  ws.getRow(r).height = 26
+  ws.getRow(r).height = H(26)
   mg(`A${r}:G${r}`, `A${r}`, resident.name + '　様',
     COL.valBg, COL.valFg, true, 16, 'left', 'middle')
   sc(`H${r}`, 'R',     COL.lblBg, COL.lblFg, false, 8)
@@ -149,9 +153,9 @@ function buildSheet(
   r++
 
   // ━━━ Row 3: サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 15
+  ws.getRow(r).height = H(15)
   mg(`A${r}:F${r}`, `A${r}`, changed ? '《サービス提供時間（本日変更）》' : '《サービス提供時間 / 時間区分》',
-    COL.lblBg, COL.lblFg, false, 7, 'left')
+    COL.lblBg, COL.lblFg, false, 8, 'left')
   mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 9)
   sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 8)
   mg(`J${r}:K${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 9)
@@ -163,19 +167,19 @@ function buildSheet(
   secHdr(r, 'デイサービスでのご様子', 15); r++
 
   // ━━━ Row 5: 健康チェック テーブルヘッダー ━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 14
-  mg(`A${r}:B${r}`, `A${r}`, '健康チェック', COL.lblBg, COL.lblFg, true, 7)
-  sc(`C${r}`, '担当者', COL.lblBg, COL.lblFg, false, 7)
-  sc(`D${r}`, '',       COL.lblBg, COL.lblFg, false, 7)
-  mg(`E${r}:G${r}`, `E${r}`, '時間',         COL.lblBg, COL.lblFg, false, 7)
-  mg(`H${r}:J${r}`, `H${r}`, '体温（℃）',   COL.lblBg, COL.lblFg, false, 7)
-  mg(`K${r}:M${r}`, `K${r}`, '血圧（mmHg）', COL.lblBg, COL.lblFg, false, 7)
-  mg(`N${r}:O${r}`, `N${r}`, '脈拍（/分）',  COL.lblBg, COL.lblFg, false, 7)
+  ws.getRow(r).height = H(14)
+  mg(`A${r}:B${r}`, `A${r}`, '健康チェック', COL.lblBg, COL.lblFg, true, 8)
+  sc(`C${r}`, '担当者', COL.lblBg, COL.lblFg, false, 8)
+  sc(`D${r}`, '',       COL.lblBg, COL.lblFg, false, 8)
+  mg(`E${r}:G${r}`, `E${r}`, '時間',         COL.lblBg, COL.lblFg, false, 8)
+  mg(`H${r}:J${r}`, `H${r}`, '体温（℃）',   COL.lblBg, COL.lblFg, false, 8)
+  mg(`K${r}:M${r}`, `K${r}`, '血圧（mmHg）', COL.lblBg, COL.lblFg, false, 8)
+  mg(`N${r}:O${r}`, `N${r}`, '脈拍（/分）',  COL.lblBg, COL.lblFg, false, 8)
   r++
 
   // ━━━ Row 6: AM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const amRow = r
-  ws.getRow(r).height = 17
+  ws.getRow(r).height = H(17)
   mg(`A${r}:B${r}`, `A${r}`, '午前', COL.lblBg, COL.lblFg, false, 8)
   sc(`D${r}`, '', COL.valBg, COL.valFg)
   const bpAmAlert = record != null &&
@@ -198,7 +202,7 @@ function buildSheet(
 
   // ━━━ Row 7: PM バイタル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const pmRow = r
-  ws.getRow(r).height = 17
+  ws.getRow(r).height = H(17)
   mg(`A${r}:B${r}`, `A${r}`, '午後', COL.lblBg, COL.lblFg, false, 8)
   sc(`D${r}`, '', COL.valBg, COL.valFg)
   const bpPmStr = record?.bpSystolicPm != null
@@ -230,7 +234,7 @@ function buildSheet(
   }
 
   // ━━━ Row 8: 食事・水分量 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 20
+  ws.getRow(r).height = H(20)
   mg(`A${r}:D${r}`, `A${r}`, '食事・水分量', COL.lblBg, COL.lblFg, true, 8)
   mg(`E${r}:F${r}`, `E${r}`, '（主食）',     COL.lblBg, COL.lblFg, false, 8)
   sc(`G${r}`, record?.mealMainFood != null ? record.mealMainFood + '割' : '',
@@ -246,7 +250,7 @@ function buildSheet(
   r++
 
   // ━━━ Row 9: 入浴・口腔ケア ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 20
+  ws.getRow(r).height = H(20)
   mg(`A${r}:D${r}`, `A${r}`, '入　浴', COL.lblBg, COL.lblFg, true, 8)
   mg(`E${r}:H${r}`, `E${r}`,
     record ? bathingLabel(record.bathing, record.bathingSkipReason) : '',
@@ -258,7 +262,7 @@ function buildSheet(
   r++
 
   // ━━━ Row 10: 服薬 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 20
+  ws.getRow(r).height = H(20)
   const lunchMed = record?.medicationBeforeLunch || record?.medicationAfterLunch
   mg(`A${r}:D${r}`, `A${r}`, '服　薬', COL.lblBg, COL.lblFg, true, 8)
   sc(`E${r}`, '（朝）', COL.lblBg, COL.lblFg, false, 8)
@@ -276,7 +280,7 @@ function buildSheet(
   r++
 
   // ━━━ Row 11: 排便・排尿（排尿は手書き欄） ━━━━━━━━━━━━━━━━━━━━
-  ws.getRow(r).height = 20
+  ws.getRow(r).height = H(20)
   mg(`A${r}:D${r}`, `A${r}`, '排便・排尿', COL.lblBg, COL.lblFg, true, 8)
   mg(`E${r}:F${r}`, `E${r}`, '排　便', COL.lblBg, COL.lblFg, false, 8)
   // 日次記録の排便（量・質）を差し込む。未記録なら手書きできるよう空欄のまま
@@ -296,7 +300,7 @@ function buildSheet(
     { label: '認知機能訓練', start: '', end: '' },
   ]
   trainItems.forEach((item, i) => {
-    ws.getRow(r).height = 20
+    ws.getRow(r).height = H(20)
     mg(`D${r}:H${r}`, `D${r}`, item.label, COL.lblBg, COL.lblFg, false, 9, 'left')
     mg(`I${r}:J${r}`, `I${r}`, item.start, COL.valBg, COL.valFg, false, 10)
     sc(`K${r}`, item.start || item.end ? '～' : '', COL.lblBg, COL.lblFg, false, 9)
@@ -334,30 +338,30 @@ function buildSheet(
   // ━━━ 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 行の高さを固定すると長い文章が途中で切れて印刷されるため、文字数から高さを見積もる
   secHdr(r, '日中のご様子・連絡事項', 18); r++
-  ws.getRow(r).height = estimateTextHeight(aiDaily, AI_TEXT_WIDTH_UNITS, 10, 90)
+  ws.getRow(r).height = H(estimateTextHeight(aiDaily, AI_TEXT_WIDTH_UNITS, 10, 90))
   mg(`A${r}:O${r}`, `A${r}`, aiDaily,
     COL.valBg, COL.valFg, false, 10, 'left', 'top', allT, true)
   r++
 
   // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'リハビリからの連絡事項', 18); r++
-  ws.getRow(r).height = estimateTextHeight(aiRehab, AI_TEXT_WIDTH_UNITS, 10, 60)
+  ws.getRow(r).height = H(estimateTextHeight(aiRehab, AI_TEXT_WIDTH_UNITS, 10, 60))
   mg(`A${r}:O${r}`, `A${r}`, aiRehab,
     COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, 10, 'left', 'top', allT, true)
   r++
 
   // ━━━ 看護からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, '看護からの連絡事項', 18); r++
-  ws.getRow(r).height = 40
+  ws.getRow(r).height = H(40)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = 40
+  ws.getRow(r).height = H(40)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
 
   // ━━━ ご家族からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'ご家族からの連絡事項', 18); r++
-  ws.getRow(r).height = 40
+  ws.getRow(r).height = H(40)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = 40
+  ws.getRow(r).height = H(40)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
 }
 
