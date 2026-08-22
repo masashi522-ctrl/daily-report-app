@@ -2,13 +2,35 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import ExcelJS from 'exceljs'
 import type { Resident, DailyRecord } from '@/types/database'
-import { estimateTextHeight } from '@/lib/care-plan-document'
 // 文章とラベルの決まりごとは、LINEで送る画像と共通のものを使う
 import { DOW_JA, bathingLabel, sheetSafeName, generateAIText, createGroqClient } from '@/lib/daily-report-ai'
 import { serviceTimeRangeFromNotes } from '@/lib/attendance-stats'
 
-// AI文章欄（A〜O列を結合）の横幅。行の高さの見積もりに使う
+// AI文章欄（A〜O列を結合）の横幅。何文字で折り返すかの見積もりに使う
 const AI_TEXT_WIDTH_UNITS = 69
+
+// AI文章欄の高さ（pt）。文章の長さによらず固定し、印刷の大きさを一定に保つ
+const AI_DAILY_HEIGHT = 140
+const AI_REHAB_HEIGHT = 70
+
+/**
+ * 決まった高さの欄に文章を収めるための文字の大きさを選ぶ。
+ * 大きい方から順に試し、行数が収まる最初のものを使う。
+ * 高さを変えずに調整することで、文章が長い日でも紙の大きさが変わらない。
+ */
+function fitFontSize(text: string, boxHeight: number): number {
+  const body = (text ?? '').trim()
+  if (!body) return 10
+
+  for (const size of [10, 9, 8, 7, 6]) {
+    // 文字が小さいほど1行に入る字数は増える
+    const charsPerLine = Math.max(5, Math.floor(AI_TEXT_WIDTH_UNITS * 0.42 * (10 / size)))
+    const lines = body.split('\n')
+      .reduce((n, line) => n + Math.max(1, Math.ceil(Array.from(line).length / charsPerLine)), 0)
+    if (lines * size * 1.7 + 8 <= boxHeight) return size
+  }
+  return 6
+}
 
 
 // ─── カラー（2色：タイトルのみティール、他グレー） ────────────────
@@ -349,32 +371,34 @@ function buildSheet(
   }
 
   // ━━━ 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 行の高さを固定すると長い文章が途中で切れて印刷されるため、文字数から高さを見積もる
+  // 欄の高さは固定する。文章の長さで高さを変えると、そのぶんシート全体が
+  // 縮小されて印刷され、日によって連絡帳の大きさが変わってしまうため。
+  // 長い文章は文字を小さくして収める
   secHdr(r, '日中のご様子・連絡事項', 18); r++
-  ws.getRow(r).height = H(estimateTextHeight(aiDaily, AI_TEXT_WIDTH_UNITS, 10, 90))
+  ws.getRow(r).height = H(AI_DAILY_HEIGHT)
   mg(`A${r}:O${r}`, `A${r}`, aiDaily,
-    COL.valBg, COL.valFg, false, 10, 'left', 'top', allT, true)
+    COL.valBg, COL.valFg, false, fitFontSize(aiDaily, AI_DAILY_HEIGHT), 'left', 'top', allT, true)
   r++
 
   // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'リハビリからの連絡事項', 18, 'left'); r++
-  ws.getRow(r).height = H(estimateTextHeight(aiRehab, AI_TEXT_WIDTH_UNITS, 10, 60))
+  ws.getRow(r).height = H(AI_REHAB_HEIGHT)
   mg(`A${r}:O${r}`, `A${r}`, aiRehab,
-    COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, 10, 'left', 'top', allT, true)
+    COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, fitFontSize(aiRehab, AI_REHAB_HEIGHT), 'left', 'top', allT, true)
   r++
 
   // ━━━ 看護からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, '看護からの連絡事項', 18, 'left'); r++
-  ws.getRow(r).height = H(32)
+  ws.getRow(r).height = H(28)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = H(32)
+  ws.getRow(r).height = H(28)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
 
   // ━━━ ご家族からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'ご家族からの連絡事項', 18, 'left'); r++
-  ws.getRow(r).height = H(32)
+  ws.getRow(r).height = H(28)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = H(32)
+  ws.getRow(r).height = H(28)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
 
   duplicateToRight(ws, r, mergedRanges)
