@@ -444,6 +444,8 @@ function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: 
       const dst = ws.getCell(row, dstCol)
       dst.style = { ...src.style }
       if (!slaves.has(`${row}:${dstCol}`)) dst.value = src.value
+      // 担当者欄のプルダウン（入力規則）も引き継ぐ
+      if (src.dataValidation) dst.dataValidation = { ...src.dataValidation }
     }
   }
 }
