@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { residentIdsInFacility } from '@/lib/facility-guard'
-import { isLineConfigured, isLineUserId, pushMessages } from '@/lib/line'
+import { getLineChannel, isLineUserId, pushMessages } from '@/lib/line'
 import { buildDailyReportImage } from '@/lib/daily-report-image'
 import { generateAIText, createGroqClient } from '@/lib/daily-report-ai'
 import type { Resident, DailyRecord, FamilyContact } from '@/types/database'
@@ -78,8 +78,9 @@ async function log(
 export async function sendFamilyLine(residentIds: string[], date?: string): Promise<{ results: SendResult[]; error?: string }> {
   const session = await requireSession()
 
-  if (!isLineConfigured()) {
-    return { results: [], error: 'LINEの設定（LINE_CHANNEL_ACCESS_TOKEN）がまだ登録されていません' }
+  const channel = await getLineChannel(session.facilityId)
+  if (!channel) {
+    return { results: [], error: 'この施設のLINE設定がまだ登録されていません（スタッフ画面から登録できます）' }
   }
 
   const targetDate = date || jstToday()
@@ -180,7 +181,7 @@ export async function sendFamilyLine(residentIds: string[], date?: string): Prom
 
     for (const contact of contacts) {
       try {
-        await pushMessages(contact.lineUserId!, messages)
+        await pushMessages(channel.accessToken, contact.lineUserId!, messages)
         result.sent++
         if (reportUrl) await log(session.facilityId, resident.id, contact.id, targetDate, 'REPORT', 'SENT', null, paths)
         if (sentPhotoPaths.length > 0) await log(session.facilityId, resident.id, contact.id, targetDate, 'PHOTO', 'SENT', null, paths)
@@ -197,8 +198,3 @@ export async function sendFamilyLine(residentIds: string[], date?: string): Prom
   return { results }
 }
 
-/** 送信ボタンを出してよいか（LINEの設定が済んでいるか） */
-export async function lineReady(): Promise<boolean> {
-  await requireSession()
-  return isLineConfigured()
-}

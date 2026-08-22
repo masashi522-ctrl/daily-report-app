@@ -38,11 +38,13 @@ export default async function ReportPage({
         .order('name')
     : { data: [] }
 
+  const lineConfigured = await isLineConfigured(session.facilityId)
+
   return (
     <ReportClient
       residents={(residents ?? []) as Resident[]}
       date={today}
-      lineConfigured={isLineConfigured()}
+      lineConfigured={lineConfigured}
     />
   )
 }

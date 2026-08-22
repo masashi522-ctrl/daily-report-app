@@ -69,14 +69,10 @@ export async function requireSession(): Promise<SessionPayload> {
   return session
 }
 
+// 役割は 'ADMIN' / 'STAFF' の2つ。以前は小文字で比較していたため
+// 管理者でも必ず弾かれ、存在しないURLへ飛ばしていた
 export async function requireAdmin(): Promise<SessionPayload> {
   const session = await requireSession()
-  if (session.role !== 'admin') redirect('/leader')
-  return session
-}
-
-export async function requireLeader(): Promise<SessionPayload> {
-  const session = await requireSession()
-  if (session.role !== 'leader') redirect('/admin')
+  if (session.role !== 'ADMIN') redirect('/dashboard')
   return session
 }

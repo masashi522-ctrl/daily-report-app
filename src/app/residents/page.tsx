@@ -29,6 +29,8 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
         .order('createdAt', { ascending: true })
     : { data: [] }
 
+  const lineConfigured = await isLineConfigured(session.facilityId)
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -51,7 +53,7 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
                   <FamilyContactPanel
                     resident={editingResident as Resident}
                     contacts={(familyContacts ?? []) as FamilyContact[]}
-                    lineConfigured={isLineConfigured()}
+                    lineConfigured={lineConfigured}
                   />
                 </EditResidentForm>
               </>

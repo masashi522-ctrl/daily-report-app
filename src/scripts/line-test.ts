@@ -1,21 +1,21 @@
 // LINE送信のお試し用スクリプト。
-// LINE公式アカウントを作ったあと、Webhookの設定をする前でも、
+// LINE公式アカウントを登録したあと、Webhookの設定をする前でも、
 // 自分自身宛に連絡帳の画像を送って見た目と動作を確認できる。
 //
 // 実行方法:
-//   npx tsx --conditions=react-server --env-file=.env.local src/scripts/line-test.ts [利用者名] [日付]
+//   npx tsx --conditions=react-server --env-file=.env.local src/scripts/line-test.ts <施設のslug> <あなたのユーザーID> [利用者名] [日付]
 //
-// 必要な環境変数（.env.local に追記）:
-//   LINE_CHANNEL_ACCESS_TOKEN=（チャネルアクセストークン・長期）
-//   LINE_TEST_USER_ID=（あなたのユーザーID・引数で渡してもよい）
+// 例:
+//   ... src/scripts/line-test.ts genkimura U0a66... "折元和子" 2026-08-20
 //
+// トークンは施設ごとに「スタッフ」画面から登録した値を使う。
 // <あなたのユーザーID> は LINE Developers コンソールの
 // 「Messaging API設定」タブに表示される "あなたのユーザーID"（Uで始まる33文字）。
 // 事前にその公式アカウントを友だち追加しておくこと（未追加だと送信できない）。
 
 import crypto from 'crypto'
 import { supabase } from '../lib/supabase'
-import { isLineConfigured, isLineUserId, pushMessages } from '../lib/line'
+import { getLineChannel, isLineUserId, pushMessages } from '../lib/line'
 import { buildDailyReportImage } from '../lib/daily-report-image'
 import { generateAIText, createGroqClient } from '../lib/daily-report-ai'
 import type { Resident, DailyRecord } from '../types/database'
@@ -23,12 +23,20 @@ import type { Resident, DailyRecord } from '../types/database'
 const BUCKET = 'resident-monthly-photos'
 
 async function main() {
-  // ユーザーIDは引数でも、.env.local の LINE_TEST_USER_ID でも指定できる
-  const [argUserId, residentName, dateArg] = process.argv.slice(2)
+  const [slug, argUserId, residentName, dateArg] = process.argv.slice(2)
   const userId = argUserId || process.env.LINE_TEST_USER_ID || ''
 
-  if (!isLineConfigured()) {
-    console.error('LINE_CHANNEL_ACCESS_TOKEN が設定されていません。.env.local に追記してください。')
+  if (!slug) {
+    console.error('施設のslugを指定してください（例: genkimura / mokumoku / suginoko）')
+    process.exit(1)
+  }
+
+  const { data: facility } = await supabase.from('Facility').select('id, name').eq('slug', slug).maybeSingle()
+  if (!facility) { console.error(`施設「${slug}」が見つかりません`); process.exit(1) }
+
+  const channel = await getLineChannel(facility.id)
+  if (!channel) {
+    console.error(`「${facility.name}」のLINE設定が未登録です。スタッフ画面から登録してください。`)
     process.exit(1)
   }
   if (!isLineUserId(userId)) {
@@ -42,8 +50,9 @@ async function main() {
   let resident: Resident | null = null
 
   if (residentName) {
-    const { data } = await supabase.from('Resident').select('*').eq('name', residentName).limit(1).maybeSingle()
-    if (!data) { console.error(`利用者「${residentName}」が見つかりません`); process.exit(1) }
+    const { data } = await supabase.from('Resident').select('*')
+      .eq('name', residentName).eq('facilityId', facility.id).limit(1).maybeSingle()
+    if (!data) { console.error(`「${facility.name}」に利用者「${residentName}」が見つかりません`); process.exit(1) }
     resident = data as Resident
   }
 
@@ -54,19 +63,19 @@ async function main() {
       .eq('residentId', resident.id).eq('date', date).maybeSingle()
     record = (data as DailyRecord) ?? null
   } else {
-    // 指定が無ければ、記録が入っているものを1件選ぶ
+    // 指定が無ければ、その施設で記録が入っているものを1件選ぶ
+    const { data: rs } = await supabase.from('Resident').select('id').eq('facilityId', facility.id).eq('isActive', true)
+    const ids = (rs ?? []).map(r => r.id)
     const { data } = await supabase.from('DailyRecord').select('*')
-      .not('tempMorning', 'is', null).order('date', { ascending: false }).limit(1).maybeSingle()
+      .in('residentId', ids).not('tempMorning', 'is', null)
+      .order('date', { ascending: false }).limit(1).maybeSingle()
     if (!data) { console.error('記録が1件も見つかりません'); process.exit(1) }
     record = data as DailyRecord
     const { data: r } = await supabase.from('Resident').select('*').eq('id', record.residentId).single()
     resident = r as Resident
   }
 
-  const { data: facility } = await supabase.from('Facility').select('name').eq('id', resident!.facilityId!).maybeSingle()
-  const facilityName = facility?.name ?? 'デイサービス'
-
-  console.log(`対象: ${resident!.name} 様 / ${record?.date ?? date} / ${facilityName}`)
+  console.log(`対象: ${resident!.name} 様 / ${record?.date ?? date} / ${facility.name}`)
 
   // AI文章（GROQ_API_KEY があれば本番と同じ文面になる）
   let ai = { daily: '', rehab: '' }
@@ -81,7 +90,7 @@ async function main() {
   }
 
   console.log('連絡帳の画像を作成中...')
-  const png = buildDailyReportImage(resident!, record, record?.date ?? date, facilityName, ai.daily, ai.rehab)
+  const png = buildDailyReportImage(resident!, record, record?.date ?? date, facility.name, ai.daily, ai.rehab)
   console.log(`  画像サイズ: ${(png.length / 1024).toFixed(0)}KB`)
 
   const objectPath = `line/test/${crypto.randomUUID()}.png`
@@ -100,13 +109,12 @@ async function main() {
 
   console.log('LINEへ送信中...')
   try {
-    await pushMessages(userId, [
-      { type: 'text', text: `【送信テスト】${facilityName}\nこの内容がご家族に届きます。` },
+    await pushMessages(channel.accessToken, userId, [
+      { type: 'text', text: `【送信テスト】${facility.name}\nこの内容がご家族に届きます。` },
       { type: 'image', originalContentUrl: signed.signedUrl, previewImageUrl: signed.signedUrl },
     ])
     console.log('\n送信しました。LINEのトークを確認してください。')
-    // LINEは送信APIの応答後に画像を取りに来るため、ここで消してはいけない。
-    // 本番と同じく期限切れまで置いたままにする
+    // LINEは送信APIの応答後に画像を取りに来るため、ここで消してはいけない
     console.log(`（画像は ${objectPath} に24時間残ります）`)
   } catch (err) {
     console.error('\n送信に失敗:', err instanceof Error ? err.message : err)

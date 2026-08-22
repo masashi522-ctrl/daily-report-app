@@ -27,6 +27,13 @@ export interface Facility {
   slug: string | null
   capacity: number | null
   capacityByCategory: Partial<Record<typeof SERVICE_TIME_CATEGORIES[number], number>> | null
+  /** LINE公式アカウントは施設ごとに持つ。以下は秘密情報なので画面には返さない */
+  lineChannelAccessToken: string | null
+  lineChannelSecret: string | null
+  /** 公式アカウント自身のID。WebhookのdestinationからこのIDで施設を引く */
+  lineBotUserId: string | null
+  lineBotDisplayName: string | null
+  lineLinkedAt: string | null
   createdAt: string
   updatedAt: string
 }

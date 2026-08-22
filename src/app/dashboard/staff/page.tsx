@@ -3,6 +3,9 @@ import { supabase } from '@/lib/supabase'
 import StaffForm from './staff-form'
 import DeleteButton from './delete-button'
 import EditButton from './edit-button'
+import LineSettingPanel from './line-setting-panel'
+import { getLineSetting } from './line-actions'
+import { headers } from 'next/headers'
 
 export default async function StaffPage() {
   const session = await requireSession()
@@ -19,6 +22,11 @@ export default async function StaffPage() {
     .select('name, facilityCode, slug')
     .eq('id', session.facilityId)
     .maybeSingle()
+
+  // LINEの設定は管理者だけが見られる。トークン自体は画面に返さない
+  const lineSetting = isAdmin ? await getLineSetting() : null
+  const host = (await headers()).get('host') ?? ''
+  const webhookUrl = host ? `https://${host}/api/line/webhook` : '/api/line/webhook'
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,7 +60,11 @@ export default async function StaffPage() {
         </div>
       )}
 
-{isAdmin && <StaffForm />}
+{isAdmin && lineSetting && (
+        <LineSettingPanel setting={lineSetting} webhookUrl={webhookUrl} />
+      )}
+
+      {isAdmin && <StaffForm />}
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="min-w-full text-sm">
