@@ -9,27 +9,60 @@ import { serviceTimeRangeFromNotes } from '@/lib/attendance-stats'
 // AI文章欄（A〜O列を結合）の横幅。何文字で折り返すかの見積もりに使う
 const AI_TEXT_WIDTH_UNITS = 69
 
-// AI文章欄の高さ（pt）。文章の長さによらず固定し、印刷の大きさを一定に保つ
-const AI_DAILY_HEIGHT = 140
-const AI_REHAB_HEIGHT = 70
+// 文章欄と手書き欄に配れる高さの合計（pt）。
+// 合計を固定したまま中の配分だけを変えることで、文章が短い日は
+// その分を手書き欄に回しつつ、印刷の大きさは一定に保つ
+const SECTION_BUDGET = 322
+/** 文章欄の上限。これを超える文章は文字を小さくして収める */
+const AI_DAILY_MAX = 160
+const AI_REHAB_MAX = 82
+/** 文章が無いときの最小の高さ */
+const AI_DAILY_MIN = 44
+const AI_REHAB_MIN = 30
+/** 手書き欄（看護・ご家族の各2行） */
+const BLANK_ROWS = 4
+const BLANK_ROW_MIN = 20
+
+/** 指定した文字の大きさで、その文章が何行になるか */
+function countLines(text: string, size: number): number {
+  const body = text.trim()
+  if (!body) return 0
+  const charsPerLine = Math.max(5, Math.floor(AI_TEXT_WIDTH_UNITS * 0.42 * (10 / size)))
+  return body.split('\n')
+    .reduce((n, line) => n + Math.max(1, Math.ceil(Array.from(line).length / charsPerLine)), 0)
+}
 
 /**
- * 決まった高さの欄に文章を収めるための文字の大きさを選ぶ。
- * 大きい方から順に試し、行数が収まる最初のものを使う。
- * 高さを変えずに調整することで、文章が長い日でも紙の大きさが変わらない。
+ * 文章欄の文字の大きさと高さを決める。
+ * 文字は大きい方から順に試し、上限の高さに収まる最初のものを使う。
+ * 高さは文章の行数ぴったりにして、余白が空きすぎないようにする。
  */
-function fitFontSize(text: string, boxHeight: number): number {
+function fitTextBox(text: string, maxHeight: number, minHeight: number) {
   const body = (text ?? '').trim()
-  if (!body) return 10
+  if (!body) return { size: 10, height: minHeight }
 
   for (const size of [10, 9, 8, 7, 6]) {
-    // 文字が小さいほど1行に入る字数は増える
-    const charsPerLine = Math.max(5, Math.floor(AI_TEXT_WIDTH_UNITS * 0.42 * (10 / size)))
-    const lines = body.split('\n')
-      .reduce((n, line) => n + Math.max(1, Math.ceil(Array.from(line).length / charsPerLine)), 0)
-    if (lines * size * 1.7 + 8 <= boxHeight) return size
+    const height = Math.ceil(countLines(body, size) * size * 1.7 + 8)
+    if (height <= maxHeight) return { size, height: Math.max(minHeight, height) }
   }
-  return 6
+  return { size: 6, height: maxHeight }
+}
+
+/**
+ * 文章欄と手書き欄の高さを配分する。合計は必ず SECTION_BUDGET になる。
+ * 文章が短い日は、余った高さを手書き欄に回す。
+ */
+function layoutSections(aiDaily: string, aiRehab: string) {
+  const daily = fitTextBox(aiDaily, AI_DAILY_MAX, AI_DAILY_MIN)
+  const rehab = fitTextBox(aiRehab, AI_REHAB_MAX, AI_REHAB_MIN)
+
+  // 残りを手書き欄に均等に配り、端数は最後の行で吸収して合計を合わせる
+  const rest = SECTION_BUDGET - daily.height - rehab.height
+  const each = Math.max(BLANK_ROW_MIN, Math.floor(rest / BLANK_ROWS))
+  const blanks = Array.from({ length: BLANK_ROWS }, () => each)
+  blanks[BLANK_ROWS - 1] += rest - each * BLANK_ROWS
+
+  return { daily, rehab, blanks }
 }
 
 
@@ -370,35 +403,35 @@ function buildSheet(
     showErrorMessage: false,
   }
 
-  // ━━━ 日中のご様子・連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 欄の高さは固定する。文章の長さで高さを変えると、そのぶんシート全体が
-  // 縮小されて印刷され、日によって連絡帳の大きさが変わってしまうため。
-  // 長い文章は文字を小さくして収める
+  // ━━━ 文章欄と手書き欄 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 文章欄は中身の行数ぴったりの高さにし、余った分は手書き欄へ回す。
+  // 合計の高さは変わらないため、文章の長さで印刷の大きさが変わらない
+  const layout = layoutSections(aiDaily, aiRehab)
+
   secHdr(r, '日中のご様子・連絡事項', 18); r++
-  ws.getRow(r).height = H(AI_DAILY_HEIGHT)
+  ws.getRow(r).height = H(layout.daily.height)
   mg(`A${r}:O${r}`, `A${r}`, aiDaily,
-    COL.valBg, COL.valFg, false, fitFontSize(aiDaily, AI_DAILY_HEIGHT), 'left', 'top', allT, true)
+    COL.valBg, COL.valFg, false, layout.daily.size, 'left', 'top', allT, true)
   r++
 
-  // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'リハビリからの連絡事項', 18, 'left'); r++
-  ws.getRow(r).height = H(AI_REHAB_HEIGHT)
+  ws.getRow(r).height = H(layout.rehab.height)
   mg(`A${r}:O${r}`, `A${r}`, aiRehab,
-    COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, fitFontSize(aiRehab, AI_REHAB_HEIGHT), 'left', 'top', allT, true)
+    COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, layout.rehab.size, 'left', 'top', allT, true)
   r++
 
   // ━━━ 看護からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, '看護からの連絡事項', 18, 'left'); r++
-  ws.getRow(r).height = H(28)
+  ws.getRow(r).height = H(layout.blanks[0])
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = H(28)
+  ws.getRow(r).height = H(layout.blanks[1])
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
 
   // ━━━ ご家族からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'ご家族からの連絡事項', 18, 'left'); r++
-  ws.getRow(r).height = H(28)
+  ws.getRow(r).height = H(layout.blanks[2])
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = H(28)
+  ws.getRow(r).height = H(layout.blanks[3])
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
 
   duplicateToRight(ws, r, mergedRanges)
