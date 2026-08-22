@@ -44,8 +44,11 @@ function buildSheet(
       // 真ん中で切ればA5の連絡帳が2部になる
       fitToWidth: 1,
       fitToHeight: 1,
-      // 端が切れないよう最小限の余白を取り、余りは左右均等に配る
-      margins: { left: 0.2, right: 0.2, top: 0.2, bottom: 0.2, header: 0, footer: 0 },
+      // 余白はプリンターが印刷できない範囲より広く取る。
+      // ここを狭くすると、印刷できない範囲が広い機種ではExcelが余白を
+      // 押し広げて内容を縮小するため、PCによって大きさが変わってしまう。
+      // 0.4インチ（約10mm）あれば、ほぼどの機種でも縮小されない
+      margins: { left: 0.4, right: 0.4, top: 0.4, bottom: 0.4, header: 0, footer: 0 },
       horizontalCentered: true,
       verticalCentered: true,
     },
