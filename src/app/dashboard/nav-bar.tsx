@@ -4,20 +4,21 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ClipboardList, Users, BookOpen, BarChart2, UserCog, Bath, Dumbbell, FileText, Scale, Target, ClipboardCheck, CalendarCheck, Send } from 'lucide-react'
 
+// 日々使うものを先に、記録の作成物、集計、管理、過去の参照という順に並べている
 const NAV_ITEMS = [
   { href: '/dashboard',       label: '日次記録',   mobileLabel: '日次',   icon: ClipboardList, exact: true },
   { href: '/bathing',         label: '入浴',       mobileLabel: '入浴',   icon: Bath },
   { href: '/training',        label: '機能訓練',   mobileLabel: '訓練',   icon: Dumbbell },
-  { href: '/training-plan',   label: '機能訓練計画書', mobileLabel: '訓練計画', icon: Target },
-  { href: '/care-plan',       label: '介護計画書', mobileLabel: '介護計画', icon: ClipboardCheck },
+  { href: '/weight',          label: '体重',       mobileLabel: '体重',   icon: Scale },
   { href: '/report',          label: '連絡帳',     mobileLabel: '連絡帳', icon: FileText },
   { href: '/family-report',   label: '家族連絡',   mobileLabel: '家族',   icon: Send },
+  { href: '/care-plan',       label: '介護計画書', mobileLabel: '介護計画', icon: ClipboardCheck },
+  { href: '/training-plan',   label: '機能訓練計画書', mobileLabel: '訓練計画', icon: Target },
   { href: '/monthly-report',  label: '月次報告',   mobileLabel: '月次',   icon: CalendarCheck },
-  { href: '/weight',          label: '体重',       mobileLabel: '体重',   icon: Scale },
-  { href: '/residents',       label: '利用者管理', mobileLabel: '利用者', icon: Users },
-  { href: '/history',         label: '過去記録',   mobileLabel: '過去',   icon: BookOpen },
   { href: '/analytics',       label: '集計・分析', mobileLabel: '集計',   icon: BarChart2 },
+  { href: '/residents',       label: '利用者管理', mobileLabel: '利用者', icon: Users },
   { href: '/dashboard/staff', label: 'スタッフ',   mobileLabel: 'スタッフ', icon: UserCog },
+  { href: '/history',         label: '過去記録',   mobileLabel: '過去',   icon: BookOpen },
 ]
 
 export function DesktopNav() {
