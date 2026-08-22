@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINE公式アカウント開設手順</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --ground:      #fbfcfc;
+    --surface:     #ffffff;
+    --surface-2:   #f2f6f5;
+    --line:        #dde5e3;
+    --line-soft:   #e9efee;
+    --ink:         #16211f;
+    --ink-2:       #46534f;
+    --ink-3:       #77837f;
+    --teal:        #0f766e;
+    --teal-soft:   #e6f2f0;
+    --teal-ink:    #0b5952;
+    --lg:          #06c755;
+    --lg-bg:       #e7f9ee;
+    --lg-ink:      #04893c;
+    --warn:        #b45309;
+    --warn-bg:     #fdf4e7;
+    --warn-line:   #f0d8b4;
+    --stop:        #b3261e;
+    --stop-bg:     #fdeeed;
+    --stop-line:   #f2cfcc;
+    --shadow:      0 1px 2px rgba(16,33,31,.05), 0 8px 24px -16px rgba(16,33,31,.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#101817; --surface:#16211f; --surface-2:#1c2a27; --line:#2b3a37; --line-soft:#233130;
+      --ink:#e8efed; --ink-2:#a8b6b2; --ink-3:#7d8b87;
+      --teal:#4fbfb2; --teal-soft:#17322f; --teal-ink:#7ed6cb;
+      --lg:#3ad977; --lg-bg:#12301f; --lg-ink:#62e295;
+      --warn:#e0a45c; --warn-bg:#2c2114; --warn-line:#4a3820;
+      --stop:#ef8b83; --stop-bg:#2e1917; --stop-line:#4d2a26;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#101817; --surface:#16211f; --surface-2:#1c2a27; --line:#2b3a37; --line-soft:#233130;
+    --ink:#e8efed; --ink-2:#a8b6b2; --ink-3:#7d8b87;
+    --teal:#4fbfb2; --teal-soft:#17322f; --teal-ink:#7ed6cb;
+    --lg:#3ad977; --lg-bg:#12301f; --lg-ink:#62e295;
+    --warn:#e0a45c; --warn-bg:#2c2114; --warn-line:#4a3820;
+    --stop:#ef8b83; --stop-bg:#2e1917; --stop-line:#4d2a26;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: "Noto Sans JP", system-ui, sans-serif;
+    font-size: 16px; line-height: 1.9; margin: 0; padding: 0 20px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1, h2, h3, .eyebrow, .phase-n { font-family: "Zen Kaku Gothic New", "Noto Sans JP", system-ui, sans-serif; }
+
+  .cover { padding: 72px 0 40px; border-bottom: 2px solid var(--ink); display: flex; flex-direction: column; gap: 14px; }
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .14em; color: var(--teal); margin: 0; }
+  h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 900; line-height: 1.3; margin: 0; text-wrap: balance; }
+  .lede { margin: 0; color: var(--ink-2); max-width: 60ch; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+
+  nav.toc { margin: 32px 0 0; padding: 20px 24px; background: var(--surface-2); border-radius: 12px; }
+  nav.toc p { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--ink-3); }
+  nav.toc ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 4px; }
+  nav.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px solid transparent; }
+  nav.toc a:hover, nav.toc a:focus-visible { border-bottom-color: var(--teal); color: var(--teal-ink); }
+
+  section { margin-top: 64px; }
+  h2 { font-size: 24px; font-weight: 900; margin: 0 0 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); text-wrap: balance; }
+  .phase-n {
+    display: inline-block; margin-right: 12px; padding: 2px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; vertical-align: 4px;
+    background: var(--teal); color: #fff;
+  }
+  .where {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 8px;
+    background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line);
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 32px 0 8px; }
+  p { margin: 0 0 14px; }
+  .sub { color: var(--ink-2); font-size: 14.5px; }
+
+  ol.steps { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 20px; counter-reset: s; }
+  ol.steps > li { counter-increment: s; position: relative; padding-left: 52px; }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 1px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--teal); color: #fff;
+    font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  ol.steps > li > strong { display: block; font-weight: 700; font-size: 16.5px; margin-bottom: 2px; }
+  ol.steps > li > .sub { margin: 0 0 8px; }
+  ol.steps.green > li::before { background: var(--lg); color: #04331a; }
+
+  .tablewrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 460px; background: var(--surface); }
+  th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th { background: var(--surface-2); font-weight: 700; font-size: 13px; color: var(--ink-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.k { font-weight: 700; white-space: nowrap; }
+
+  .note { margin: 20px 0; padding: 16px 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); }
+  .note > p:last-child { margin-bottom: 0; }
+  .note .head { font-weight: 700; margin-bottom: 6px; }
+  .note.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .note.warn .head { color: var(--warn); }
+  .note.stop { background: var(--stop-bg); border-color: var(--stop-line); }
+  .note.stop .head { color: var(--stop); }
+  .note.tip { background: var(--teal-soft); border-color: color-mix(in srgb, var(--teal) 26%, transparent); }
+  .note.tip .head { color: var(--teal-ink); }
+
+  /* 画面の写し */
+  .screen { margin: 18px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow); }
+  .screen-bar { padding: 9px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--ink-2); }
+  .screen-body { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .field { border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13px; color: var(--ink-3); background: var(--ground); }
+  .field b { display: block; font-size: 11px; color: var(--ink-2); font-weight: 700; margin-bottom: 3px; }
+  .btn-teal { display: inline-block; background: var(--teal); color: #fff; font-size: 13px; font-weight: 700; padding: 8px 18px; border-radius: 8px; }
+  .pill-ok { display: inline-block; background: var(--teal); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .9em; background: var(--surface-2); border: 1px solid var(--line-soft); padding: 1px 6px; border-radius: 5px; word-break: break-all; }
+  .val {
+    font-family: "IBM Plex Mono", monospace; font-size: 12.5px; background: var(--surface-2);
+    border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 14px; display: block;
+    overflow-x: auto; white-space: nowrap; margin: 6px 0 0;
+  }
+  ul.plain { margin: 0 0 14px; padding-left: 1.3em; }
+  ul.plain li { margin-bottom: 6px; }
+
+  .facility-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 18px 0; }
+  .facility-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--surface); }
+  .facility-card b { display: block; font-size: 15px; margin-bottom: 4px; }
+  .facility-card span { font-size: 12.5px; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; }
+  .checkline { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; margin-bottom: 8px; }
+  .checkline i { flex: none; width: 17px; height: 17px; margin-top: 5px; border: 1.5px solid var(--teal); border-radius: 4px; }
+
+  footer { margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
+  a { color: var(--teal-ink); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  @media (max-width: 560px) {
+    body { padding: 0 16px 64px; }
+    .cover { padding-top: 48px; }
+    ol.steps > li { padding-left: 44px; }
+    ol.steps > li::before { width: 28px; height: 28px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="cover">
+    <p class="eyebrow">デイサービス管理 ・ 管理者向け</p>
+    <h1>LINE公式アカウント<br>開設手順</h1>
+    <p class="lede">ご家族へ連絡帳をお届けするための、施設ごとのLINE公式アカウントを開設し、アプリに登録するまでの手順です。作業はおよそ30分、費用はかかりません。</p>
+    <div class="meta">
+      <span>対象：各施設の管理者</span>
+      <span>所要：30分程度</span>
+      <span>2026年8月版</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <p>もくじ</p>
+    <ol>
+      <li><a href="#before">はじめる前に</a></li>
+      <li><a href="#p1">公式アカウントをつくる</a></li>
+      <li><a href="#p2">Messaging APIを有効にする</a></li>
+      <li><a href="#p3">2つの値を控える</a></li>
+      <li><a href="#p4">アプリに登録する</a></li>
+      <li><a href="#p5">Webhookを設定する</a></li>
+      <li><a href="#p6">応答メッセージを止める</a></li>
+      <li><a href="#p7">QRコードを保存する</a></li>
+      <li><a href="#p8">動作を確かめる</a></li>
+      <li><a href="#trouble">うまくいかないとき</a></li>
+    </ol>
+  </nav>
+
+  <!-- ─────────────────────────── -->
+  <section id="before">
+    <h2>はじめる前に</h2>
+
+    <h3>アカウントは施設ごとに用意します</h3>
+    <p>3施設で1つのアカウントを共有すると、ご家族から見てどの施設からの連絡か分からず、送信できる通数も3施設で取り合うことになります。<strong>この手順は施設ごとに1回ずつ、計3回行います。</strong></p>
+
+    <div class="facility-grid">
+      <div class="facility-card"><b>げんきむらデイサービスセンター</b><span>genkimura</span></div>
+      <div class="facility-card"><b>デイサービスセンターもくもく</b><span>mokumoku</span></div>
+      <div class="facility-card"><b>杉の子デイサービスセンター</b><span>suginoko</span></div>
+    </div>
+
+    <h3>用意するもの</h3>
+    <div class="checkline"><i></i><span>施設で使えるメールアドレス（アカウントごとに別のものが望ましい）</span></div>
+    <div class="checkline"><i></i><span>その施設の<strong>管理者</strong>としてアプリにログインできること</span></div>
+    <div class="checkline"><i></i><span>パソコンとスマートフォン（QRコードの確認に使います）</span></div>
+
+    <div class="note warn">
+      <div class="head">法人審査は不要です</div>
+      <p>この手順で作るのは「未認証アカウント」で、登記簿などの提出は要りません。無料で、すぐに使い始められます。アカウント名の横に認証済みのバッジは付きませんが、機能に違いはありません。</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p1">
+    <h2><span class="phase-n">STEP 1</span>公式アカウントをつくる</h2>
+    <p class="where">作業する場所：ブラウザ（LINE Business ID）</p>
+
+    <ol class="steps">
+      <li>
+        <strong><a href="https://entry.line.biz/" target="_blank" rel="noopener">entry.line.biz</a> を開く</strong>
+        <p class="sub">「LINE公式アカウントを開設する」から進みます。</p>
+      </li>
+      <li>
+        <strong>アカウントを作成してログインする</strong>
+        <p class="sub">メールアドレスで作成するか、施設で使っているLINEアカウントでログインします。個人のLINEアカウントでログインしても、作られるのは施設用の別アカウントです。個人のトークが見られることはありません。</p>
+      </li>
+      <li>
+        <strong>アカウント情報を入力する</strong>
+        <p class="sub">下の表のとおりに入力します。</p>
+      </li>
+    </ol>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:34%">項目</th><th>入力する内容</th></tr></thead>
+        <tbody>
+          <tr><td class="k">アカウント名</td><td><strong>施設名をそのまま</strong>（例：げんきむらデイサービスセンター）。ご家族のトーク画面にこの名前が出るので、施設名以外は避けてください</td></tr>
+          <tr><td class="k">メールアドレス</td><td>施設で受信できるもの</td></tr>
+          <tr><td class="k">会社・事業者名</td><td>法人名</td></tr>
+          <tr><td class="k">業種</td><td>「医療・福祉」→「介護・福祉」</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note tip">
+      <div class="head">アカウント名は後から変えにくくなります</div>
+      <p>変更は7日に1回までという制限があります。作成時に施設名を正しく入れてください。</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p2">
+    <h2><span class="phase-n">STEP 2</span>Messaging APIを有効にする</h2>
+    <p class="where">作業する場所：ブラウザ（LINE Official Account Manager）</p>
+
+    <p>作っただけのアカウントでは、アプリから連絡帳を送れません。外部と連携するための設定を入れます。</p>
+
+    <ol class="steps">
+      <li>
+        <strong><a href="https://manager.line.biz/" target="_blank" rel="noopener">manager.line.biz</a> を開き、作ったアカウントを選ぶ</strong>
+      </li>
+      <li>
+        <strong>右上の「設定」→ 左メニューの「Messaging API」</strong>
+      </li>
+      <li>
+        <strong>「Messaging APIを利用する」を押す</strong>
+        <p class="sub">開発者名とメールアドレスを聞かれたら、施設名と施設のメールアドレスを入れます。</p>
+      </li>
+      <li>
+        <strong>プロバイダーを選ぶ、または新規作成する</strong>
+        <p class="sub">プロバイダーは、複数のアカウントをまとめる入れ物です。<strong>法人名で1つ作り、3施設すべてで同じものを選んで構いません。</strong>アカウント自体は施設ごとに別なので、連絡が混ざることはありません。</p>
+      </li>
+      <li>
+        <strong>同意して完了する</strong>
+        <p class="sub">「Channel IDが発行されました」といった表示が出れば成功です。</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p3">
+    <h2><span class="phase-n">STEP 3</span>2つの値を控える</h2>
+    <p class="where">作業する場所：ブラウザ（LINE Developers）</p>
+
+    <p>アプリに登録する値を取り出します。<strong>この2つは施設ごとに違います。</strong>3施設分を作業するときは、どの施設のものか必ずメモに残してください。</p>
+
+    <ol class="steps">
+      <li>
+        <strong><a href="https://developers.line.biz/console/" target="_blank" rel="noopener">developers.line.biz/console</a> を開く</strong>
+        <p class="sub">STEP 2 で選んだプロバイダーの中に、作ったアカウントのチャネルがあります。</p>
+      </li>
+      <li>
+        <strong>「チャネル基本設定」タブ → チャネルシークレット</strong>
+        <p class="sub">32文字の英数字です。コピーして控えます。</p>
+        <span class="val">例）8f14e45fceea167a5a36dedd4bea2543</span>
+      </li>
+      <li>
+        <strong>「Messaging API設定」タブ → チャネルアクセストークン（長期）</strong>
+        <p class="sub">いちばん下にあります。「発行」を押すと数百文字の長い文字列が出ます。コピーして控えます。</p>
+        <span class="val">例）0KcFA5dWZaZCROwGHYsktsmPRGry/of/7EK2bx39xBYPFe31GS44ydYB…</span>
+      </li>
+      <li>
+        <strong>同じタブの「あなたのユーザーID」も控える</strong>
+        <p class="sub"><code>U</code> で始まる33文字です。STEP 8 の動作確認で使います。</p>
+      </li>
+    </ol>
+
+    <div class="note stop">
+      <div class="head">この2つはパスワードと同じ扱いです</div>
+      <p>チャネルアクセストークンを知られると、<strong>第三者が施設の名前でご家族にメッセージを送れてしまいます。</strong>メール・チャット・共有フォルダに置かないでください。</p>
+      <p style="margin-bottom:0;">控えるときは紙にメモするか、アプリに登録したらすぐ消してください。万一漏れたときは、同じ画面の「再発行」を押せば古いトークンは無効になります。</p>
+    </div>
+
+    <div class="note warn">
+      <div class="head">取り違えに注意</div>
+      <p>「チャネルID」（数字だけ）や「Basic ID」（<code>@</code>で始まる）とは別のものです。アプリに登録するのは<strong>チャネルシークレット（32文字）</strong>と<strong>チャネルアクセストークン（長い文字列）</strong>の2つです。</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p4">
+    <h2><span class="phase-n">STEP 4</span>アプリに登録する</h2>
+    <p class="where">作業する場所：デイサービス管理アプリ</p>
+
+    <ol class="steps">
+      <li>
+        <strong>その施設の管理者としてログインする</strong>
+        <p class="sub">施設を間違えると、別の施設のアカウントとして登録されてしまいます。画面右上の名前で、どの施設にログインしているか確認してください。</p>
+      </li>
+      <li>
+        <strong>メニューの「スタッフ」を開く</strong>
+        <p class="sub">「ご家族へのLINE連絡」という欄があります（管理者にだけ表示されます）。</p>
+      </li>
+      <li>
+        <strong>控えた2つの値を入力して「登録する」を押す</strong>
+      </li>
+    </ol>
+
+    <div class="screen">
+      <div class="screen-bar">スタッフ ▸ ご家族へのLINE連絡</div>
+      <div class="screen-body">
+        <div class="field"><b>Webhook URL（LINE Developersに設定してください）</b>https://…/api/line/webhook　［コピー］</div>
+        <div class="field"><b>チャネルアクセストークン（長期）</b>0KcFA5dWZaZCROwGHYsktsmPRGry/of/7EK2…</div>
+        <div class="field"><b>チャネルシークレット</b>8f14e45fceea167a5a36dedd4bea2543</div>
+        <div><span class="btn-teal">登録する</span></div>
+      </div>
+    </div>
+
+    <p>登録に成功すると、次のように表示が変わります。</p>
+
+    <div class="screen">
+      <div class="screen-bar">スタッフ ▸ ご家族へのLINE連絡</div>
+      <div class="screen-body">
+        <div><span class="pill-ok">設定済み</span> <strong style="margin-left:8px;">げんきむらデイサービスセンター</strong></div>
+        <p class="sub" style="margin:0;">登録日：2026/8/22</p>
+      </div>
+    </div>
+
+    <div class="note tip">
+      <div class="head">値が正しいかはその場で分かります</div>
+      <p>保存する前にLINEへ問い合わせて確認しています。誤った値や期限切れのトークンは「このトークンではLINEに接続できませんでした」と表示され、保存されません。</p>
+      <p style="margin-bottom:0;">また、別の施設で登録済みのアカウントを入れると「この公式アカウントは『◯◯』で登録済みです」と表示されます。<strong>施設を取り違えた場合はここで気づけます。</strong></p>
+    </div>
+
+    <p class="sub">登録したトークンは、以降どの画面にも表示されません。入れ直すときは「トークンを入れ直す」から上書きします。</p>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p5">
+    <h2><span class="phase-n">STEP 5</span>Webhookを設定する</h2>
+    <p class="where">作業する場所：ブラウザ（LINE Developers）</p>
+
+    <p>ご家族が友だち追加したことをアプリが受け取るための設定です。<strong>これを設定しないと、ご家族の連携が完了しません。</strong></p>
+
+    <ol class="steps">
+      <li>
+        <strong>スタッフ画面に表示されているWebhook URLをコピーする</strong>
+        <p class="sub">「コピー」ボタンで写せます。</p>
+      </li>
+      <li>
+        <strong>LINE Developers →「Messaging API設定」→ Webhook URL に貼り付けて「更新」</strong>
+      </li>
+      <li>
+        <strong>「Webhookの利用」をオンにする</strong>
+      </li>
+      <li>
+        <strong>「検証」ボタンを押して確認する</strong>
+        <p class="sub">「成功」と出れば設定できています。</p>
+      </li>
+    </ol>
+
+    <div class="note tip">
+      <div class="head">URLは3施設とも同じで構いません</div>
+      <p>どの施設宛の通知かは、アプリ側でアカウントを見分けています。施設ごとに違うURLを用意する必要はありません。</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p6">
+    <h2><span class="phase-n">STEP 6</span>応答メッセージを止める</h2>
+    <p class="where">作業する場所：ブラウザ（LINE Official Account Manager）</p>
+
+    <p>初期状態では、ご家族が何か送るとLINEが自動で定型文を返します。<strong>この自動返信があると、連携コードを送っても正しく処理されません。</strong>必ずオフにしてください。</p>
+
+    <ol class="steps">
+      <li>
+        <strong>manager.line.biz →「設定」→「応答設定」</strong>
+      </li>
+      <li>
+        <strong>「応答メッセージ」を<span style="color:var(--stop)">オフ</span>にする</strong>
+      </li>
+      <li>
+        <strong>「Webhook」を<span style="color:var(--lg-ink)">オン</span>にする</strong>
+      </li>
+      <li>
+        <strong>「あいさつメッセージ」は任意</strong>
+        <p class="sub">友だち追加した直後に届くメッセージです。オンのままでも動作に支障はありません。施設からのご案内を入れておくと親切です。</p>
+      </li>
+    </ol>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:40%">設定</th><th>あるべき状態</th></tr></thead>
+        <tbody>
+          <tr><td class="k">応答メッセージ</td><td><strong style="color:var(--stop)">オフ</strong>（オンだと連携できません）</td></tr>
+          <tr><td class="k">Webhook</td><td><strong style="color:var(--lg-ink)">オン</strong></td></tr>
+          <tr><td class="k">あいさつメッセージ</td><td>どちらでも可</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p7">
+    <h2><span class="phase-n">STEP 7</span>QRコードを保存する</h2>
+    <p class="where">作業する場所：ブラウザ（LINE Official Account Manager）</p>
+
+    <p>ご家族に友だち追加していただくためのQRコードです。<strong>施設ごとに違うQRコードになります。</strong>取り違えると別の施設のアカウントに登録されてしまうので、ファイル名に施設名を入れて保存してください。</p>
+
+    <ol class="steps">
+      <li>
+        <strong>manager.line.biz →「友だちを増やす」→「友だち追加ガイド」</strong>
+      </li>
+      <li>
+        <strong>QRコードをダウンロードする</strong>
+        <p class="sub">「げんきむら_友だち追加QR.png」のように、施設名を入れて保存します。</p>
+      </li>
+      <li>
+        <strong>ご家族用の案内に印刷して使う</strong>
+        <p class="sub">職員向けマニュアルの「ご家族にしていただくこと」に、切り取って渡せる案内があります。そこにこのQRコードを貼ってお使いください。</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="p8">
+    <h2><span class="phase-n">STEP 8</span>動作を確かめる</h2>
+    <p class="where">作業する場所：スマートフォン ＋ アプリ</p>
+
+    <p>ご家族にご案内する前に、ご自身で一通り試してください。</p>
+
+    <ol class="steps">
+      <li>
+        <strong>スマホでQRコードを読み取り、友だち追加する</strong>
+        <p class="sub">STEP 7 で保存したQRコードを使います。</p>
+      </li>
+      <li>
+        <strong>アプリの利用者管理で、ご自身を仮のご家族として登録する</strong>
+        <p class="sub">適当な利用者を開き、「ご家族への連絡を有効にする」と「連絡帳を共有する」にチェック。「ご家族を追加」でご自身の名前を登録します。</p>
+      </li>
+      <li>
+        <strong>「連携コードを発行」を押し、出た8桁のコードをLINEのトークに送る</strong>
+        <p class="sub">「◯◯様として連携が完了しました」と返信が来れば成功です。</p>
+      </li>
+      <li>
+        <strong>連絡帳の画面から、その利用者を選んで送信する</strong>
+        <p class="sub">ご自身のLINEに連絡帳の画像が届けば、すべて正しく設定できています。</p>
+      </li>
+      <li>
+        <strong>確認が済んだら、仮に登録したご家族を削除する</strong>
+        <p class="sub">利用者管理から削除してください。消し忘れると、実際の運用でご自身にも届き続けます。</p>
+      </li>
+    </ol>
+
+    <div class="note warn">
+      <div class="head">送信できる通数に上限があります</div>
+      <p>無料プランは<strong>1つのアカウントにつき月200通</strong>です。1通は「ご家族お一人へのメッセージ」で数えます。</p>
+      <p style="margin-bottom:0;">利用者20名にお一人ずつご家族が登録されている場合、平日20日間毎日お送りすると400通となり上限を超えます。<strong>お送りする対象や頻度を決めてから運用を始めてください。</strong></p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section id="trouble">
+    <h2>うまくいかないとき</h2>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:42%">症状</th><th>確認すること</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="k">「このトークンではLINEに接続できませんでした」</td>
+            <td>チャネルIDやチャネルシークレットと取り違えていませんか。トークンは数百文字の長い文字列です。コピーしきれていない場合もあります</td>
+          </tr>
+          <tr>
+            <td class="k">「チャネルシークレットの形式が違います」</td>
+            <td>32文字の英数字です。「チャネル基本設定」タブから取り直してください</td>
+          </tr>
+          <tr>
+            <td class="k">「この公式アカウントは『◯◯』で登録済みです」</td>
+            <td>別の施設のトークンを入れています。ログイン中の施設と、控えたトークンの施設が一致しているか確認してください</td>
+          </tr>
+          <tr>
+            <td class="k">Webhookの「検証」が失敗する</td>
+            <td>URLの綴りと、アプリへのトークン登録が済んでいるかを確認してください。登録前だと検証は失敗します</td>
+          </tr>
+          <tr>
+            <td class="k">連携コードを送っても定型文しか返らない</td>
+            <td>応答メッセージがオンのままです。STEP 6 でオフにしてください</td>
+          </tr>
+          <tr>
+            <td class="k">連携コードを送っても何も返らない</td>
+            <td>Webhookがオフか、URLが未設定です。STEP 5・6 を確認してください</td>
+          </tr>
+          <tr>
+            <td class="k">「連携コードが確認できませんでした」</td>
+            <td>期限（30日）が切れているか、別の施設のコードです。発行し直してください</td>
+          </tr>
+          <tr>
+            <td class="k">送信ボタンが押せない</td>
+            <td>その施設のトークン登録が済んでいません。STEP 4 を確認してください</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>作業が終わったら</h3>
+    <p>3施設それぞれで、次がすべて済んでいることを確認してください。</p>
+    <div class="checkline"><i></i><span>公式アカウントを作り、Messaging APIを有効にした</span></div>
+    <div class="checkline"><i></i><span>アプリのスタッフ画面が「設定済み」になっている</span></div>
+    <div class="checkline"><i></i><span>Webhook URLを設定し、検証が成功した</span></div>
+    <div class="checkline"><i></i><span>応答メッセージをオフにした</span></div>
+    <div class="checkline"><i></i><span>QRコードを施設名付きで保存した</span></div>
+    <div class="checkline"><i></i><span>自分宛の送信テストで連絡帳が届いた</span></div>
+    <div class="checkline"><i></i><span>テスト用に登録したご家族を削除した</span></div>
+  </section>
+
+  <footer>
+    <p>この手順が済むと、日々の運用は職員向けの「ご家族LINE連絡マニュアル」に沿って進められます。<br>設定でご不明な点があれば、システム担当者までお知らせください。</p>
+  </footer>
+
+</div>
+
+</body>
+</html>
