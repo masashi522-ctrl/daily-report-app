@@ -134,9 +134,9 @@ function buildSheet(
   const H = (points: number) => points * 1.5
 
   // セクションヘッダー（A-O 全幅）
-  function secHdr(row: number, label: string, h2 = 18) {
+  function secHdr(row: number, label: string, h2 = 18, h: HAlign = 'center') {
     ws.getRow(row).height = H(h2)
-    mg(`A${row}:O${row}`, `A${row}`, label, COL.hdrBg, COL.hdrFg, true, 9, 'left')
+    mg(`A${row}:O${row}`, `A${row}`, label, COL.hdrBg, COL.hdrFg, true, 9, h)
   }
 
   let r = 1
@@ -151,7 +151,7 @@ function buildSheet(
   // 氏名は誰の連絡帳か一目で分かるよう大きめに（余白が窮屈にならない高さに合わせる）
   ws.getRow(r).height = H(26)
   mg(`A${r}:G${r}`, `A${r}`, resident.name + '　様',
-    COL.valBg, COL.valFg, true, 16, 'left', 'middle')
+    COL.valBg, COL.valFg, true, 16, 'center', 'middle')
   sc(`H${r}`, 'R',     COL.lblBg, COL.lblFg, false, 8)
   sc(`I${r}`, reiwa,   COL.valBg, COL.valFg, false, 9)
   sc(`J${r}`, '年',    COL.lblBg, COL.lblFg, false, 8)
@@ -165,7 +165,7 @@ function buildSheet(
   // ━━━ Row 3: サービス提供時間 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ws.getRow(r).height = H(15)
   mg(`A${r}:F${r}`, `A${r}`, changed ? '《サービス提供時間（本日変更）》' : '《サービス提供時間 / 時間区分》',
-    COL.lblBg, COL.lblFg, false, 8, 'left')
+    COL.lblBg, COL.lblFg, false, 8, 'center')
   mg(`G${r}:H${r}`, `G${r}`, startTime || '---', COL.valBg, COL.valFg, false, 9)
   sc(`I${r}`, '～', COL.lblBg, COL.lblFg, false, 8)
   mg(`J${r}:K${r}`, `J${r}`, endTime || '---', COL.valBg, COL.valFg, false, 9)
@@ -264,7 +264,7 @@ function buildSheet(
   mg(`A${r}:D${r}`, `A${r}`, '入　浴', COL.lblBg, COL.lblFg, true, 8)
   mg(`E${r}:H${r}`, `E${r}`,
     record ? bathingLabel(record.bathing, record.bathingSkipReason) : '',
-    COL.valBg, COL.valFg, false, 10, 'left')
+    COL.valBg, COL.valFg, false, 10)
   mg(`I${r}:L${r}`, `I${r}`, '口腔ケア', COL.lblBg, COL.lblFg, false, 8)
   mg(`M${r}:O${r}`, `M${r}`,
     record ? (record.oralCare ? '実施' : '未実施') : '',
@@ -311,7 +311,7 @@ function buildSheet(
   ]
   trainItems.forEach((item, i) => {
     ws.getRow(r).height = H(20)
-    mg(`D${r}:H${r}`, `D${r}`, item.label, COL.lblBg, COL.lblFg, false, 9, 'left')
+    mg(`D${r}:H${r}`, `D${r}`, item.label, COL.lblBg, COL.lblFg, false, 9)
     mg(`I${r}:J${r}`, `I${r}`, item.start, COL.valBg, COL.valFg, false, 10)
     sc(`K${r}`, item.start || item.end ? '～' : '', COL.lblBg, COL.lblFg, false, 9)
     sc(`L${r}`, '', COL.lblBg, COL.lblFg)
@@ -354,21 +354,21 @@ function buildSheet(
   r++
 
   // ━━━ リハビリからの連絡事項 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  secHdr(r, 'リハビリからの連絡事項', 18); r++
+  secHdr(r, 'リハビリからの連絡事項', 18, 'left'); r++
   ws.getRow(r).height = H(estimateTextHeight(aiRehab, AI_TEXT_WIDTH_UNITS, 10, 60))
   mg(`A${r}:O${r}`, `A${r}`, aiRehab,
     COL.valBg, aiRehab ? COL.valFg : COL.lblFg, false, 10, 'left', 'top', allT, true)
   r++
 
   // ━━━ 看護からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  secHdr(r, '看護からの連絡事項', 18); r++
+  secHdr(r, '看護からの連絡事項', 18, 'left'); r++
   ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
   ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
 
   // ━━━ ご家族からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━
-  secHdr(r, 'ご家族からの連絡事項', 18); r++
+  secHdr(r, 'ご家族からの連絡事項', 18, 'left'); r++
   ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
   ws.getRow(r).height = H(32)
