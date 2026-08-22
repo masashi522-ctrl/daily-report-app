@@ -6,6 +6,11 @@ import type { Resident, DailyRecord } from '@/types/database'
 import { DOW_JA, bathingLabel, sheetSafeName, generateAIText, createGroqClient } from '@/lib/daily-report-ai'
 import { serviceTimeRangeFromNotes } from '@/lib/attendance-stats'
 
+// 印刷の倍率（%）。Excelに計算させるとプリンターによって変わるため固定する。
+// 内容は888×660pt。79%で702×521ptとなり、余白が0.5インチ必要な機種でも
+// A4横1枚に収まる
+const PRINT_SCALE = 79
+
 // AI文章欄（A〜O列を結合）の横幅。何文字で折り返すかの見積もりに使う
 const AI_TEXT_WIDTH_UNITS = 69
 
@@ -94,15 +99,15 @@ function buildSheet(
     pageSetup: {
       paperSize: 9,  // A4
       orientation: 'landscape',
-      fitToPage: true,
       // A4横（297mm）にA5縦（148mm）がちょうど2枚並ぶ。左右に同じ内容を出し、
-      // 真ん中で切ればA5の連絡帳が2部になる
-      fitToWidth: 1,
-      fitToHeight: 1,
-      // 余白はプリンターが印刷できない範囲より広く取る。
-      // ここを狭くすると、印刷できない範囲が広い機種ではExcelが余白を
-      // 押し広げて内容を縮小するため、PCによって大きさが変わってしまう。
-      // 0.4インチ（約10mm）あれば、ほぼどの機種でも縮小されない
+      // 真ん中で切ればA5の連絡帳が2部になる。
+      //
+      // 「1ページに収める」設定にすると、Excelがプリンターの印刷可能範囲を
+      // 見て倍率を計算するため、PCによって大きさが変わってしまう。
+      // ここでは倍率を固定し、どのPCでも同じ大きさで印刷されるようにする。
+      // 79%は、余白が0.5インチ必要な機種でも1枚に収まる値。
+      fitToPage: false,
+      scale: PRINT_SCALE,
       margins: { left: 0.4, right: 0.4, top: 0.4, bottom: 0.4, header: 0, footer: 0 },
       horizontalCentered: true,
       verticalCentered: true,
