@@ -41,7 +41,9 @@ function buildSheet(
       orientation: 'portrait',
       fitToPage: true,
       fitToWidth: 1,
-      fitToHeight: 0,
+      // 縦を無制限にすると、行が少し増えただけで2ページ目に流れてしまう。
+      // AI文章の長さで高さが変わるため、A5・1枚に必ず収まるよう縦も1に固定する
+      fitToHeight: 1,
       margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
     },
   })
@@ -352,16 +354,16 @@ function buildSheet(
 
   // ━━━ 看護からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, '看護からの連絡事項', 18); r++
-  ws.getRow(r).height = H(40)
+  ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = H(40)
+  ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
 
   // ━━━ ご家族からの連絡事項（手書き） ━━━━━━━━━━━━━━━━━━━━━━━━━
   secHdr(r, 'ご家族からの連絡事項', 18); r++
-  ws.getRow(r).height = H(40)
+  ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg); r++
-  ws.getRow(r).height = H(40)
+  ws.getRow(r).height = H(32)
   mg(`A${r}:O${r}`, `A${r}`, '', COL.valBg, COL.valFg)
 }
 
