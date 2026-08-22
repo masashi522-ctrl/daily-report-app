@@ -59,7 +59,9 @@ export default async function DashboardPage({
     if (!r.attendanceDays) return true
     return r.attendanceDays.split(',').map(Number).includes(todayDow)
   })
-  const daySummary = summarizeDay(attendees)
+  const daySummary = summarizeDay(
+    attendees.map((r: Resident) => ({ resident: r, specialNotes: recordMap.get(r.id)?.specialNotes ?? null })),
+  )
 
   // 本日すでに臨時追加済みの residentId
   const temporaryIds = (records ?? [])

@@ -31,10 +31,18 @@ export default function DaySummaryBar({ summary }: { summary: DaySummary }) {
           <span className="text-base font-bold tabular-nums">{summary.unset}名</span>
         </div>
       )}
-      {summary.hoursUnknown > 0 && (
-        <p className="w-full text-[11px] text-gray-400">
-          ※ 平均提供時間は、提供時刻または時間区分が登録されている {summary.total - summary.hoursUnknown}名 で計算しています
-        </p>
+      {(summary.hoursFromNotes > 0 || summary.pickupDropCount > 0 || summary.hoursUnknown > 0) && (
+        <div className="w-full text-[11px] text-gray-400 flex flex-col gap-0.5">
+          {summary.hoursFromNotes > 0 && (
+            <p>※ 特記事項の記載により {summary.hoursFromNotes}名 の提供時間を変更して計算しています</p>
+          )}
+          {summary.pickupDropCount > 0 && (
+            <p>※ 特記事項から読み取った送迎減 {summary.pickupDropCount}回（月次報告に集計されます）</p>
+          )}
+          {summary.hoursUnknown > 0 && (
+            <p>※ 平均提供時間は、提供時刻または時間区分が分かる {summary.total - summary.hoursUnknown}名 で計算しています</p>
+          )}
+        </div>
       )}
     </div>
   )

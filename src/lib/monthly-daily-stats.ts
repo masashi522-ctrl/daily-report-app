@@ -14,6 +14,8 @@ export type MonthlyDailyStats = {
   rows: DailyRow[]
   /** 合計・平均 */
   totalVisits: number
+  /** 送迎減の合計回数 */
+  totalPickupDrop: number
   avgTotal: number | null
   avgCare: number | null
   avgSupport: number | null
@@ -44,24 +46,25 @@ export async function computeMonthlyDailyStats(
   const ids = residents.map(r => r.id)
 
   // 記録は件数が多くなるため分割して読む
-  const records: { residentId: string; date: string; isAbsent: boolean }[] = []
+  const records: { residentId: string; date: string; isAbsent: boolean; specialNotes: string | null }[] = []
   for (let i = 0; i < ids.length; i += 200) {
     const { data } = await supabase
       .from('DailyRecord')
-      .select('residentId, date, isAbsent')
+      .select('residentId, date, isAbsent, specialNotes')
       .in('residentId', ids.slice(i, i + 200))
       .gte('date', from).lte('date', to)
     records.push(...(data ?? []))
   }
 
-  // 日付ごとの出席者を集める。同じ日に重複した記録があっても1人と数える
-  const attendeesByDate = new Map<string, Set<string>>()
+  // 日付ごとの出席者を集める。同じ日に重複した記録があっても1人と数える。
+  // 特記事項は利用時間の変更と送迎減を読み取るために持ち回る
+  const attendeesByDate = new Map<string, Map<string, string | null>>()
   const datesWithRecords = new Set<string>()
   for (const rec of records) {
     datesWithRecords.add(rec.date)
     if (rec.isAbsent) continue
-    if (!attendeesByDate.has(rec.date)) attendeesByDate.set(rec.date, new Set())
-    attendeesByDate.get(rec.date)!.add(rec.residentId)
+    if (!attendeesByDate.has(rec.date)) attendeesByDate.set(rec.date, new Map())
+    attendeesByDate.get(rec.date)!.set(rec.residentId, rec.specialNotes)
   }
 
   const rows: DailyRow[] = []
@@ -70,15 +73,19 @@ export async function computeMonthlyDailyStats(
     // 記録が1件も無い日は休業日とみなし、行に出さない
     if (!datesWithRecords.has(date)) continue
 
-    const attendees = Array.from(attendeesByDate.get(date) ?? [])
-      .map(id => byId.get(id))
-      .filter((r): r is NonNullable<typeof r> => !!r)
+    const attendees = Array.from(attendeesByDate.get(date) ?? new Map())
+      .map(([id, specialNotes]) => {
+        const resident = byId.get(id)
+        return resident ? { resident, specialNotes } : null
+      })
+      .filter((x): x is NonNullable<typeof x> => !!x)
 
     rows.push({ date, dow: new Date(date + 'T00:00:00').getDay(), ...summarizeDay(attendees) })
   }
 
   const businessDays = rows.length
   const totalVisits = rows.reduce((n, r) => n + r.total, 0)
+  const totalPickupDrop = rows.reduce((n, r) => n + r.pickupDropCount, 0)
   const avg = (pick: (r: DailyRow) => number) =>
     businessDays > 0 ? rows.reduce((n, r) => n + pick(r), 0) / businessDays : null
 
@@ -89,7 +96,7 @@ export async function computeMonthlyDailyStats(
     : null
 
   return {
-    year, month, rows, businessDays, totalVisits,
+    year, month, rows, businessDays, totalVisits, totalPickupDrop,
     avgTotal: avg(r => r.total),
     avgCare: avg(r => r.care),
     avgSupport: avg(r => r.support),

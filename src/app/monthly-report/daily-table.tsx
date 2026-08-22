@@ -12,7 +12,7 @@ export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats 
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
       <h3 className="text-sm font-semibold text-gray-700 mb-1">日別の利用状況</h3>
       <p className="text-xs text-gray-400 mb-3">
-        {stats.year}年{stats.month}月 ・ 営業 {stats.businessDays}日 ・ 延べ {stats.totalVisits}人
+        {stats.year}年{stats.month}月 ・ 営業 {stats.businessDays}日 ・ 延べ {stats.totalVisits}人 ・ 送迎減 {stats.totalPickupDrop}回
       </p>
 
       {stats.rows.length === 0 ? (
@@ -26,7 +26,8 @@ export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats 
                 <th className="py-2 text-right px-2 font-medium">利用者数</th>
                 <th className="py-2 text-right px-2 font-medium">要介護</th>
                 <th className="py-2 text-right px-2 font-medium">要支援</th>
-                <th className="py-2 text-right pl-2 font-medium">平均提供時間</th>
+                <th className="py-2 text-right px-2 font-medium">平均提供時間</th>
+                <th className="py-2 text-right pl-2 font-medium">送迎減</th>
               </tr>
             </thead>
             <tbody>
@@ -42,7 +43,10 @@ export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats 
                     <td className="py-1.5 text-right px-2 font-medium text-gray-800 tabular-nums">{r.total}</td>
                     <td className="py-1.5 text-right px-2 text-rose-700 tabular-nums">{r.care}</td>
                     <td className="py-1.5 text-right px-2 text-sky-700 tabular-nums">{r.support}</td>
-                    <td className="py-1.5 text-right pl-2 text-gray-700 tabular-nums">{formatHours(r.avgHours)}</td>
+                    <td className="py-1.5 text-right px-2 text-gray-700 tabular-nums">{formatHours(r.avgHours)}</td>
+                    <td className={`py-1.5 text-right pl-2 tabular-nums ${r.pickupDropCount > 0 ? 'text-amber-700 font-medium' : 'text-gray-300'}`}>
+                      {r.pickupDropCount > 0 ? r.pickupDropCount : '―'}
+                    </td>
                   </tr>
                 )
               })}
@@ -53,14 +57,16 @@ export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats 
                 <td className="py-2 text-right px-2 tabular-nums">{stats.totalVisits}</td>
                 <td className="py-2 text-right px-2 tabular-nums">{stats.rows.reduce((n, r) => n + r.care, 0)}</td>
                 <td className="py-2 text-right px-2 tabular-nums">{stats.rows.reduce((n, r) => n + r.support, 0)}</td>
-                <td className="py-2 text-right pl-2 text-gray-400">―</td>
+                <td className="py-2 text-right px-2 text-gray-400">―</td>
+                <td className="py-2 text-right pl-2 tabular-nums">{stats.totalPickupDrop}</td>
               </tr>
               <tr className="text-gray-600">
                 <td className="py-2">1日平均</td>
                 <td className="py-2 text-right px-2 tabular-nums">{fmt(stats.avgTotal)}</td>
                 <td className="py-2 text-right px-2 tabular-nums">{fmt(stats.avgCare)}</td>
                 <td className="py-2 text-right px-2 tabular-nums">{fmt(stats.avgSupport)}</td>
-                <td className="py-2 text-right pl-2 tabular-nums">{formatHours(stats.avgHours)}</td>
+                <td className="py-2 text-right px-2 tabular-nums">{formatHours(stats.avgHours)}</td>
+                <td className="py-2 text-right pl-2 tabular-nums">{fmt(stats.businessDays > 0 ? stats.totalPickupDrop / stats.businessDays : null)}</td>
               </tr>
             </tfoot>
           </table>
@@ -70,7 +76,8 @@ export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats 
       <div className="text-[10px] text-gray-400 mt-2 flex flex-col gap-0.5">
         <p>日次記録があり、欠席でない利用者を1人と数えています（稼働率の集計と同じ数え方です）。</p>
         <p>記録が1件も無い日は休業日とみなし、行に出していません。</p>
-        <p>平均提供時間は、提供開始・終了時刻から求めています。時刻が未登録の場合は利用時間区分の下限（例：5-6時間なら5時間）を使い、どちらも無い方は平均から除いています。</p>
+        <p>平均提供時間は、特記事項に「利用時間 9:30-15:00」と記載があればその時間を優先します。記載が無ければ登録されている提供開始・終了時刻、それも無ければ利用時間区分の下限（例：5-6時間なら5時間）を使い、どちらも無い方は平均から除いています。</p>
+        <p>送迎減は、特記事項の「迎えなし」「送りなし」をそれぞれ1回として数えています（「送迎なし」は往復とみなして2回）。</p>
       </div>
     </div>
   )
