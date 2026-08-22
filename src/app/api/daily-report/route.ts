@@ -433,19 +433,26 @@ function duplicateToRight(ws: ExcelJS.Worksheet, lastRow: number, mergedRanges: 
     }
   }
 
-  // セルの値と書式。
   // 書式は結合に隠れるセルにも入れる（罫線や背景は隠れたセル側にも
   // 持たせないと、結合範囲の内側で線が欠けてずれて見える）。
-  // 値は先頭セルだけに入れる（隠れたセルへ書くと先頭を上書きしてしまう）
+  //
+  // 値は左側を参照する数式にする。ダウンロード後に左側へ書き込むと
+  // 右側にも自動で反映される。空欄をそのまま参照すると Excel は 0 と
+  // 表示するため、IF で空欄のまま返す。
+  // 数式は先頭セルだけに入れる（隠れたセルへ書くと先頭を上書きしてしまう）
   for (let row = 1; row <= lastRow; row++) {
     for (let c = 1; c <= BLOCK_COLS; c++) {
       const dstCol = c + COL_OFFSET
       const src = ws.getCell(row, c)
       const dst = ws.getCell(row, dstCol)
       dst.style = { ...src.style }
-      if (!slaves.has(`${row}:${dstCol}`)) dst.value = src.value
-      // 担当者欄のプルダウン（入力規則）も引き継ぐ
-      if (src.dataValidation) dst.dataValidation = { ...src.dataValidation }
+      if (slaves.has(`${row}:${dstCol}`)) continue
+
+      const ref = `${colName(c)}${row}`
+      // 計算前でも中身が見えるよう、今の値を計算結果として持たせておく
+      const current = src.value
+      const result = current == null || typeof current === 'object' ? '' : current
+      dst.value = { formula: `IF(${ref}="","",${ref})`, result }
     }
   }
 }
