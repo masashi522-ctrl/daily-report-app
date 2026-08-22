@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { formatHours } from '@/lib/attendance-stats'
 import type { MonthlyDailyStats } from '@/lib/monthly-daily-stats'
 
@@ -10,10 +11,24 @@ function fmt(n: number | null, unit = '') {
 export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
-      <h3 className="text-sm font-semibold text-gray-700 mb-1">日別の利用状況</h3>
-      <p className="text-xs text-gray-400 mb-3">
-        {stats.year}年{stats.month}月 ・ 営業 {stats.businessDays}日 ・ 延べ {stats.totalVisits}人 ・ 送迎減 {stats.totalPickupDrop}回
-      </p>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-1">日別の利用状況</h3>
+          <p className="text-xs text-gray-400">
+            {stats.year}年{stats.month}月 ・ 営業 {stats.businessDays}日 ・ 延べ {stats.totalVisits}人 ・ 送迎減 {stats.totalPickupDrop}回
+          </p>
+        </div>
+        <Link
+          href={`/print/monthly-daily?year=${stats.year}&month=${stats.month}`}
+          target="_blank"
+          className="shrink-0 print:hidden flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-teal-300 bg-white text-teal-700 hover:bg-teal-50 transition"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          この表だけ印刷
+        </Link>
+      </div>
 
       {stats.rows.length === 0 ? (
         <p className="text-sm text-gray-400 py-6 text-center">この月の記録がまだありません</p>
