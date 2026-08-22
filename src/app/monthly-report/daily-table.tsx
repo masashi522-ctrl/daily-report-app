@@ -1,0 +1,77 @@
+import { formatHours } from '@/lib/attendance-stats'
+import type { MonthlyDailyStats } from '@/lib/monthly-daily-stats'
+
+const DOW = ['日', '月', '火', '水', '木', '金', '土']
+
+function fmt(n: number | null, unit = '') {
+  return n == null ? '―' : `${n.toFixed(1)}${unit}`
+}
+
+export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
+      <h3 className="text-sm font-semibold text-gray-700 mb-1">日別の利用状況</h3>
+      <p className="text-xs text-gray-400 mb-3">
+        {stats.year}年{stats.month}月 ・ 営業 {stats.businessDays}日 ・ 延べ {stats.totalVisits}人
+      </p>
+
+      {stats.rows.length === 0 ? (
+        <p className="text-sm text-gray-400 py-6 text-center">この月の記録がまだありません</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 text-xs text-gray-500">
+                <th className="py-2 text-left font-medium">日付</th>
+                <th className="py-2 text-right px-2 font-medium">利用者数</th>
+                <th className="py-2 text-right px-2 font-medium">要介護</th>
+                <th className="py-2 text-right px-2 font-medium">要支援</th>
+                <th className="py-2 text-right pl-2 font-medium">平均提供時間</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.rows.map(r => {
+                const day = Number(r.date.slice(8))
+                const isSun = r.dow === 0
+                const isSat = r.dow === 6
+                return (
+                  <tr key={r.date} className="border-b border-gray-50">
+                    <td className={`py-1.5 tabular-nums ${isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-gray-700'}`}>
+                      {day}日<span className="text-xs ml-1">（{DOW[r.dow]}）</span>
+                    </td>
+                    <td className="py-1.5 text-right px-2 font-medium text-gray-800 tabular-nums">{r.total}</td>
+                    <td className="py-1.5 text-right px-2 text-rose-700 tabular-nums">{r.care}</td>
+                    <td className="py-1.5 text-right px-2 text-sky-700 tabular-nums">{r.support}</td>
+                    <td className="py-1.5 text-right pl-2 text-gray-700 tabular-nums">{formatHours(r.avgHours)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-300 font-semibold text-gray-800">
+                <td className="py-2">合計</td>
+                <td className="py-2 text-right px-2 tabular-nums">{stats.totalVisits}</td>
+                <td className="py-2 text-right px-2 tabular-nums">{stats.rows.reduce((n, r) => n + r.care, 0)}</td>
+                <td className="py-2 text-right px-2 tabular-nums">{stats.rows.reduce((n, r) => n + r.support, 0)}</td>
+                <td className="py-2 text-right pl-2 text-gray-400">―</td>
+              </tr>
+              <tr className="text-gray-600">
+                <td className="py-2">1日平均</td>
+                <td className="py-2 text-right px-2 tabular-nums">{fmt(stats.avgTotal)}</td>
+                <td className="py-2 text-right px-2 tabular-nums">{fmt(stats.avgCare)}</td>
+                <td className="py-2 text-right px-2 tabular-nums">{fmt(stats.avgSupport)}</td>
+                <td className="py-2 text-right pl-2 tabular-nums">{formatHours(stats.avgHours)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      <div className="text-[10px] text-gray-400 mt-2 flex flex-col gap-0.5">
+        <p>日次記録があり、欠席でない利用者を1人と数えています（稼働率の集計と同じ数え方です）。</p>
+        <p>記録が1件も無い日は休業日とみなし、行に出していません。</p>
+        <p>平均提供時間は、提供開始・終了時刻から求めています。時刻が未登録の場合は利用時間区分の下限（例：5-6時間なら5時間）を使い、どちらも無い方は平均から除いています。</p>
+      </div>
+    </div>
+  )
+}

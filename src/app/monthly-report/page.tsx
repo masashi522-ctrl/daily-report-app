@@ -1,4 +1,6 @@
 import { requireSession } from '@/lib/session'
+import { computeMonthlyDailyStats } from '@/lib/monthly-daily-stats'
+import MonthlyDailyTable from './daily-table'
 import {
   computeFacilityOperationsOverview,
   type Metrics,
@@ -107,6 +109,9 @@ export default async function MonthlyReportPage() {
   const session = await requireSession()
   const today = jstToday()
   const overview = await computeFacilityOperationsOverview(session.facilityId, today)
+  const dailyStats = await computeMonthlyDailyStats(
+    session.facilityId, parseInt(today.slice(0, 4)), parseInt(today.slice(5, 7)),
+  )
   const { composition } = overview
 
   const registeredCategoryCounts: Record<string, number> = {}
@@ -158,6 +163,9 @@ export default async function MonthlyReportPage() {
           registeredCategoryCounts={registeredCategoryCounts}
         />
       </div>
+
+      {/* 日別の利用状況 */}
+      <MonthlyDailyTable stats={dailyStats} />
 
       {/* 介護度 × 利用時間 の構成 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">

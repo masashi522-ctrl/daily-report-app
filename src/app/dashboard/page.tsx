@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { type Resident, type DailyRecord } from '@/types/database'
 import DailyRecordTable from './daily-record-table'
 import AddTemporaryModal from './add-temporary-modal'
+import DaySummaryBar from './day-summary'
+import { summarizeDay } from '@/lib/attendance-stats'
 
 function toDateStr(date: Date) {
   return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -48,6 +50,17 @@ export default async function DashboardPage({
     return !r.attendanceDays.split(',').map(Number).includes(todayDow)
   })
 
+  // その日の利用状況。画面に並ぶ対象者（曜日の予定者＋臨時追加）から
+  // 欠席の方を除いて数える
+  const attendees = (residents ?? []).filter((r: Resident) => {
+    const rec = recordMap.get(r.id)
+    if (rec?.isAbsent) return false
+    if (rec?.isTemporaryAttendance) return true
+    if (!r.attendanceDays) return true
+    return r.attendanceDays.split(',').map(Number).includes(todayDow)
+  })
+  const daySummary = summarizeDay(attendees)
+
   // 本日すでに臨時追加済みの residentId
   const temporaryIds = (records ?? [])
     .filter(r => r.isTemporaryAttendance)
@@ -58,7 +71,7 @@ export default async function DashboardPage({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-xl font-bold text-gray-800">{dateLabel}</h2>
-          <p className="text-sm text-gray-500">利用者数: {residents?.length ?? 0}名</p>
+          <p className="text-sm text-gray-500">登録者 {residents?.length ?? 0}名</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <AddTemporaryModal
@@ -80,6 +93,8 @@ export default async function DashboardPage({
           </form>
         </div>
       </div>
+
+      <DaySummaryBar summary={daySummary} />
 
       <DailyRecordTable
         residents={residents ?? []}
