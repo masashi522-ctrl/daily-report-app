@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>特記事項の書き方</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --ground:#fbfcfc; --surface:#ffffff; --surface-2:#f2f6f5;
+    --line:#dde5e3; --line-soft:#e9efee;
+    --ink:#16211f; --ink-2:#46534f; --ink-3:#77837f;
+    --teal:#0f766e; --teal-soft:#e6f2f0; --teal-ink:#0b5952;
+    --new:#b45309; --new-bg:#fff8e8; --new-line:#f0d8a4; --new-mark:#fde9b8;
+    --ok:#0f766e; --ok-bg:#e9f6f4; --ok-line:#bfe0db;
+    --ng:#b3261e; --ng-bg:#fdeeed; --ng-line:#f2cfcc;
+    --shadow:0 1px 2px rgba(16,33,31,.05), 0 8px 24px -16px rgba(16,33,31,.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#101817; --surface:#16211f; --surface-2:#1c2a27;
+      --line:#2b3a37; --line-soft:#233130;
+      --ink:#e8efed; --ink-2:#a8b6b2; --ink-3:#7d8b87;
+      --teal:#4fbfb2; --teal-soft:#17322f; --teal-ink:#7ed6cb;
+      --new:#e0a45c; --new-bg:#2b2114; --new-line:#4a3820; --new-mark:#553f1e;
+      --ok:#4fbfb2; --ok-bg:#14302c; --ok-line:#2d5a53;
+      --ng:#ef8b83; --ng-bg:#2e1917; --ng-line:#4d2a26;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#101817; --surface:#16211f; --surface-2:#1c2a27;
+    --line:#2b3a37; --line-soft:#233130;
+    --ink:#e8efed; --ink-2:#a8b6b2; --ink-3:#7d8b87;
+    --teal:#4fbfb2; --teal-soft:#17322f; --teal-ink:#7ed6cb;
+    --new:#e0a45c; --new-bg:#2b2114; --new-line:#4a3820; --new-mark:#553f1e;
+    --ok:#4fbfb2; --ok-bg:#14302c; --ok-line:#2d5a53;
+    --ng:#ef8b83; --ng-bg:#2e1917; --ng-line:#4d2a26;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: "Noto Sans JP", system-ui, sans-serif;
+    font-size: 16px; line-height: 1.9; margin: 0; padding: 0 20px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1, h2, h3, .eyebrow { font-family: "Zen Kaku Gothic New", "Noto Sans JP", system-ui, sans-serif; }
+
+  .cover { padding: 64px 0 32px; border-bottom: 2px solid var(--ink); display: flex; flex-direction: column; gap: 12px; }
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .14em; color: var(--teal); margin: 0; }
+  h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 900; line-height: 1.3; margin: 0; text-wrap: balance; }
+  .lede { margin: 0; color: var(--ink-2); max-width: 60ch; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--ink-3); margin-top: 4px; }
+
+  section { margin-top: 56px; }
+  h2 { font-size: 22px; font-weight: 900; margin: 0 0 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); text-wrap: balance; }
+  h3 { font-size: 16px; font-weight: 700; margin: 28px 0 8px; }
+  p { margin: 0 0 14px; }
+  .sub { color: var(--ink-2); font-size: 14.5px; }
+
+  /* 今回追加された内容の目印 */
+  .badge-new {
+    display: inline-block; vertical-align: 3px; margin-right: 10px;
+    font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    padding: 3px 10px; border-radius: 999px;
+    background: var(--new); color: #fff;
+    font-family: "Zen Kaku Gothic New", sans-serif;
+  }
+  .new-block {
+    border: 1px solid var(--new-line); background: var(--new-bg);
+    border-left: 4px solid var(--new);
+    border-radius: 10px; padding: 18px 22px; margin: 20px 0;
+  }
+  .new-block > :last-child { margin-bottom: 0; }
+  .new-block .cap {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--new);
+    display: block; margin-bottom: 6px;
+  }
+  mark { background: var(--new-mark); color: inherit; padding: 1px 4px; border-radius: 4px; }
+
+  /* 書き方の例 */
+  .ex { margin: 14px 0; display: flex; flex-direction: column; gap: 8px; }
+  .ex-row {
+    display: grid; grid-template-columns: 74px 1fr; gap: 12px; align-items: start;
+    border-radius: 10px; padding: 11px 14px; border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .ex-row.ok { background: var(--ok-bg); border-color: var(--ok-line); }
+  .ex-row.ng { background: var(--ng-bg); border-color: var(--ng-line); }
+  .ex-tag { font-size: 12px; font-weight: 700; padding-top: 2px; }
+  .ex-row.ok .ex-tag { color: var(--ok); }
+  .ex-row.ng .ex-tag { color: var(--ng); }
+  .ex-body code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 14px;
+    background: var(--surface); border: 1px solid var(--line-soft);
+    padding: 2px 8px; border-radius: 5px; display: inline-block;
+  }
+  .ex-why { display: block; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+
+  .tablewrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 420px; background: var(--surface); }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th { background: var(--surface-2); font-weight: 700; font-size: 13px; color: var(--ink-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.k { font-weight: 700; white-space: nowrap; font-family: "IBM Plex Mono", monospace; font-size: 13.5px; }
+
+  .note { margin: 20px 0; padding: 16px 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); }
+  .note > :last-child { margin-bottom: 0; }
+  .note .head { font-weight: 700; margin-bottom: 6px; }
+  .note.tip { background: var(--teal-soft); border-color: color-mix(in srgb, var(--teal) 26%, transparent); }
+  .note.tip .head { color: var(--teal-ink); }
+
+  .screen { margin: 18px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow); }
+  .screen-bar { padding: 9px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--ink-2); }
+  .screen-body { padding: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; font-size: 13px; background: var(--ground); }
+  .chip b { font-size: 15px; margin-left: 6px; }
+  .chip.mark { background: var(--new-bg); border-color: var(--new-line); }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .9em; background: var(--surface-2); border: 1px solid var(--line-soft); padding: 1px 6px; border-radius: 5px; }
+  ul.plain { margin: 0 0 14px; padding-left: 1.3em; }
+  ul.plain li { margin-bottom: 6px; }
+
+  footer { margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
+  a { color: var(--teal-ink); }
+  a:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  @media (max-width: 560px) {
+    body { padding: 0 16px 64px; }
+    .cover { padding-top: 44px; }
+    .ex-row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="cover">
+    <p class="eyebrow">デイサービス管理 ・ 職員向け</p>
+    <h1>特記事項の書き方</h1>
+    <p class="lede">日次記録の「特記事項」は、これまでどおり自由に書ける欄です。ただし決まった書き方をした場合だけ、利用時間の変更と送迎減が自動で集計されるようになりました。</p>
+    <div class="meta">
+      <span>対象：日次記録を入力する職員</span>
+      <span>2026年8月版</span>
+    </div>
+  </header>
+
+  <!-- ─────────────────────────── -->
+  <section>
+    <h2><span class="badge-new">今回の変更</span>何が変わったか</h2>
+
+    <div class="new-block">
+      <span class="cap">追加された動き</span>
+      <p>特記事項に <mark>決まった書き方</mark> をすると、次の2つがアプリで自動的に集計されるようになりました。</p>
+      <ul class="plain" style="margin-bottom:0;">
+        <li><mark>利用時間 9:30-15:00</mark> と書くと、その日の提供時間としてその時間を使います</li>
+        <li><mark>迎えなし</mark> <mark>送りなし</mark> と書くと、送迎減として月次報告に数えられます</li>
+      </ul>
+    </div>
+
+    <p><strong>これまでの書き方を変える必要はありません。</strong>血糖値・目薬・爪切りなど、いまお書きの内容はそのままで構いません。上の2つは、書いたときだけ集計に反映される追加の機能です。</p>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section>
+    <h2><span class="badge-new">今回の変更</span>利用時間が変わった日</h2>
+
+    <p>体調不良の早退や、通院での遅れなどで<strong>その日だけ利用時間が変わったとき</strong>に書きます。書かなければ、利用者管理に登録されている時間で計算されます。</p>
+
+    <h3>書き方</h3>
+    <div class="new-block" style="text-align:center; padding:22px;">
+      <code style="font-size:18px; font-family:'IBM Plex Mono',monospace; background:var(--surface); border:1px solid var(--new-line); padding:8px 18px; border-radius:8px;">利用時間 9:30-15:00</code>
+      <p class="sub" style="margin:10px 0 0; font-size:13px;">「利用時間」と書いてから、開始と終了の時刻を書きます</p>
+    </div>
+
+    <h3>この書き方なら反映されます</h3>
+    <div class="ex">
+      <div class="ex-row ok"><span class="ex-tag">反映される</span><span class="ex-body"><code>利用時間 9:30-15:00</code></span></div>
+      <div class="ex-row ok"><span class="ex-tag">反映される</span><span class="ex-body"><code>提供時間 9:30〜15:00</code><span class="ex-why">「提供時間」「サービス時間」「時間変更」でも可</span></span></div>
+      <div class="ex-row ok"><span class="ex-tag">反映される</span><span class="ex-body"><code>時間変更 9:30～12:30</code><span class="ex-why">区切りは <code>-</code> <code>〜</code> <code>～</code> <code>ー</code> <code>から</code> のどれでも可</span></span></div>
+      <div class="ex-row ok"><span class="ex-tag">反映される</span><span class="ex-body"><code>目薬 / 利用時間 10:00-15:30</code><span class="ex-why">他の記載と一緒に書いても構いません</span></span></div>
+      <div class="ex-row ok"><span class="ex-tag">反映される</span><span class="ex-body"><code>利用時間 9：30－15：00</code><span class="ex-why">全角で書いても構いません</span></span></div>
+    </div>
+
+    <h3>この書き方では反映されません</h3>
+    <div class="ex">
+      <div class="ex-row ng"><span class="ex-tag">反映されない</span><span class="ex-body"><code>9:30-15:00</code><span class="ex-why"><strong>「利用時間」の見出しが必要です。</strong>これが無いと、血糖値の測定時刻などと区別できません</span></span></div>
+      <div class="ex-row ng"><span class="ex-tag">反映されない</span><span class="ex-body"><code>早退のため12時30分まで</code><span class="ex-why">開始と終了の両方を、時刻の形（9:30 など）で書いてください</span></span></div>
+      <div class="ex-row ng"><span class="ex-tag">反映されない</span><span class="ex-body"><code>利用時間 15:00-9:30</code><span class="ex-why">終了が開始より前になっています</span></span></div>
+    </div>
+
+    <div class="note tip">
+      <div class="head">なぜ見出しが必要なのか</div>
+      <p style="margin-bottom:0;">特記事項には <code>BS254 朝 301 15時</code> や <code>9:30血糖値258mg/dl 15:00血糖値327mg/dl</code> のように、血糖値の測定時刻もよく書かれています。時刻だけを見て判断すると、これらを利用時間と取り違えてしまいます。<strong>「利用時間」と書かれているときだけ読む</strong>ことで、誤りを防いでいます。</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section>
+    <h2><span class="badge-new">今回の変更</span>送迎がなかった日</h2>
+
+    <p>ご家族の送り迎えなどで<strong>施設の送迎を使わなかったとき</strong>に書きます。月次報告で送迎減として集計されます。</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:38%">書き方</th><th>数え方</th></tr></thead>
+        <tbody>
+          <tr><td class="k">迎えなし</td><td>1回</td></tr>
+          <tr><td class="k">送りなし</td><td>1回</td></tr>
+          <tr><td class="k">迎えなし 送りなし</td><td>2回（両方書いた場合）</td></tr>
+          <tr><td class="k">送迎なし</td><td>2回（往復とみなします）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="sub"><code>迎え無し</code><code>送り無し</code>のように「無し」と書いても同じです。他の記載と一緒に書いても構いません（<code>目薬 / 迎えなし</code>）。</p>
+
+    <div class="note">
+      <div class="head">数えられない書き方</div>
+      <p style="margin-bottom:0;"><code>迎えは家族</code><code>送りはご家族対応</code>のような書き方では数えられません。<strong>「なし」または「無し」</strong>を付けてください。</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section>
+    <h2>どこに反映されるか</h2>
+
+    <h3>日次記録</h3>
+    <p>日付の下に、その日の利用状況が出ます。</p>
+    <div class="screen">
+      <div class="screen-bar">日次記録</div>
+      <div class="screen-body">
+        <div class="chips">
+          <span class="chip">利用者数<b>34名</b></span>
+          <span class="chip">要介護<b>27名</b></span>
+          <span class="chip">要支援<b>7名</b></span>
+          <span class="chip mark">平均提供時間<b>5.7時間</b></span>
+        </div>
+        <p class="sub" style="margin:12px 0 0; font-size:12px;">
+          ※ 特記事項の記載により 1名 の提供時間を変更して計算しています<br>
+          ※ 特記事項から読み取った送迎減 3回（月次報告に集計されます）
+        </p>
+      </div>
+    </div>
+    <p class="sub">この <strong>※</strong> が出ていれば、書いた内容が正しく読み取られています。書いたのに出ない場合は、書き方をご確認ください。</p>
+
+    <h3>月次報告</h3>
+    <p>「日別の利用状況」に、日ごとの人数・平均提供時間・送迎減が並びます。</p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>日付</th><th style="text-align:right">利用者数</th><th style="text-align:right">要介護</th><th style="text-align:right">要支援</th><th style="text-align:right">平均提供時間</th><th style="text-align:right">送迎減</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>21日（金）</td><td style="text-align:right">40</td><td style="text-align:right">28</td><td style="text-align:right">12</td><td style="text-align:right">5.6時間</td><td style="text-align:right">―</td></tr>
+          <tr><td>22日（土）</td><td style="text-align:right">34</td><td style="text-align:right">27</td><td style="text-align:right">7</td><td style="text-align:right">5.7時間</td><td style="text-align:right"><strong>3</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── -->
+  <section>
+    <h2>これまでどおり書けること</h2>
+    <p>特記事項は自由記入の欄です。決まった書き方が必要なのは上の2つだけで、それ以外は今までどおりで構いません。</p>
+    <ul class="plain">
+      <li>血糖値・SpO2などの測定値と測定時刻</li>
+      <li>目薬・インスリンなどの与薬</li>
+      <li>爪切り・髭剃りなどの実施内容</li>
+      <li>体重の測定値</li>
+      <li>その他、職員間で共有したいこと</li>
+    </ul>
+
+    <div class="note tip">
+      <div class="head">ご家族には送られません</div>
+      <p style="margin-bottom:0;">特記事項は職員どうしで共有するためのメモで、紙の連絡帳にも印字されず、ご家族へのLINEにも含まれません。<strong>ご家族にお伝えしたいことは「その日の様子」欄に書いてください。</strong></p>
+    </div>
+  </section>
+
+  <footer>
+    <p>書き方でご不明な点や、書いたのに反映されない場合は、システム担当者までお知らせください。</p>
+  </footer>
+
+</div>
+
+</body>
+</html>
