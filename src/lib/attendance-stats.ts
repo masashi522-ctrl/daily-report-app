@@ -1,4 +1,5 @@
 import 'server-only'
+import { SERVICE_TIME_CATEGORIES } from '@/types/database'
 
 // 日次記録と月次報告の両方で使う、その日の利用状況の数え方。
 // 同じ定義を2か所に書くと必ずずれるため、ここに集約する。
@@ -69,6 +70,36 @@ export function serviceHoursFromNotes(notes: string | null | undefined): number 
   const s = toMinutes(range.start)!
   const e = toMinutes(range.end)!
   return (e - s) / 60
+}
+
+/** 利用時間（時間単位）から時間区分を求める。3.0時間なら '3-4' */
+export function categoryOfHours(hours: number | null | undefined): string | null {
+  if (hours == null || !Number.isFinite(hours)) return null
+  const lower = Math.floor(hours)
+  const cat = `${lower}-${lower + 1}`
+  return (SERVICE_TIME_CATEGORIES as readonly string[]).includes(cat) ? cat : null
+}
+
+// 「（3-4h）」「(3-4)」「3-4時間」のように、区分を直接書いてある場合に読む
+const CATEGORY_RE = /([3-8])\s*[-~〜～ー―–—－‐]\s*([4-9])\s*(?:h|H|時間)?/
+
+/**
+ * その日の時間区分。特記事項に利用時間の記載があるときだけ返す。
+ * 「利用時間 14:00～17:00（3-4h）」のように区分が併記されていればそれを使い、
+ * 書かれていなければ利用時間の長さから求める。
+ */
+export function serviceCategoryFromNotes(notes: string | null | undefined): string | null {
+  const range = serviceTimeRangeFromNotes(notes)
+  if (!range || !notes) return null
+
+  // 時刻の記載より後ろに書かれた区分だけを見る（時刻そのものを拾わないため）
+  const after = notes.slice(notes.indexOf(range.end) + range.end.length)
+  const m = CATEGORY_RE.exec(after)
+  if (m) {
+    const cat = `${m[1]}-${m[2]}`
+    if ((SERVICE_TIME_CATEGORIES as readonly string[]).includes(cat)) return cat
+  }
+  return categoryOfHours(serviceHoursFromNotes(notes))
 }
 
 /**

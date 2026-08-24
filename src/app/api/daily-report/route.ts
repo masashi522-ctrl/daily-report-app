@@ -4,7 +4,7 @@ import ExcelJS from 'exceljs'
 import type { Resident, DailyRecord } from '@/types/database'
 // 文章とラベルの決まりごとは、LINEで送る画像と共通のものを使う
 import { DOW_JA, bathingLabel, sheetSafeName, generateAIText, createGroqClient } from '@/lib/daily-report-ai'
-import { serviceTimeRangeFromNotes } from '@/lib/attendance-stats'
+import { serviceTimeRangeFromNotes, serviceCategoryFromNotes } from '@/lib/attendance-stats'
 
 // 印刷の倍率（%）。Excelに計算させるとプリンターによって変わるため固定する。
 // 内容は888×660pt。79%で702×521ptとなり、余白が0.5インチ必要な機種でも
@@ -121,7 +121,11 @@ function buildSheet(
   const changed = serviceTimeRangeFromNotes(record?.specialNotes)
   const startTime = changed?.start ?? resident.serviceStartTime ?? ''
   const endTime = changed?.end ?? resident.serviceEndTime ?? ''
-  const cat = changed ? '' : (resident.serviceTimeCategory ?? '')
+  // 時間が変わった日は、その日の時間区分を使う。特記事項に区分が併記されて
+  // いればそれを、なければ変更後の利用時間の長さから求める
+  const cat = changed
+    ? (serviceCategoryFromNotes(record?.specialNotes) ?? '')
+    : (resident.serviceTimeCategory ?? '')
 
   // ── 列幅（A-O 15列、A5用に調整） ───────────────────────────────
   // A:B = section/am-pm label  C = 担当者  D = spacer
