@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import StaffForm from './staff-form'
 import DeleteButton from './delete-button'
 import EditButton from './edit-button'
+import TempPasswordButton from './temp-password-button'
 import LineSettingPanel from './line-setting-panel'
 import { getLineSetting } from './line-actions'
 import { headers } from 'next/headers'
@@ -73,7 +74,7 @@ export default async function StaffPage() {
               <th className="px-4 py-3 text-left">名前</th>
               <th className="px-4 py-3 text-left">メールアドレス</th>
               <th className="px-4 py-3 text-left">権限</th>
-              <th className="px-4 py-3" colSpan={2}></th>
+              <th className="px-4 py-3" colSpan={3}></th>
             </tr>
           </thead>
           <tbody>
@@ -92,6 +93,9 @@ export default async function StaffPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
+                  {isAdmin && <TempPasswordButton id={staff.id} name={staff.name} />}
+                </td>
+                <td className="px-4 py-3 text-right">
                   {(isAdmin || staff.id === session.userId) && (
                     <EditButton staff={staff} isAdmin={isAdmin} />
                   )}
@@ -104,7 +108,7 @@ export default async function StaffPage() {
               </tr>
             ))}
             {(!staffList || staffList.length === 0) && (
-              <tr><td colSpan={4} className="text-center py-8 text-gray-400">スタッフがいません</td></tr>
+              <tr><td colSpan={5} className="text-center py-8 text-gray-400">スタッフがいません</td></tr>
             )}
           </tbody>
         </table>
