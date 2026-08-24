@@ -214,6 +214,61 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     (!searchText || r.name.includes(searchText) || (r.furigana ?? '').includes(searchText))
   )
 
+  // 介護度で分けて並べる。要介護・要支援を区別して見られるようにする
+  const careGroups = [
+    { key: 'CARE',    label: '要介護', badge: 'bg-rose-100 text-rose-700',
+      match: (c: string | null) => !!c?.startsWith('要介護') },
+    { key: 'SUPPORT', label: '要支援', badge: 'bg-sky-100 text-sky-700',
+      match: (c: string | null) => !!c?.startsWith('要支援') },
+    { key: 'UNSET',   label: '介護度未設定', badge: 'bg-gray-100 text-gray-600',
+      match: (c: string | null) => !c || (!c.startsWith('要介護') && !c.startsWith('要支援')) },
+  ]
+    .map(g => ({ ...g, residents: nameButtonList.filter(r => g.match(r.careLevel)) }))
+    .filter(g => g.residents.length > 0)
+
+  /** 一覧の氏名ボタン1つ分 */
+  function renderNameButton(r: Resident) {
+    const draft = getDraft(r.id)
+    const absent = draft.isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+    const incomplete = !absent && getMissing(r.id).length > 0
+    const recheck = !absent && hasRecheck(draft)
+    const isTemp = recordMap[r.id]?.isTemporaryAttendance === true
+    const selected = selectedIds.has(r.id)
+
+    return (
+      <button key={r.id} onClick={() => toggleResident(r.id)}
+        title={[
+          absent ? '欠席' : '',
+          recheck ? '要再検' : '',
+          incomplete ? `未入力: ${getMissing(r.id).join('・')}` : '',
+        ].filter(Boolean).join(' / ')}
+        className={`text-xs px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
+          selected
+            ? 'bg-violet-600 text-white border-violet-600'
+            : absent
+            ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+            : recheck
+            ? 'bg-red-50 text-red-700 border-red-300 hover:border-red-500'
+            : incomplete
+            ? 'bg-amber-50 text-amber-700 border-amber-300 hover:border-amber-500'
+            : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
+        }`}>
+        {absent && <span className="text-[9px]">欠</span>}
+        {isTemp && !absent && <span className="text-[9px] text-orange-500">臨</span>}
+        {/* 再検は赤の「再」、記入漏れは黄の「⚠」で区別する */}
+        {recheck && (
+          <span className={`text-[9px] font-bold px-1 rounded ${
+            selected ? 'bg-white text-red-600' : 'bg-red-500 text-white'
+          }`}>再</span>
+        )}
+        {incomplete && (
+          <span className={selected ? 'text-amber-200' : 'text-amber-500'}>⚠</span>
+        )}
+        {r.name}
+      </button>
+    )
+  }
+
   function toggleResident(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -417,46 +472,31 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
             >{row.label}</button>
           ))}
         </div>
-        {/* 名前ボタン（複数選択可・クリックで入力欄へジャンプ） */}
+        {/* 名前ボタン（複数選択可・クリックで入力欄へジャンプ）
+            介護度ごとに分け、その中で利用者→欠席者の順に並べる */}
         {nameButtonList.length > 0 ? (
-          <div className="flex flex-wrap gap-1 w-full">
-            {nameButtonList.map(r => {
-              const draft = getDraft(r.id)
-              const absent = draft.isAbsent ?? recordMap[r.id]?.isAbsent ?? false
-              const incomplete = !absent && getMissing(r.id).length > 0
-              const recheck = !absent && hasRecheck(draft)
-              const isTemp = recordMap[r.id]?.isTemporaryAttendance === true
-              const selected = selectedIds.has(r.id)
+          <div className="flex flex-col gap-2 w-full">
+            {careGroups.map(group => {
+              const isAbsentOf = (r: Resident) =>
+                getDraft(r.id).isAbsent ?? recordMap[r.id]?.isAbsent ?? false
+              const attending = group.residents.filter(r => !isAbsentOf(r))
+              const absentees = group.residents.filter(r => isAbsentOf(r))
+
               return (
-                <button key={r.id} onClick={() => toggleResident(r.id)}
-                  title={[
-                    recheck ? '要再検' : '',
-                    incomplete ? `未入力: ${getMissing(r.id).join('・')}` : '',
-                  ].filter(Boolean).join(' / ')}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
-                    selected
-                      ? 'bg-violet-600 text-white border-violet-600'
-                      : absent
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                      : recheck
-                      ? 'bg-red-50 text-red-700 border-red-300 hover:border-red-500'
-                      : incomplete
-                      ? 'bg-amber-50 text-amber-700 border-amber-300 hover:border-amber-500'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
-                  }`}>
-                  {absent && <span className="text-[9px]">欠</span>}
-                  {isTemp && !absent && <span className="text-[9px] text-orange-500">臨</span>}
-                  {/* 再検は赤の「再」、記入漏れは黄の「⚠」で区別する */}
-                  {recheck && (
-                    <span className={`text-[9px] font-bold px-1 rounded ${
-                      selected ? 'bg-white text-red-600' : 'bg-red-500 text-white'
-                    }`}>再</span>
-                  )}
-                  {incomplete && (
-                    <span className={selected ? 'text-amber-200' : 'text-amber-500'}>⚠</span>
-                  )}
-                  {r.name}
-                </button>
+                <div key={group.key} className="w-full">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${group.badge}`}>
+                      {group.label}
+                    </span>
+                    <span className="text-[11px] text-gray-500">
+                      利用 {attending.length}名
+                      {absentees.length > 0 && <span className="text-gray-400"> ・ 欠席 {absentees.length}名</span>}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {[...attending, ...absentees].map(r => renderNameButton(r))}
+                  </div>
+                </div>
               )
             })}
           </div>
