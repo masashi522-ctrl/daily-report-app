@@ -740,9 +740,10 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                 {/* 特記事項・その日の様子 */}
                 <div className="space-y-2 pt-2 border-t border-gray-200">
                   <div className="text-[10px] font-bold text-gray-500">特記事項・その日の様子</div>
-                  <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
-                    placeholder="特記事項（体重・SpO2・口腔ケアの気づき等）"
-                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm" />
+                  {/* その日の様子と同じく、枠を引き伸ばして全文を読めるようにする */}
+                  <textarea value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
+                    rows={2} placeholder="特記事項（体重・SpO2・口腔ケアの気づき等）"
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm resize-y" />
                   <textarea value={d.dailyNote ?? ''} onChange={e => upd(resident.id, 'dailyNote', e.target.value)}
                     rows={3} placeholder="その日の様子（活動の様子・ご本人の言葉など）"
                     className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm resize-y" />
@@ -1009,9 +1010,9 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     </td>
                     {/* 特記 */}
                     <td className={td}>
-                      <input type="text" value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
-                        placeholder="体重・SpO2・口腔ケアの気づき等"
-                        className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                      <textarea value={d.specialNotes ?? ''} onChange={e => upd(resident.id, 'specialNotes', e.target.value)}
+                        rows={2} placeholder="体重・SpO2・口腔ケアの気づき等"
+                        className="w-full border border-gray-200 rounded px-1 py-0.5 text-xs resize-y" />
                     </td>
                     {/* その日の様子 */}
                     <td className={td}>
