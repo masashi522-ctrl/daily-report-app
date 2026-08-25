@@ -48,6 +48,10 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const gender                   = (formData.get('gender') as string) || null
   const goalImage                = (formData.get('goalImage') as string)?.trim() || null
   const subGoalImage             = (formData.get('subGoalImage') as string)?.trim() || null
+  // ご家族へのLINE連絡。無効なら共有内容もオフに揃える
+  const familyContactEnabled     = formData.get('familyContactEnabled') === '1'
+  const shareDailyReport         = familyContactEnabled && formData.get('shareDailyReport') === '1'
+  const shareActivityPhoto       = familyContactEnabled && formData.get('shareActivityPhoto') === '1'
 
   const { error } = await supabase.from('Resident').insert({
     id: crypto.randomUUID(),
@@ -74,6 +78,9 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     gender,
     goalImage,
     subGoalImage,
+    familyContactEnabled,
+    shareDailyReport,
+    shareActivityPhoto,
     facilityId: session.facilityId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

@@ -84,6 +84,8 @@ export default function ResidentForm() {
   const [hospitalizations, setHospitalizations] = useState<HospitalizationPeriod[]>([])
   const [gender, setGender] = useState('')
   const [genderSuggested, setGenderSuggested] = useState(false)
+  // ご家族へのLINE連絡。無効なら共有内容のチェックは選べない
+  const [familyEnabled, setFamilyEnabled] = useState(false)
   // 職員が選び直したかどうかを即座に判定するため、選択中の値をrefでも保持する
   const genderRef = useRef('')
 
@@ -274,6 +276,37 @@ export default function ResidentForm() {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
       <GoalImageField gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={null} defaultSubGoalImage={null} />
+
+      {/* ご家族への連絡（LINE）。送信先のご家族は利用者の登録後に編集画面で追加する */}
+      <div className="border border-teal-100 rounded-lg p-3 bg-teal-50/40 flex flex-col gap-2">
+        <div>
+          <p className="text-xs font-semibold text-teal-800">ご家族への連絡（LINE）</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">連絡帳と活動写真をご家族のLINEへお送りします</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-800 cursor-pointer">
+          <input type="checkbox" name="familyContactEnabled" value="1"
+            checked={familyEnabled}
+            onChange={e => setFamilyEnabled(e.target.checked)}
+            className="w-4 h-4 accent-teal-600" />
+          ご家族への連絡を有効にする
+        </label>
+        <div className={`flex flex-col gap-2 pl-6 ${familyEnabled ? '' : 'opacity-40'}`}>
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" name="shareDailyReport" value="1" disabled={!familyEnabled}
+              className="w-4 h-4 accent-teal-600" />
+            連絡帳を共有する
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" name="shareActivityPhoto" value="1" disabled={!familyEnabled}
+              className="w-4 h-4 accent-teal-600" />
+            活動写真を共有する
+          </label>
+        </div>
+        <p className="text-[11px] text-gray-500 pl-6">
+          送信先のご家族の登録とLINE連携は、登録後に一覧の「編集」から行えます
+        </p>
+      </div>
+
       <button type="submit" disabled={pending}
         className="mt-1 bg-teal-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50">
         {pending ? '登録中...' : '追加する'}
