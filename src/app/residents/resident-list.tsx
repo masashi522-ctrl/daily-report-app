@@ -3,6 +3,32 @@
 import { useState, useTransition } from 'react'
 import { FOOD_TYPE_LABELS, type FoodType, type Resident } from '@/types/database'
 import { deleteResident, toggleActive, generateAllFurigana } from './actions'
+import ResidentDetailModal, { serviceTimeLabel } from './resident-detail-modal'
+
+/** 一覧の「提供時間」セル。開始〜終了と時間区分を縦に並べる */
+function ServiceTimeCell({ resident, className = '' }: { resident: Resident; className?: string }) {
+  const { range, category } = serviceTimeLabel(resident)
+  if (!range && !category) return <span className="text-gray-400">-</span>
+  return (
+    <div className={`flex flex-col leading-tight ${className}`}>
+      {range && <span className="text-gray-700">{range}</span>}
+      {category && <span className="text-[10px] text-gray-400">{category}</span>}
+    </div>
+  )
+}
+
+/** 一覧の「要介護度」セル。要支援と要介護で色を分ける */
+function CareLevelBadge({ careLevel }: { careLevel: string | null }) {
+  if (!careLevel) return <span className="text-gray-400">-</span>
+  const support = careLevel.startsWith('要支援')
+  return (
+    <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap ${
+      support ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+    }`}>
+      {careLevel}
+    </span>
+  )
+}
 
 const GOJUUON_ROWS = [
   { label: 'あ', chars: 'あいうえおアイウエオ' },
@@ -30,6 +56,8 @@ export default function ResidentList({ residents, editId }: Props) {
   const [generateResult, setGenerateResult] = useState<string | null>(null)
   const [, startDelete] = useTransition()
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({})
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const detailResident = residents.find(r => r.id === detailId) ?? null
 
   function handleDelete(id: string) {
     startDelete(async () => {
@@ -154,6 +182,8 @@ export default function ResidentList({ residents, editId }: Props) {
           <thead>
             <tr className="text-xs" style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)' }}>
               <th className="px-4 py-2.5 text-left text-violet-800 font-semibold">名前</th>
+              <th className="px-3 py-2.5 text-left text-amber-700 font-semibold">要介護度</th>
+              <th className="px-3 py-2.5 text-left text-indigo-700 font-semibold">提供時間</th>
               <th className="px-3 py-2.5 text-left text-amber-700 font-semibold">食事形態</th>
               <th className="px-3 py-2.5 text-left text-sky-700 font-semibold">利用曜日</th>
               <th className="px-3 py-2.5 text-left text-red-600 font-semibold">禁止食品</th>
@@ -166,7 +196,14 @@ export default function ResidentList({ residents, editId }: Props) {
           <tbody>
             {filtered.map((r, i) => (
               <tr key={r.id} className={`border-t hover:bg-violet-50/40 transition ${editId === r.id ? 'bg-violet-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}`}>
-                <td className="px-4 py-2 font-medium text-gray-800">{r.name}</td>
+                <td className="px-4 py-2">
+                  <button
+                    onClick={() => setDetailId(r.id)}
+                    className="font-medium text-violet-700 hover:text-violet-900 hover:underline text-left"
+                  >{r.name}</button>
+                </td>
+                <td className="px-3 py-2"><CareLevelBadge careLevel={r.careLevel} /></td>
+                <td className="px-3 py-2 text-xs"><ServiceTimeCell resident={r} /></td>
                 <td className="px-3 py-2 text-gray-600 text-xs">
                   {r.foodType ? r.foodType.split(',').map((t: string) => FOOD_TYPE_LABELS[t as FoodType] ?? t).join('・') : '-'}
                 </td>
@@ -224,7 +261,7 @@ export default function ResidentList({ residents, editId }: Props) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-gray-400">
+                <td colSpan={10} className="text-center py-8 text-gray-400">
                   {appliedText || gojuuonRow ? '該当する利用者が見つかりません' : '利用者が登録されていません'}
                 </td>
               </tr>
@@ -243,7 +280,10 @@ export default function ResidentList({ residents, editId }: Props) {
         {filtered.map(r => (
           <div key={r.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${editId === r.id ? 'border-violet-400' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between px-4 py-2.5 mb-0" style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)' }}>
-              <span className="font-semibold text-violet-900 text-base">{r.name}</span>
+              <button
+                onClick={() => setDetailId(r.id)}
+                className="font-semibold text-violet-900 text-base underline decoration-violet-300 underline-offset-2 text-left"
+              >{r.name}</button>
               <form action={toggleActive.bind(null, r.id, !r.isActive)}>
                 <button className={`text-xs px-3 py-1 rounded-full font-medium ${r.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                   {r.isActive ? '在籍' : '退所'}
@@ -252,6 +292,14 @@ export default function ResidentList({ residents, editId }: Props) {
             </div>
             <div className="p-4 pt-3">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-3">
+              <div>
+                <p className="text-xs text-gray-400">要介護度</p>
+                <p className="mt-0.5"><CareLevelBadge careLevel={r.careLevel} /></p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">提供時間</p>
+                <ServiceTimeCell resident={r} className="text-xs mt-0.5" />
+              </div>
               <div>
                 <p className="text-xs text-gray-400">食事形態</p>
                 <p className="text-xs text-gray-700 mt-0.5">
@@ -317,6 +365,10 @@ export default function ResidentList({ residents, editId }: Props) {
           </div>
         ))}
       </div>
+
+      {detailResident && (
+        <ResidentDetailModal resident={detailResident} onClose={() => setDetailId(null)} />
+      )}
     </div>
   )
 }
