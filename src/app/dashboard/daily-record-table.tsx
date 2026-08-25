@@ -36,14 +36,19 @@ const inputStyle: React.CSSProperties = {
 }
 
 // モバイル用: 入力＋ドロップダウン一体型
-function ComboNum({ listId, values, current, onChange, placeholder = '-', min, max, step = 1, inputMode = 'numeric', alert = false }: {
+function ComboNum({ listId, values, current, onChange, placeholder = '-', min, max, step = 1, inputMode = 'numeric', alert = false, required = false }: {
   listId: string; values: number[]; current: number | null | undefined
   onChange: (v: number | null) => void; placeholder?: string
   min?: number; max?: number; step?: number; inputMode?: 'numeric' | 'decimal'; alert?: boolean
+  /** 必須項目。未入力なら黄色で目立たせる */
+  required?: boolean
 }) {
+  const missing = required && current == null
   return (
     <div className={`flex items-stretch rounded-lg border overflow-hidden transition-colors ${
-      alert ? 'border-red-400 bg-red-50 focus-within:border-red-500' : 'border-gray-200 focus-within:border-blue-400'
+      alert ? 'border-red-400 bg-red-50 focus-within:border-red-500'
+        : missing ? 'border-amber-400 bg-amber-50 focus-within:border-amber-500'
+        : 'border-gray-200 focus-within:border-blue-400'
     }`}>
       <input
         type="number" list={listId} inputMode={inputMode}
@@ -156,12 +161,20 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     return REQUIRED.filter(f => (d as Record<string, unknown>)[f.key] == null).map(f => f.label)
   }
 
-  // 入力欄の背景色。再検が必要な値は赤、未入力は黄で示す
+  // 入力欄の背景色。再検が必要な値は赤、未入力は黄で示す。
+  // 未入力はどの欄かがひと目で分かるよう、枠線も付けて強調する
   function cellTone(id: string, keys: (keyof RecordDraft)[], alert: boolean, isAbsent: boolean): string {
     if (isAbsent) return ''
     if (alert) return 'bg-red-50'
     const missing = missingKeys(id)
-    return keys.some(k => missing.includes(k)) ? 'bg-amber-50' : ''
+    return keys.some(k => missing.includes(k))
+      ? 'bg-amber-100 ring-1 ring-inset ring-amber-400'
+      : ''
+  }
+
+  /** PC表の選択欄の枠色。必須なのに未入力なら黄色で示す */
+  function selTone(value: number | null | undefined, isAbsent: boolean): string {
+    return !isAbsent && value == null ? 'border-amber-400 bg-amber-50' : 'border-gray-200'
   }
 
   function matchRow(r: Resident) {
@@ -353,6 +366,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
 // デスクトップ用: 数値入力（スピナーなし、色をinline styleで保証）
   const numBase = 'border border-gray-200 rounded px-1 py-0.5 text-center text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
   const selMd = 'w-full border border-gray-200 rounded-lg px-2 py-2 text-sm'
+  // 必須なのに未入力の選択欄。入力欄と同じ黄色で目立たせる
+  const selMdMissing = 'w-full border border-amber-400 bg-amber-50 rounded-lg px-2 py-2 text-sm'
   const vRow  = 'grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 items-center'
   const vLbl  = 'text-xs text-gray-500 leading-tight'
   // テーブルヘッダー：カテゴリ別カラー
@@ -428,8 +443,8 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
           </span>
           <span className="flex items-center gap-1">
             <span className="text-amber-500">⚠</span>
-            <span className="inline-block w-3 h-3 rounded bg-amber-50 border border-amber-300" />
-            記入漏れ
+            <span className="inline-block w-3 h-3 rounded bg-amber-100 border border-amber-400" />
+            記入漏れ（未入力の欄を黄色で表示）
           </span>
         </div>
         {/* テキスト検索（名前ボタン絞り込み用） */}
@@ -658,28 +673,28 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>収縮期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
-                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} alert={d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90)} />
-                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolicPm} onChange={v => upd(resident.id, 'bpSystolicPm', v)} min={70}  max={200} alert={d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90)} />
+                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} required alert={d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90)} />
+                    <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolicPm} onChange={v => upd(resident.id, 'bpSystolicPm', v)} min={70}  max={200} required alert={d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90)} />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>拡張期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
-                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolic}   onChange={v => upd(resident.id, 'bpDiastolic',   v)} min={30}  max={200} />
-                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolicPm} onChange={v => upd(resident.id, 'bpDiastolicPm', v)} min={30}  max={200} />
+                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolic}   onChange={v => upd(resident.id, 'bpDiastolic',   v)} min={30}  max={200} required />
+                    <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolicPm} onChange={v => upd(resident.id, 'bpDiastolicPm', v)} min={30}  max={200} required />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>脈拍<br /><span className="text-[10px] text-gray-400">回/分</span></span>
-                    <ComboNum listId="dl-pulse" values={PULSE} current={d.pulse}   onChange={v => upd(resident.id, 'pulse',   v)} min={30} max={200} />
-                    <ComboNum listId="dl-pulse" values={PULSE} current={d.pulsePm} onChange={v => upd(resident.id, 'pulsePm', v)} min={30} max={200} />
+                    <ComboNum listId="dl-pulse" values={PULSE} current={d.pulse}   onChange={v => upd(resident.id, 'pulse',   v)} min={30} max={200} required />
+                    <ComboNum listId="dl-pulse" values={PULSE} current={d.pulsePm} onChange={v => upd(resident.id, 'pulsePm', v)} min={30} max={200} required />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>体温<br /><span className="text-[10px] text-gray-400">℃</span></span>
-                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" alert={tempAlertAm(d)} />
-                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" alert={tempAlertPm(d)} />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempMorning}   onChange={v => upd(resident.id, 'tempMorning',   v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" required alert={tempAlertAm(d)} />
+                    <ComboNum listId="dl-temp" values={TEMP} current={d.tempAfternoon} onChange={v => upd(resident.id, 'tempAfternoon', v)} min={35} max={42} step={0.1} inputMode="decimal" placeholder="-" required alert={tempAlertPm(d)} />
                   </div>
                   <div className={vRow}>
                     <span className={vLbl}>水分<br /><span className="text-[10px] text-gray-400">ml</span></span>
-                    <ComboNum listId="dl-fluid" values={FLUID} current={d.fluidIntakeAm} onChange={v => upd(resident.id, 'fluidIntakeAm', v)} min={0} max={2000} step={50} />
-                    <ComboNum listId="dl-fluid" values={FLUID} current={d.fluidIntakePm} onChange={v => upd(resident.id, 'fluidIntakePm', v)} min={0} max={2000} step={50} />
+                    <ComboNum listId="dl-fluid" values={FLUID} current={d.fluidIntakeAm} onChange={v => upd(resident.id, 'fluidIntakeAm', v)} min={0} max={2000} step={50} required />
+                    <ComboNum listId="dl-fluid" values={FLUID} current={d.fluidIntakePm} onChange={v => upd(resident.id, 'fluidIntakePm', v)} min={0} max={2000} step={50} required />
                   </div>
                 </div>
                 {/* 食事 */}
@@ -687,14 +702,16 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                   <div className="col-span-2 text-[10px] font-bold text-amber-600 -mb-1">食事</div>
                   <div>
                     <span className="text-xs text-gray-500 mb-0.5 block">主食（割）</span>
-                    <select value={d.mealMainFood ?? ''} onChange={e => upd(resident.id, 'mealMainFood', e.target.value !== '' ? +e.target.value : null)} className={selMd}>
+                    <select value={d.mealMainFood ?? ''} onChange={e => upd(resident.id, 'mealMainFood', e.target.value !== '' ? +e.target.value : null)}
+                      className={d.mealMainFood == null ? selMdMissing : selMd}>
                       <option value="">-</option>
                       {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}割</option>)}
                     </select>
                   </div>
                   <div>
                     <span className="text-xs text-gray-500 mb-0.5 block">主菜（割）</span>
-                    <select value={d.mealSideFood ?? ''} onChange={e => upd(resident.id, 'mealSideFood', e.target.value !== '' ? +e.target.value : null)} className={selMd}>
+                    <select value={d.mealSideFood ?? ''} onChange={e => upd(resident.id, 'mealSideFood', e.target.value !== '' ? +e.target.value : null)}
+                      className={d.mealSideFood == null ? selMdMissing : selMd}>
                       <option value="">-</option>
                       {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}割</option>)}
                     </select>
@@ -943,31 +960,31 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                       )}
                     </td>
                     {/* 食事 主/副 */}
-                    <td className={td}>
+                    <td className={`${td} ${cellTone(resident.id, ['mealMainFood', 'mealSideFood'], false, isAbsent)}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <select value={d.mealMainFood ?? ''} onChange={e => upd(resident.id, 'mealMainFood', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[40px]">
+                          className={`rounded px-0.5 py-0.5 text-xs w-[40px] border ${selTone(d.mealMainFood, isAbsent)}`}>
                           <option value="">主</option>
                           {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                         <span className="text-gray-400">/</span>
                         <select value={d.mealSideFood ?? ''} onChange={e => upd(resident.id, 'mealSideFood', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[40px]">
+                          className={`rounded px-0.5 py-0.5 text-xs w-[40px] border ${selTone(d.mealSideFood, isAbsent)}`}>
                           <option value="">副</option>
                           {MEAL_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </div>
                     </td>
                     {/* 水分 AM/PM（セレクト 50〜1000ml） */}
-                    <td className={td}>
+                    <td className={`${td} ${cellTone(resident.id, ['fluidIntakeAm', 'fluidIntakePm'], false, isAbsent)}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <select value={d.fluidIntakeAm ?? ''} onChange={e => upd(resident.id, 'fluidIntakeAm', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[46px]">
+                          className={`rounded px-0.5 py-0.5 text-xs w-[46px] border ${selTone(d.fluidIntakeAm, isAbsent)}`}>
                           <option value="">AM</option>
                           {FLUID_SELECT.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                         <select value={d.fluidIntakePm ?? ''} onChange={e => upd(resident.id, 'fluidIntakePm', e.target.value !== '' ? +e.target.value : null)}
-                          className="border border-gray-200 rounded px-0.5 py-0.5 text-xs w-[46px]">
+                          className={`rounded px-0.5 py-0.5 text-xs w-[46px] border ${selTone(d.fluidIntakePm, isAbsent)}`}>
                           <option value="">PM</option>
                           {FLUID_SELECT.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
