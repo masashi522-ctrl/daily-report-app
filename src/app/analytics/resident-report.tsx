@@ -276,7 +276,8 @@ export default function ResidentReport({
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="text-sm font-semibold text-gray-700">
             ケアマネジャー向け月次報告書
-            <span className="ml-2 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">AI生成</span>
+            {/* 画面上の目印。ケアマネジャーへお渡しする印刷物には出さない */}
+            <span className="ml-2 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded print:hidden">AI生成</span>
           </h3>
           <div className="flex gap-2 flex-wrap print:hidden">
             {report && (
