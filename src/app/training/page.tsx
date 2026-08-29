@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { type Resident, type DailyRecord } from '@/types/database'
 import TrainingTable from './training-table'
+import { isInServicePeriod } from '@/lib/service-period'
 
 function toDateStr(d: Date) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -26,7 +27,7 @@ export default async function TrainingPage({
 
   const todayDow = new Date(today + 'T00:00:00').getDay()
 
-  const { data: allResidents } = await supabase
+  const { data: residentRows } = await supabase
     .from('Resident')
     .select('*')
     .eq('isActive', true)
@@ -34,8 +35,11 @@ export default async function TrainingPage({
     .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
 
+  // 利用開始前に登録された方は、その日にはまだ出さない
+  const allResidents = (residentRows ?? []).filter((r: Resident) => isInServicePeriod(r, today))
+
   // 機能訓練対象チェックがある利用者
-  const trainingResidents = (allResidents ?? []).filter((r: Resident) => !!r.trainingDays)
+  const trainingResidents = allResidents.filter((r: Resident) => !!r.trainingDays)
 
   // 機能訓練対象 かつ 本日の利用曜日に該当する利用者
   const regularResidents = trainingResidents.filter((r: Resident) =>
@@ -43,7 +47,7 @@ export default async function TrainingPage({
   )
 
   // 臨時利用者の取得
-  const allResidentIds = (allResidents ?? []).map(r => r.id)
+  const allResidentIds = allResidents.map(r => r.id)
   const { data: tempRecords } = allResidentIds.length > 0
     ? await supabase
         .from('DailyRecord')
@@ -54,7 +58,7 @@ export default async function TrainingPage({
     : { data: [] }
 
   const tempIds = new Set((tempRecords ?? []).map((r: { residentId: string }) => r.residentId))
-  const temporaryResidents = (allResidents ?? []).filter((r: Resident) =>
+  const temporaryResidents = allResidents.filter((r: Resident) =>
     tempIds.has(r.id) &&
     !!r.trainingDays &&
     !regularResidents.some(rr => rr.id === r.id)

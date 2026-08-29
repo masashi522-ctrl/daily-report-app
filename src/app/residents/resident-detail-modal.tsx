@@ -9,8 +9,9 @@ import {
   type FoodType,
   type Resident,
 } from '@/types/database'
+import { hasLeftBy } from '@/lib/service-period'
 
-const DAYS = ['日', '月', '火', '水', '木', '金', '土']
+const DAYS =['日', '月', '火', '水', '木', '金', '土']
 
 function daysLabel(days: string | null) {
   if (!days) return null
@@ -64,9 +65,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function ResidentDetailModal({
   resident,
+  today,
   onClose,
 }: {
   resident: Resident
+  /** 在籍／退所の判定に使う日本時間の今日 */
+  today: string
   onClose: () => void
 }) {
   // Escキーでも閉じられるようにする
@@ -79,6 +83,8 @@ export default function ResidentDetailModal({
   }, [onClose])
 
   const r = resident
+  // 利用終了日を過ぎていれば、isActive の値にかかわらず退所として扱う
+  const enrolled = r.isActive && !hasLeftBy(r, today)
   const { range, category } = serviceTimeLabel(r)
   const subGoals = (r.subGoalImage ?? '').split('\n').map(s => s.trim()).filter(Boolean)
   const hospitalizations = r.hospitalizations ?? []
@@ -100,8 +106,8 @@ export default function ResidentDetailModal({
             {r.furigana && <p className="text-[11px] text-violet-600">{r.furigana}</p>}
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-bold text-violet-900">{r.name}</h3>
-              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${r.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
-                {r.isActive ? '在籍' : '退所'}
+              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${enrolled ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
+                {enrolled ? '在籍' : '退所'}
               </span>
             </div>
           </div>

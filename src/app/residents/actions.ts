@@ -7,8 +7,15 @@ import Anthropic from '@anthropic-ai/sdk'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { HospitalizationPeriod } from '@/types/database'
+import { jstToday } from '@/lib/service-period'
 
 export type ResidentFormState = { error: string } | null
+
+// 在籍かどうか。利用終了日は先の日付で登録しておけるよう、
+// その日を過ぎるまでは在籍のままにする
+function isActiveOn(serviceEndDate: string | null, date: string) {
+  return !serviceEndDate || serviceEndDate >= date
+}
 
 function parseHospitalizations(formData: FormData): HospitalizationPeriod[] {
   const admissions = formData.getAll('hospAdmission') as string[]
@@ -60,7 +67,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     foodType,
     foodRestrictions: foodRestrictions || null,
     specialCondition: specialCondition || null,
-    isActive: !serviceEndDate,
+    isActive: isActiveOn(serviceEndDate, jstToday()),
     attendanceDays:      attendanceDays      || null,
     bathingDays:         bathingDays         || null,
     trainingDays:        trainingDays        || null,
@@ -161,7 +168,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     serviceStartDate,
     serviceEndDate,
     hospitalizations,
-    isActive: !serviceEndDate,
+    isActive: isActiveOn(serviceEndDate, jstToday()),
     weightMeasureEveryVisit,
     bathingCareItems,
     bathingSpecialItems,

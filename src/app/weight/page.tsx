@@ -1,6 +1,7 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import WeightClient from './weight-client'
+import { isInServicePeriod, notEndedFilter } from '@/lib/service-period'
 
 // JST 今日の日付。レンダー中に現在時刻を読まないよう関数に切り出す
 function getJstToday() {
@@ -17,9 +18,11 @@ export default async function WeightPage({
 
   const { data: residentsRaw } = await supabase
     .from('Resident')
-    .select('id, name, furigana, weightMeasureEveryVisit, attendanceDays')
+    .select('id, name, furigana, weightMeasureEveryVisit, attendanceDays, serviceStartDate, serviceEndDate')
     .eq('isActive', true)
     .eq('facilityId', session.facilityId)
+    // 利用終了日を過ぎた方は在籍者の一覧から外す
+    .or(notEndedFilter(getJstToday()))
 
   const residents = (residentsRaw ?? []).sort((a, b) =>
     (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'),
@@ -73,6 +76,8 @@ export default async function WeightPage({
         if (!r.attendanceDays) return true
         return (r.attendanceDays as string).split(',').map(Number).includes(jstDayOfWeek)
       })
+      // 利用開始前・利用終了後の方は本日の測定対象に含めない
+      .filter(r => isInServicePeriod(r, jstToday))
       .filter((r: { id: string }) => !measuredTodayIds.has(r.id))
       .map((r: { id: string }) => r.id),
   )

@@ -5,6 +5,7 @@ import DailyRecordTable from './daily-record-table'
 import AddTemporaryModal from './add-temporary-modal'
 import DaySummaryBar from './day-summary'
 import { summarizeDay } from '@/lib/attendance-stats'
+import { isInServicePeriod } from '@/lib/service-period'
 
 function toDateStr(date: Date) {
   return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -19,7 +20,7 @@ export default async function DashboardPage({
   const params = await searchParams
   const today = params.date || toDateStr(new Date())
 
-  const { data: residents } = await supabase
+  const { data: allResidents } = await supabase
     .from('Resident')
     .select('*')
     .eq('isActive', true)
@@ -27,7 +28,10 @@ export default async function DashboardPage({
     .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
 
-  const residentIds = (residents ?? []).map(r => r.id)
+  // 利用開始前に登録された方は、その日にはまだ出さない
+  const residents = (allResidents ?? []).filter((r: Resident) => isInServicePeriod(r, today))
+
+  const residentIds = residents.map(r => r.id)
 
   const { data: records } = residentIds.length > 0
     ? await supabase.from('DailyRecord').select('*').eq('date', today).in('residentId', residentIds)
@@ -45,14 +49,14 @@ export default async function DashboardPage({
   const dateLabel = `${displayDate.getFullYear()}年${displayDate.getMonth() + 1}月${displayDate.getDate()}日（${dayNames[todayDow]}）`
 
   // 本日スケジュール外の利用者 → 臨時追加候補（曜日未設定 or 今日が含まれない）
-  const nonScheduledResidents = (residents ?? []).filter((r: Resident) => {
+  const nonScheduledResidents = residents.filter((r: Resident) => {
     if (!r.attendanceDays) return true
     return !r.attendanceDays.split(',').map(Number).includes(todayDow)
   })
 
   // その日の利用状況。画面に並ぶ対象者（曜日の予定者＋臨時追加）から
   // 欠席の方を除いて数える
-  const attendees = (residents ?? []).filter((r: Resident) => {
+  const attendees = residents.filter((r: Resident) => {
     const rec = recordMap.get(r.id)
     if (rec?.isAbsent) return false
     if (rec?.isTemporaryAttendance) return true
@@ -73,7 +77,7 @@ export default async function DashboardPage({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-xl font-bold text-gray-800">{dateLabel}</h2>
-          <p className="text-sm text-gray-500">登録者 {residents?.length ?? 0}名</p>
+          <p className="text-sm text-gray-500">登録者 {residents.length}名</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <AddTemporaryModal
@@ -99,7 +103,7 @@ export default async function DashboardPage({
       <DaySummaryBar summary={daySummary} />
 
       <DailyRecordTable
-        residents={residents ?? []}
+        residents={residents}
         recordMap={Object.fromEntries(recordMap)}
         date={today}
       />

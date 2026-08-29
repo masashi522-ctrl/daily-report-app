@@ -4,6 +4,25 @@ import { useState, useTransition } from 'react'
 import { FOOD_TYPE_LABELS, type FoodType, type Resident } from '@/types/database'
 import { deleteResident, toggleActive, generateAllFurigana } from './actions'
 import ResidentDetailModal, { serviceTimeLabel } from './resident-detail-modal'
+import { hasLeftBy } from '@/lib/service-period'
+
+/**
+ * 在籍／退所のバッジ。ふだんは押して切り替えられるが、
+ * 利用終了日を過ぎている方は日付で決まるため、ボタンにせず退所と表示する
+ */
+function EnrollmentBadge({ resident, today, padding }: { resident: Resident; today: string; padding: string }) {
+  const style = (active: boolean) =>
+    `text-xs ${padding} rounded-full font-medium ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`
+
+  if (hasLeftBy(resident, today)) {
+    return <span className={style(false)} title={`利用終了日 ${resident.serviceEndDate}`}>退所</span>
+  }
+  return (
+    <form action={toggleActive.bind(null, resident.id, !resident.isActive)}>
+      <button className={style(resident.isActive)}>{resident.isActive ? '在籍' : '退所'}</button>
+    </form>
+  )
+}
 
 /** 一覧の「提供時間」セル。開始〜終了と時間区分を縦に並べる */
 function ServiceTimeCell({ resident, className = '' }: { resident: Resident; className?: string }) {
@@ -46,9 +65,11 @@ const GOJUUON_ROWS = [
 interface Props {
   residents: Resident[]
   editId?: string
+  /** 在籍／退所の判定に使う日本時間の今日 */
+  today: string
 }
 
-export default function ResidentList({ residents, editId }: Props) {
+export default function ResidentList({ residents, editId, today }: Props) {
   const [inputText, setInputText] = useState('')
   const [appliedText, setAppliedText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
@@ -235,11 +256,7 @@ export default function ResidentList({ residents, editId }: Props) {
                   )}
                 </td>
                 <td className="px-3 py-2 text-center">
-                  <form action={toggleActive.bind(null, r.id, !r.isActive)}>
-                    <button className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {r.isActive ? '在籍' : '退所'}
-                    </button>
-                  </form>
+                  <EnrollmentBadge resident={r} today={today} padding="px-2 py-0.5" />
                 </td>
                 <td className="px-3 py-2 text-center">
                   <div className="flex flex-col items-center gap-1">
@@ -284,11 +301,7 @@ export default function ResidentList({ residents, editId }: Props) {
                 onClick={() => setDetailId(r.id)}
                 className="font-semibold text-violet-900 text-base underline decoration-violet-300 underline-offset-2 text-left"
               >{r.name}</button>
-              <form action={toggleActive.bind(null, r.id, !r.isActive)}>
-                <button className={`text-xs px-3 py-1 rounded-full font-medium ${r.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {r.isActive ? '在籍' : '退所'}
-                </button>
-              </form>
+              <EnrollmentBadge resident={r} today={today} padding="px-3 py-1" />
             </div>
             <div className="p-4 pt-3">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-3">
@@ -367,7 +380,7 @@ export default function ResidentList({ residents, editId }: Props) {
       </div>
 
       {detailResident && (
-        <ResidentDetailModal resident={detailResident} onClose={() => setDetailId(null)} />
+        <ResidentDetailModal resident={detailResident} today={today} onClose={() => setDetailId(null)} />
       )}
     </div>
   )

@@ -1,6 +1,7 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import TrainingPlanClient from './training-plan-client'
+import { jstToday, notEndedFilter } from '@/lib/service-period'
 
 export default async function TrainingPlanPage({
   searchParams,
@@ -15,6 +16,8 @@ export default async function TrainingPlanPage({
     .select('id, name, furigana, careLevel, trainingDays')
     .eq('isActive', true)
     .eq('facilityId', session.facilityId)
+    // 利用終了日を過ぎた方は在籍者の一覧から外す
+    .or(notEndedFilter(jstToday()))
 
   // 個別機能訓練加算の対象者（利用者管理で「機能訓練対象」に設定されている方）のみを表示する
   const residents = (residentsRaw ?? [])

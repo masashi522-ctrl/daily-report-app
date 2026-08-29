@@ -2,6 +2,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import FamilyReportClient, { type Cell, type RowResident } from './family-report-client'
 import type { FamilyMessageLog, Resident, FamilyContact } from '@/types/database'
+import { notEndedFilter } from '@/lib/service-period'
 
 /** 直近何日分を表示するか（2週間） */
 const DAYS = 14
@@ -26,6 +27,8 @@ export default async function FamilyReportPage() {
     supabase.from('Resident')
       .select('id, name, furigana, familyContactEnabled, shareDailyReport, shareActivityPhoto')
       .eq('facilityId', session.facilityId).eq('isActive', true)
+      // 利用終了日を過ぎた方は在籍者の一覧から外す
+      .or(notEndedFilter(today))
       .order('furigana', { ascending: true, nullsFirst: false })
       .order('name'),
     supabase.from('FamilyMessageLog')

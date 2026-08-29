@@ -5,6 +5,7 @@ import type { ResidentPhoto } from './photo-gallery'
 import type { ReportStats, CarePlanSummary } from './actions'
 import AnalyticsFilter from './analytics-filter'
 import PrintButton from './print-button'
+import { overlapsServicePeriod } from '@/lib/service-period'
 
 const PHOTO_BUCKET = 'resident-monthly-photos'
 
@@ -25,21 +26,30 @@ export default async function AnalyticsPage({
   const lastDay = new Date(year, month, 0).getDate()
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
+  // 集計対象はその月に在籍していた方なので、現在の在籍状況では絞り込まない。
+  // 施設の全利用者を読み、記録の取得範囲を自施設に限るためにIDを使う
   const { data: residentsRaw } = await supabase
-    .from('Resident').select('id, name, furigana').eq('isActive', true).eq('facilityId', session.facilityId)
-  const residents = (residentsRaw ?? []).sort((a, b) =>
-    (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja')
-  )
-  const facilityResidentIds = residents.map(r => r.id)
+    .from('Resident')
+    .select('id, name, furigana, isActive, serviceStartDate, serviceEndDate')
+    .eq('facilityId', session.facilityId)
+  const facilityResidentIds = (residentsRaw ?? []).map(r => r.id)
 
+  // その月の記録。月の途中で利用を終えた方の記録も、利用日までは集計に入れる
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let records: any[] = []
+  let monthRecords: any[] = []
   if (facilityResidentIds.length > 0) {
-    let query = supabase.from('DailyRecord').select('*').gte('date', from).lte('date', to).in('residentId', facilityResidentIds)
-    if (residentId) query = query.eq('residentId', residentId)
-    const { data } = await query
-    records = data ?? []
+    const { data } = await supabase.from('DailyRecord').select('*')
+      .gte('date', from).lte('date', to).in('residentId', facilityResidentIds)
+    monthRecords = data ?? []
   }
+  const recordedIds = new Set(monthRecords.map(x => x.residentId))
+
+  // 選べる利用者：その月に記録がある方と、その月に在籍していた在籍中の方
+  const residents = (residentsRaw ?? [])
+    .filter(r => recordedIds.has(r.id) || (r.isActive && overlapsServicePeriod(r, from, to)))
+    .sort((a, b) => (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'))
+
+  const records = residentId ? monthRecords.filter(x => x.residentId === residentId) : monthRecords
 
   function avg(arr: (number | null | undefined)[]) {
     const valid = arr.filter((v): v is number => v != null)
@@ -54,8 +64,8 @@ export default async function AnalyticsPage({
   }
   function countOf(arr: boolean[]) { return arr.filter(Boolean).length }
 
-  const total = records?.length ?? 0
-  const r = records ?? []
+  const total = records.length
+  const r = records
 
   const stats = {
     bpSystolicAll:   avgCombined(r.map(x => x.bpSystolic), r.map(x => x.bpSystolicPm)),

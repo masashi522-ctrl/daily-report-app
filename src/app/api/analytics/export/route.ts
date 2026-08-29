@@ -1,6 +1,7 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import * as XLSX from 'xlsx'
+import { overlapsServicePeriod } from '@/lib/service-period'
 
 function avg(arr: (number | null | undefined)[]) {
   const valid = arr.filter((v): v is number => v != null)
@@ -20,21 +21,31 @@ export async function GET(request: Request) {
   const lastDay = new Date(year, month, 0).getDate()
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-  const { data: residents } = await supabase
-    .from('Resident').select('id, name').eq('isActive', true).eq('facilityId', session.facilityId).order('name')
-  const facilityResidentIds = (residents ?? []).map(x => x.id)
+  // 集計対象はその月に在籍していた方なので、現在の在籍状況では絞り込まない
+  const { data: allResidents } = await supabase
+    .from('Resident')
+    .select('id, name, isActive, serviceStartDate, serviceEndDate')
+    .eq('facilityId', session.facilityId).order('name')
+  const facilityResidentIds = (allResidents ?? []).map(x => x.id)
 
   // 他施設の利用者IDを直接指定されても出力しない
   if (residentId && !facilityResidentIds.includes(residentId)) {
     return new Response('利用者が見つかりません', { status: 404 })
   }
 
-  let query = supabase
-    .from('DailyRecord').select('*').gte('date', from).lte('date', to).in('residentId', facilityResidentIds)
-  if (residentId) query = query.eq('residentId', residentId)
-  const { data: records } = facilityResidentIds.length > 0 ? await query : { data: [] }
+  // その月の記録。月の途中で利用を終えた方の記録も、利用日までは集計に入れる
+  const { data: monthRecords } = facilityResidentIds.length > 0
+    ? await supabase.from('DailyRecord').select('*')
+        .gte('date', from).lte('date', to).in('residentId', facilityResidentIds)
+    : { data: [] }
 
-  const r = records ?? []
+  const recordedIds = new Set((monthRecords ?? []).map(x => x.residentId))
+  const residents = (allResidents ?? [])
+    .filter(x => recordedIds.has(x.id) || (x.isActive && overlapsServicePeriod(x, from, to)))
+
+  const r = residentId
+    ? (monthRecords ?? []).filter(x => x.residentId === residentId)
+    : (monthRecords ?? [])
   const total = r.length
   const targetName = residentId
     ? residents?.find(x => x.id === residentId)?.name ?? '不明'

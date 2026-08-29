@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { type Resident, type DailyRecord } from '@/types/database'
 import BathingTable from './bathing-table'
 import AddTemporaryModal from '../dashboard/add-temporary-modal'
+import { isInServicePeriod } from '@/lib/service-period'
 
 function toDateStr(d: Date) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -27,7 +28,7 @@ export default async function BathingPage({
 
   const todayDow = new Date(today + 'T00:00:00').getDay() // 0=日 〜 6=土
 
-  const { data: allResidents } = await supabase
+  const { data: residentRows } = await supabase
     .from('Resident')
     .select('*')
     .eq('isActive', true)
@@ -35,14 +36,17 @@ export default async function BathingPage({
     .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
 
+  // 利用開始前に登録された方は、その日にはまだ出さない
+  const allResidents = (residentRows ?? []).filter((r: Resident) => isInServicePeriod(r, today))
+
   // bathingDays に今日の曜日が含まれる利用者
-  const regularResidents = (allResidents ?? []).filter((r: Resident) => {
+  const regularResidents = allResidents.filter((r: Resident) => {
     if (!r.bathingDays) return false
     return r.bathingDays.split(',').map(Number).includes(todayDow)
   })
 
   // 臨時利用者の取得
-  const allResidentIds = (allResidents ?? []).map(r => r.id)
+  const allResidentIds = allResidents.map(r => r.id)
   const { data: tempRecords } = allResidentIds.length > 0
     ? await supabase
         .from('DailyRecord')
@@ -53,12 +57,12 @@ export default async function BathingPage({
     : { data: [] }
 
   const tempIds = new Set((tempRecords ?? []).map((r: { residentId: string }) => r.residentId))
-  const temporaryResidents = (allResidents ?? []).filter((r: Resident) =>
+  const temporaryResidents = allResidents.filter((r: Resident) =>
     tempIds.has(r.id) &&
     !regularResidents.some(rr => rr.id === r.id)
   )
 
-  const nonScheduledResidents = (allResidents ?? []).filter(
+  const nonScheduledResidents = allResidents.filter(
     (r: Resident) =>
       !regularResidents.some(rr => rr.id === r.id) &&
       !!r.attendanceDays &&

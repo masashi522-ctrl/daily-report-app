@@ -7,6 +7,7 @@ import ResidentList from './resident-list'
 import FamilyContactPanel from './family-contact-panel'
 import { isLineConfigured } from '@/lib/line'
 import type { FamilyContact, Resident } from '@/types/database'
+import { jstToday } from '@/lib/service-period'
 
 export default async function ResidentsPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const session = await requireSession()
@@ -68,7 +69,7 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
 
         {/* リスト: モバイルで2番目、PCで左側(2列) */}
         <div className="order-2 lg:order-1 lg:col-span-2">
-          <ResidentList residents={residents ?? []} editId={editId} />
+          <ResidentList residents={residents ?? []} editId={editId} today={jstToday()} />
         </div>
       </div>
     </div>

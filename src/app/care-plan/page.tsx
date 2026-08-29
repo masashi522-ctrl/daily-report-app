@@ -2,6 +2,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import CarePlanClient from './care-plan-client'
 import type { CarePlanHistoryEntry } from '@/types/database'
+import { jstToday, notEndedFilter } from '@/lib/service-period'
 
 export default async function CarePlanPage({
   searchParams,
@@ -16,6 +17,8 @@ export default async function CarePlanPage({
     .select('id, name, furigana, careLevel')
     .eq('isActive', true)
     .eq('facilityId', session.facilityId)
+    // 利用終了日を過ぎた方は在籍者の一覧から外す
+    .or(notEndedFilter(jstToday()))
 
   const residents = (residentsRaw ?? []).sort((a, b) =>
     (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'),

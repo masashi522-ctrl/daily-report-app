@@ -9,6 +9,7 @@ import {
   type DailyRecord,
 } from '@/types/database'
 import PrintActions from './print-actions'
+import { isInServicePeriod } from '@/lib/service-period'
 
 // 日本時間の今日。レンダー中に現在時刻を読まないよう関数に切り出す
 function jstToday() {
@@ -44,7 +45,7 @@ export default async function PrintPage({
   const today = jstToday()
   const date = params.date || today
 
-  const { data: residents } = await supabase
+  const { data: residentRows } = await supabase
     .from('Resident')
     .select('*')
     .eq('isActive', true)
@@ -52,7 +53,10 @@ export default async function PrintPage({
     .order('furigana', { ascending: true, nullsFirst: false })
     .order('name')
 
-  const residentIds = (residents ?? []).map(r => r.id)
+  // 利用開始前に登録された方は、その日にはまだ出さない
+  const residents = (residentRows ?? []).filter(r => isInServicePeriod(r, date))
+
+  const residentIds = residents.map(r => r.id)
   const { data: records } = residentIds.length > 0
     ? await supabase.from('DailyRecord').select('*').eq('date', date).in('residentId', residentIds)
     : { data: [] }
@@ -64,7 +68,7 @@ export default async function PrintPage({
   const dayNames = ['日', '月', '火', '水', '木', '金', '土']
   const dateLabel = `${displayDate.getFullYear()}年${displayDate.getMonth() + 1}月${displayDate.getDate()}日（${dayNames[displayDate.getDay()]}）`
 
-  const list = residents ?? []
+  const list = residents
   const recordCount = records?.length ?? 0
 
   return (

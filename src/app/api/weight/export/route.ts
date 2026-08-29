@@ -1,6 +1,7 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import * as XLSX from 'xlsx'
+import { overlapsServicePeriod } from '@/lib/service-period'
 
 function monthLabels(count: number, jstToday: string) {
   const now = new Date(jstToday)
@@ -78,22 +79,19 @@ export async function GET(request: Request) {
   }
 
   // ── 全利用者: 利用者×月の推移表 ──
+  // 対象期間に在籍していた方が対象。期間の途中で利用を終えた方も、測定値がある月までは載せる
   const { data: residentsRaw } = await supabase
     .from('Resident')
-    .select('id, name, furigana')
+    .select('id, name, furigana, isActive, serviceStartDate, serviceEndDate')
     .eq('facilityId', session.facilityId)
-    .eq('isActive', true)
 
-  const residents = (residentsRaw ?? []).sort((a, b) =>
-    (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'),
-  )
-  const residentIds = residents.map(r => r.id)
+  const facilityResidentIds = (residentsRaw ?? []).map(r => r.id)
 
-  const { data: recordsRaw } = residentIds.length
+  const { data: recordsRaw } = facilityResidentIds.length
     ? await supabase
         .from('DailyRecord')
         .select('residentId, date, weight')
-        .in('residentId', residentIds)
+        .in('residentId', facilityResidentIds)
         .not('weight', 'is', null)
         .gte('date', rangeFrom)
         .lte('date', jstToday)
@@ -101,6 +99,11 @@ export async function GET(request: Request) {
     : { data: [] }
 
   const records = (recordsRaw ?? []).filter(r => r.weight != null) as { residentId: string; date: string; weight: number }[]
+
+  const measuredIds = new Set(records.map(r => r.residentId))
+  const residents = (residentsRaw ?? [])
+    .filter(r => measuredIds.has(r.id) || (r.isActive && overlapsServicePeriod(r, rangeFrom, jstToday)))
+    .sort((a, b) => (a.furigana ?? a.name).localeCompare(b.furigana ?? b.name, 'ja'))
 
   // 利用者ごと・月ごとの最終測定値
   const byResidentMonth = new Map<string, Map<string, number>>()

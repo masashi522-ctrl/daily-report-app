@@ -5,6 +5,7 @@ import {
   type HospitalizationPeriod,
 } from '@/types/database'
 import { isHospitalizedOn } from '@/lib/hospitalization'
+import { isInServicePeriod } from '@/lib/service-period'
 
 // 予測の補正率と営業曜日を推定するために遡る日数
 const LOOKBACK_DAYS = 90
@@ -306,8 +307,7 @@ export async function computeFacilityOperationsOverview(
     for (const r of residents) {
       if (!r.isActive) continue
       if (r.attendanceDays && !r.attendanceDays.split(',').map(Number).includes(dow)) continue
-      if (r.serviceStartDate && r.serviceStartDate > date) continue
-      if (r.serviceEndDate && r.serviceEndDate < date) continue
+      if (!isInServicePeriod(r, date)) continue
       if (isHospitalizedOn(r.hospitalizations, date)) continue
       count++
       weighted += weightById.get(r.id) ?? 1
