@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { FOOD_TYPE_LABELS, BOWEL_AMOUNT_OPTIONS, BOWEL_QUALITY_OPTIONS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
-import { isHospitalizedOn } from '@/lib/hospitalization'
-import { saveRecord, saveAllRecords } from './actions'
+import { isHospitalizedOn, findOpenHospitalizationIndex } from '@/lib/hospitalization'
+import { saveRecord, saveAllRecords, setDischargeDate } from './actions'
 
 interface Props {
   residents: Resident[]
@@ -13,6 +13,27 @@ interface Props {
 }
 
 type RecordDraft = Partial<DailyRecord>
+
+/** 退院日の記入漏れを埋めてもらう対象。入院日は入力の目安として画面に出す */
+type DischargeTarget = { id: string; name: string; admissionDate: string }
+/** 退院日の確認ダイアログを挟んだあとに続ける保存 */
+type PendingSave = { kind: 'one'; residentId: string } | { kind: 'all' }
+
+// 入院中でも「欠席」や空の記録は矛盾しない。実際に来所したと分かる入力だけを退院の手掛かりにする
+function hasAttendanceEvidence(d: RecordDraft): boolean {
+  if (d.isAbsent) return false
+  return d.bpSystolic != null || d.bpDiastolic != null
+    || d.bpSystolicPm != null || d.bpDiastolicPm != null
+    || d.pulse != null || d.pulsePm != null
+    || d.tempMorning != null || d.tempAfternoon != null
+    || d.mealMainFood != null || d.mealSideFood != null
+    || d.fluidIntakeAm != null || d.fluidIntakePm != null
+    || d.weight != null || d.spo2Before != null || d.spo2After != null
+    || d.oralCare === true
+    || (!!d.bathing && d.bathing !== 'NOT_APPLICABLE')
+    || !!d.bowelAmount || !!d.bowelQuality
+    || !!d.dailyNote?.trim() || !!d.specialNotes?.trim()
+}
 
 function range(from: number, to: number, step: number) {
   const arr: number[] = []
@@ -96,6 +117,12 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [incompleteOnly, setIncompleteOnly] = useState(false)
   const [recheckOnly, setRecheckOnly] = useState(false)
+  // 退院日の記入漏れをその場で埋めてもらう確認ダイアログの状態
+  const [dischargeTargets, setDischargeTargets] = useState<DischargeTarget[]>([])
+  const [dischargeInputs, setDischargeInputs] = useState<Record<string, string>>({})
+  const [dischargeError, setDischargeError] = useState<string | null>(null)
+  const [dischargeSaving, setDischargeSaving] = useState(false)
+  const [pendingSave, setPendingSave] = useState<PendingSave | null>(null)
 
   const todayNum = new Date(date + 'T00:00:00').getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
@@ -320,7 +347,33 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
       upd(id, field, e.target.value !== '' ? +e.target.value : null)
   }
 
-  async function handleSave(residentId: string) {
+  // 退院日が未入力のまま利用記録が入ろうとしている利用者。記入漏れをその場で埋めてもらう
+  function dischargeTargetsFor(list: Resident[]): DischargeTarget[] {
+    return list.flatMap(resident => {
+      const i = findOpenHospitalizationIndex(resident.hospitalizations, date)
+      if (i === -1) return []
+      if (!hasAttendanceEvidence(getDraft(resident.id))) return []
+      const admissionDate = resident.hospitalizations?.[i]?.admissionDate
+      return admissionDate ? [{ id: resident.id, name: resident.name, admissionDate }] : []
+    })
+  }
+
+  function openDischargePrompt(targets: DischargeTarget[], next: PendingSave) {
+    setDischargeTargets(targets)
+    setDischargeInputs(Object.fromEntries(targets.map(t => [t.id, ''])))
+    setDischargeError(null)
+    setPendingSave(next)
+  }
+
+  function closeDischargePrompt() {
+    setDischargeTargets([])
+    setPendingSave(null)
+    setDischargeInputs({})
+    setDischargeError(null)
+    setDischargeSaving(false)
+  }
+
+  function runSave(residentId: string) {
     setSaving(residentId)
     const draft = getDraft(residentId)
     const existing = recordMap[residentId]
@@ -332,8 +385,7 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     })
   }
 
-  async function handleSaveAll() {
-    if (savingAll) return
+  function runSaveAll() {
     setSavingAll(true)
     const toSave = filtered.map(resident => {
       const draft = getDraft(resident.id)
@@ -346,6 +398,59 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
       setSavedIds(prev => new Set([...prev, ...filtered.map(r => r.id)]))
       setSavingAll(false)
     })
+  }
+
+  /** 確認ダイアログを閉じ、待たせていた保存を続ける */
+  function proceedPendingSave() {
+    const next = pendingSave
+    closeDischargePrompt()
+    if (!next) return
+    if (next.kind === 'one') runSave(next.residentId)
+    else runSaveAll()
+  }
+
+  async function confirmDischarge() {
+    if (dischargeSaving) return
+    const blank = dischargeTargets.find(t => !dischargeInputs[t.id])
+    if (blank) {
+      setDischargeError(`${blank.name}さんの退院日を入力してください`)
+      return
+    }
+    setDischargeSaving(true)
+    setDischargeError(null)
+    for (const t of dischargeTargets) {
+      const res = await setDischargeDate({
+        residentId: t.id,
+        dischargeDate: dischargeInputs[t.id],
+        recordDate: date,
+      })
+      if (!res.success) {
+        setDischargeError(`${t.name}さん: ${res.error ?? '退院日を保存できませんでした'}`)
+        setDischargeSaving(false)
+        return
+      }
+    }
+    proceedPendingSave()
+  }
+
+  function handleSave(residentId: string) {
+    const resident = residents.find(r => r.id === residentId)
+    const targets = resident ? dischargeTargetsFor([resident]) : []
+    if (targets.length > 0) {
+      openDischargePrompt(targets, { kind: 'one', residentId })
+      return
+    }
+    runSave(residentId)
+  }
+
+  function handleSaveAll() {
+    if (savingAll) return
+    const targets = dischargeTargetsFor(filtered)
+    if (targets.length > 0) {
+      openDischargePrompt(targets, { kind: 'all' })
+      return
+    }
+    runSaveAll()
   }
 
   function SaveBtn({ id }: { id: string }) {
@@ -383,6 +488,55 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
 
   return (
     <>
+      {/* 入院中のままの利用者に利用記録が入ろうとしたとき、退院日をその場で入れてもらう */}
+      {dischargeTargets.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-800">退院日が未入力です</h2>
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                入院中のままになっている利用者に、{date} の利用記録が入力されています。
+                退院日が未入力だと、この利用者の記録が稼働率・利用実績から除外され続けます。
+              </p>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {dischargeTargets.map(t => (
+                <div key={t.id}>
+                  <label className="text-sm font-semibold text-gray-800 block mb-1">
+                    {t.name}
+                    <span className="text-xs font-normal text-gray-500">（入院日 {t.admissionDate}）</span>
+                  </label>
+                  <input
+                    type="date" value={dischargeInputs[t.id] ?? ''}
+                    min={t.admissionDate} max={date}
+                    onChange={e => setDischargeInputs(prev => ({ ...prev, [t.id]: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-teal-400"
+                    style={{ ...inputStyle, fontSize: '16px' }}
+                  />
+                </div>
+              ))}
+              <p className="text-[11px] text-gray-500">実際に退院した日を入力してください。</p>
+              {dischargeError && (
+                <p className="text-xs text-red-600 font-medium">{dischargeError}</p>
+              )}
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex flex-col gap-2">
+              <button onClick={confirmDischarge} disabled={dischargeSaving}
+                className="w-full py-2.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:bg-gray-300">
+                {dischargeSaving ? '保存中...' : '退院日を登録して保存'}
+              </button>
+              <button onClick={proceedPendingSave} disabled={dischargeSaving}
+                className="w-full py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 disabled:opacity-50">
+                退院日は後で入力してこのまま保存
+              </button>
+              <button onClick={closeDischargePrompt} disabled={dischargeSaving}
+                className="w-full py-1.5 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50">
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 利用者絞り込み */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-wrap gap-2 items-center">
         {/* 曜日フィルタ＋カウント */}

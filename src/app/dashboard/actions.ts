@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { isResidentInFacility, residentIdsInFacility } from '@/lib/facility-guard'
 import { revalidatePath } from 'next/cache'
-import type { DailyRecord } from '@/types/database'
+import { findOpenHospitalizationIndex } from '@/lib/hospitalization'
+import type { DailyRecord, HospitalizationPeriod } from '@/types/database'
 
 function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; date: string }, staffId: string) {
   return {
@@ -179,4 +180,58 @@ export async function removeTemporaryAttendance({ residentId, date }: { resident
   revalidatePath('/bathing')
   revalidatePath('/training')
   revalidatePath('/analytics')
+}
+
+/**
+ * 入院中の利用者に利用記録が入力されたとき、記入漏れになっていた退院日をその場で埋める。
+ * 退院日が未入力のまま続くと、その利用者の記録が稼働率・利用実績から除外され続けるため。
+ * recordDate時点で開いている入院期間だけを対象にする。
+ */
+export async function setDischargeDate({
+  residentId,
+  dischargeDate,
+  recordDate,
+}: {
+  residentId: string
+  dischargeDate: string
+  recordDate: string
+}): Promise<{ success: boolean; error?: string }> {
+  const session = await requireSession()
+  if (!(await isResidentInFacility(residentId, session.facilityId))) {
+    return { success: false, error: 'この利用者は操作できません' }
+  }
+  if (!dischargeDate) return { success: false, error: '退院日を入力してください' }
+
+  const { data: rows, error: fetchError } = await supabase
+    .from('Resident').select('hospitalizations').eq('id', residentId).limit(1)
+  if (fetchError) {
+    console.error('[setDischargeDate SELECT error]', fetchError)
+    return { success: false, error: fetchError.message }
+  }
+  const periods = (rows?.[0]?.hospitalizations ?? []) as HospitalizationPeriod[]
+
+  const index = findOpenHospitalizationIndex(periods, recordDate)
+  if (index === -1) return { success: false, error: '退院日が未入力の入院期間が見つかりません' }
+  if (dischargeDate < periods[index].admissionDate) {
+    return { success: false, error: `退院日は入院日（${periods[index].admissionDate}）より前にできません` }
+  }
+  // 利用記録がある日より後の退院日は、その記録と矛盾する
+  if (dischargeDate > recordDate) {
+    return { success: false, error: `退院日は利用日（${recordDate}）より後にできません` }
+  }
+
+  const updated = periods.map((h, i) => (i === index ? { ...h, dischargeDate } : h))
+  const { error } = await supabase
+    .from('Resident')
+    .update({ hospitalizations: updated, updatedAt: new Date().toISOString() })
+    .eq('id', residentId)
+  if (error) {
+    console.error('[setDischargeDate UPDATE error]', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/residents')
+  revalidatePath('/analytics')
+  return { success: true }
 }

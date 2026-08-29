@@ -13,3 +13,19 @@ export function isHospitalizedOn(
     return true
   })
 }
+
+// dateの時点で退院日が未入力のまま続いている入院期間の位置を返す。なければ-1。
+// 該当が複数あるときは入院日が最新のものを対象にする。
+export function findOpenHospitalizationIndex(
+  hospitalizations: HospitalizationPeriod[] | null | undefined,
+  date: string,
+): number {
+  if (!hospitalizations) return -1
+  let found = -1
+  hospitalizations.forEach((h, i) => {
+    if (h.dischargeDate) return
+    if (!h.admissionDate || h.admissionDate > date) return
+    if (found === -1 || h.admissionDate > hospitalizations[found].admissionDate) found = i
+  })
+  return found
+}
