@@ -9,16 +9,19 @@ interface Suggestion {
 }
 
 // 利用者管理の「性別」「ゴール設定」欄。
-// メインのゴールのイメージとサブのゴールのイメージをそれぞれ設定でき、
-// 入力内容をもとにAIが両方の候補を提案する。
+// 編集画面から使うときは、介護計画書の全体をサーバー側で読み込んで材料にし、
+// 「なんのためにこの長期目標があるのか」を考えさせる形でAIが候補を提案する。
 // 新規登録フォームと編集フォームの両方から使う。
 export default function GoalImageField({
+  residentId,
   gender,
   onGenderChange,
   genderSuggested,
   defaultGoalImage,
   defaultSubGoalImage,
 }: {
+  /** 新規登録のときはまだ利用者が存在しないため未指定 */
+  residentId?: string
   gender: string
   onGenderChange: (gender: string) => void
   /** 氏名からAIが推定した候補が入っているとき */
@@ -32,6 +35,10 @@ export default function GoalImageField({
   const [error, setError] = useState<string | null>(null)
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null)
 
+  // 材料が何も無いと、誰にでも当てはまる言葉しか出てこない。
+  // 編集画面では介護計画書がサーバー側で加わるため、そちらの判定はAPIに任せる
+  const hasMaterial = Boolean(residentId) || Boolean(goalImage.trim())
+
   async function handleSuggest() {
     setError(null)
     setSuggestion(null)
@@ -40,7 +47,7 @@ export default function GoalImageField({
       const res = await fetch('/api/resident/suggest-goal-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gender, goalImage, subGoalImage }),
+        body: JSON.stringify({ residentId, gender, goalImage, subGoalImage }),
       })
       if (!res.ok) {
         const msg = await res.text()
@@ -103,7 +110,7 @@ export default function GoalImageField({
       <div className="border border-teal-100 rounded-lg p-3 bg-teal-50/30 flex flex-col gap-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="text-xs font-semibold text-teal-800">ゴール設定（ACP）</span>
-          <button type="button" onClick={handleSuggest} disabled={suggesting || !goalImage.trim()}
+          <button type="button" onClick={handleSuggest} disabled={suggesting || !hasMaterial}
             className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
             {suggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
             {suggesting ? '生成中...' : 'AIで提案'}
@@ -113,7 +120,7 @@ export default function GoalImageField({
         <div>
           <label className="text-xs font-medium text-gray-700 block mb-1">メインのゴールのイメージ</label>
           <textarea name="goalImage" value={goalImage} onChange={e => setGoalImage(e.target.value)} rows={2}
-            placeholder="例: 家族と一緒に近所を散歩できるようになりたい"
+            placeholder="例: 私は自由に動いて、人と会って楽しみたい"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-y" />
         </div>
 
@@ -122,12 +129,14 @@ export default function GoalImageField({
             サブのゴールのイメージ <span className="text-gray-400 font-normal">（1行に1つ）</span>
           </label>
           <textarea name="subGoalImage" value={subGoalImage} onChange={e => setSubGoalImage(e.target.value)} rows={3}
-            placeholder="例: 友人とお茶を楽しむ時間を続けたい"
+            placeholder="例: 今日はいったい何が起きるか楽しみだ"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sky-400 resize-y" />
         </div>
 
         <p className="text-[10px] text-gray-400">
-          メインのゴールのイメージを入力してから「AIで提案」を押すと、ACPの視点でメイン・サブの候補を提案します。
+          ご本人の視点の言葉を、口調のまま、今の言葉で書きます。「その人らしく」「穏やかに」のように、
+          名前を隠すと誰のものか分からなくなる言葉は避けてください。
+          {residentId && '「AIで提案」は、介護計画書の全体から「なんのためにこの長期目標があるのか」を読み取って候補を出します。'}
         </p>
         {error && <p className="text-xs text-red-600">{error}</p>}
 
@@ -149,7 +158,7 @@ export default function GoalImageField({
               </div>
             )}
             <p className="text-[10px] text-gray-500">
-              各候補は「メインにする」「サブに追加」でそれぞれの欄に反映できます。そのまま使わず、ご本人の言葉に合わせて書き換えてください。
+              各候補は「メインにする」「サブに追加」でそれぞれの欄に反映できます。候補はあくまでたたき台です。そのまま使わず、ご本人の言葉に合わせて書き換えてください。
             </p>
           </div>
         )}

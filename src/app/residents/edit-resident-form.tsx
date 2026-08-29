@@ -349,7 +349,7 @@ export default function EditResidentForm({
           placeholder="例: インスリン、SpO2測定"
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none" />
       </div>
-      <GoalImageField gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={resident.goalImage} defaultSubGoalImage={resident.subGoalImage} />
+      <GoalImageField residentId={resident.id} gender={gender} onGenderChange={changeGender} genderSuggested={genderSuggested} defaultGoalImage={resident.goalImage} defaultSubGoalImage={resident.subGoalImage} />
     </form>
 
     {children}
