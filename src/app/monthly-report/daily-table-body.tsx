@@ -75,7 +75,14 @@ export default function DailyTableBody({ rows }: { rows: DailyTableRow[] }) {
                   <NameGroup label="要介護" names={r.names.care} color="text-rose-700" />
                   <NameGroup label="要支援" names={r.names.support} color="text-sky-700" />
                   <NameGroup label="区分未設定" names={r.names.unset} color="text-gray-500" />
-                  <NameGroup label="欠席" names={r.names.absent} color="text-amber-700" />
+                  {r.names.absent.length > 0 && (
+                    <div className="flex gap-2 items-baseline">
+                      <span className="shrink-0 text-xs font-medium text-amber-700">欠席（{r.names.absent.length}名）</span>
+                      <span className="text-xs text-gray-700 leading-relaxed">
+                        {r.names.absent.map(a => `${a.name}（${a.care}）`).join('、')}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </td>
             </tr>

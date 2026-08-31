@@ -11,7 +11,8 @@ export type DayNames = {
   care: string[]
   support: string[]
   unset: string[]
-  absent: string[]
+  /** 欠席者は要介護か要支援かが分かるように区分を添える（段階の数字までは出さない） */
+  absent: { name: string; care: string }[]
 }
 
 export type DailyRow = { date: string; dow: number; names: DayNames } & DaySummary
@@ -56,8 +57,15 @@ export async function computeMonthlyDailyStats(
   // 内訳に出す氏名は、他の画面と同じくふりがな順に並べる
   const nameOf = (id: string) => byId.get(id)?.name ?? '（不明）'
   const furiganaOf = (id: string) => byId.get(id)?.furigana ?? byId.get(id)?.name ?? ''
-  const sortByFurigana = (ids: string[]) =>
-    [...ids].sort((a, b) => furiganaOf(a).localeCompare(furiganaOf(b), 'ja')).map(nameOf)
+  const sortIds = (ids: string[]) =>
+    [...ids].sort((a, b) => furiganaOf(a).localeCompare(furiganaOf(b), 'ja'))
+  const sortByFurigana = (ids: string[]) => sortIds(ids).map(nameOf)
+  const careLabelOf = (id: string) => {
+    const group = careGroupOf(byId.get(id)?.careLevel)
+    return group === 'CARE' ? '要介護' : group === 'SUPPORT' ? '要支援' : '区分未設定'
+  }
+  const withCareLabel = (ids: string[]) =>
+    sortIds(ids).map(id => ({ name: nameOf(id), care: careLabelOf(id) }))
 
   // 記録は件数が多くなるため分割して読む
   const records: { residentId: string; date: string; isAbsent: boolean; specialNotes: string | null }[] = []
@@ -105,7 +113,7 @@ export async function computeMonthlyDailyStats(
       care:    sortByFurigana(attendeeIds.filter(id => careGroupOf(byId.get(id)?.careLevel) === 'CARE')),
       support: sortByFurigana(attendeeIds.filter(id => careGroupOf(byId.get(id)?.careLevel) === 'SUPPORT')),
       unset:   sortByFurigana(attendeeIds.filter(id => careGroupOf(byId.get(id)?.careLevel) === 'UNSET')),
-      absent:  sortByFurigana(Array.from(absenteesByDate.get(date) ?? [])),
+      absent:  withCareLabel(Array.from(absenteesByDate.get(date) ?? [])),
     }
 
     rows.push({ date, dow: new Date(date + 'T00:00:00').getDay(), names, ...summarizeDay(attendees) })
