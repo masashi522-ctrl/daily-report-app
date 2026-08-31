@@ -88,13 +88,24 @@ export default async function TrainingPage({
           <h2 className="text-lg font-bold text-gray-800">機能訓練記録</h2>
           <p className="text-sm text-gray-500">{dateLabel}（{dowLabel}曜日）・ 訓練対象者 {residents.length}名</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link href={`/training?date=${shiftDate(today, -1)}`}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">◀ 前日</Link>
           <Link href="/training"
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">今日</Link>
           <Link href={`/training?date=${shiftDate(today, 1)}`}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">翌日 ▶</Link>
+          {/* 前日・翌日だけだと過去の利用日まで辿るのに手間がかかるため、日付を直接選べるようにする */}
+          <form className="flex items-center gap-2">
+            <input
+              type="date"
+              name="date"
+              defaultValue={today}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+            />
+            <button type="submit"
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:border-teal-400 transition">表示</button>
+          </form>
         </div>
       </div>
 
