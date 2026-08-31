@@ -18,7 +18,7 @@ const PREFERRED_MODELS = [
 ]
 
 // 音声・ガードレール・埋め込みなど、文章生成に使えないモデルを除外する
-const NON_CHAT = /whisper|tts|guard|embed|prompt-?guard|safety/i
+const NON_CHAT = /whisper|tts|guard|embed|prompt-?guard|safety|orpheus|canopylabs/i
 
 let cachedModels: string[] | null = null
 

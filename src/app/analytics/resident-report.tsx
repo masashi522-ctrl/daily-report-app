@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { generateCareReport, type ReportStats } from './actions'
+import { type ReportStats } from './actions'
+import { generateAndSaveReport } from './report-actions'
 import PhotoGallery, { type ResidentPhoto } from './photo-gallery'
 
 export interface ChartData {
@@ -99,6 +100,7 @@ export default function ResidentReport({
   year,
   month,
   photos,
+  savedReport,
 }: {
   stats: ReportStats
   chartData: ChartData
@@ -106,8 +108,10 @@ export default function ResidentReport({
   year: number
   month: number
   photos: ResidentPhoto[]
+  savedReport: string
 }) {
-  const [report, setReport] = useState('')
+  // 保存済みの報告書があれば、開いた時点で表示する（作り直さなくても印刷・出力できる）
+  const [report, setReport] = useState(savedReport)
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [forceDetailed, setForceDetailed] = useState(false)
@@ -119,8 +123,12 @@ export default function ResidentReport({
     setGenerating(true)
     setReport('')
     try {
-      const text = await generateCareReport(stats, forceDetailed)
-      setReport(text)
+      const result = await generateAndSaveReport(residentId, year, month, forceDetailed)
+      if (result.status === 'ok') setReport(result.body)
+      else if (result.status === 'wait') setReport(`【生成エラー】1分あたりの利用上限に達しました。約${result.seconds}秒おいてから、もう一度お試しください。`)
+      else if (result.status === 'limit') setReport(`【生成エラー】${result.message}。無料枠は1日あたりのトークン数にも上限があります。時間をおいてから、または日を改めてお試しください。`)
+      else if (result.status === 'skip') setReport(`【記録なし】${result.message}`)
+      else setReport(`【生成エラー】${result.message}`)
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err)
       setReport(`【エラー】${detail}`)
@@ -275,7 +283,9 @@ export default function ResidentReport({
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="text-sm font-semibold text-gray-700">
-            ケアマネジャー向け月次報告書
+            {/* 画面では何の報告書か分かるように、印刷物ではケアマネジャーにお渡しする体裁で「月次報告書」と出す */}
+            <span className="print:hidden">ケアマネジャー向け月次報告書</span>
+            <span className="hidden print:inline">月次報告書</span>
             {/* 画面上の目印。ケアマネジャーへお渡しする印刷物には出さない */}
             <span className="ml-2 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded print:hidden">AI生成</span>
           </h3>

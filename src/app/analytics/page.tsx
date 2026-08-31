@@ -4,6 +4,8 @@ import ResidentReport, { type ChartData } from './resident-report'
 import type { ResidentPhoto } from './photo-gallery'
 import type { ReportStats, CarePlanSummary } from './actions'
 import AnalyticsFilter from './analytics-filter'
+import BatchReport from './batch-report'
+import { listSavedReportIds, getSavedReport } from './report-actions'
 import PrintButton from './print-button'
 import { overlapsServicePeriod } from '@/lib/service-period'
 
@@ -51,6 +53,16 @@ export default async function AnalyticsPage({
 
   const records = residentId ? monthRecords.filter(x => x.residentId === residentId) : monthRecords
 
+  // まとめて作成する対象は「その月に記録がある方」に限る。
+  // 利用開始日が未設定の利用者が多く、在籍中というだけでは翌月から利用開始の方まで並んでしまうため。
+  const batchResidents = residents
+    .filter(r => recordedIds.has(r.id) && overlapsServicePeriod(r, from, to))
+    .map(r => ({ id: r.id, name: r.name }))
+
+  // 月次報告書の作成状況（まとめて作成パネルの表示と、選択中の利用者の保存済み本文）
+  const savedReportIds = await listSavedReportIds(year, month)
+  const savedReport = residentId ? await getSavedReport(residentId, year, month) : null
+
   function avg(arr: (number | null | undefined)[]) {
     const valid = arr.filter((v): v is number => v != null)
     return valid.length ? (valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(1) : '-'
@@ -81,13 +93,13 @@ export default async function AnalyticsPage({
   }
 
   const groups = [
-    { title: '血圧（収縮期）', unit: 'mmHg', rows: [{ label: '月平均', value: stats.bpSystolicAll, highlight: true }] },
-    { title: '血圧（拡張期）', unit: 'mmHg', rows: [{ label: '月平均', value: stats.bpDiastolicAll, highlight: true }] },
-    { title: '脈拍', unit: '回/分', rows: [{ label: '月平均', value: stats.pulseAll, highlight: true }] },
-    { title: '体温', unit: '℃', rows: [{ label: '月平均', value: stats.tempAll, highlight: true }] },
-    { title: '水分摂取', unit: 'ml', rows: [{ label: '月平均', value: stats.fluidAll, highlight: true }] },
+    { title: '血圧（収縮期）', unit: 'mmHg', rows: [{ label: `${month}月推移`, value: stats.bpSystolicAll, highlight: true }] },
+    { title: '血圧（拡張期）', unit: 'mmHg', rows: [{ label: `${month}月推移`, value: stats.bpDiastolicAll, highlight: true }] },
+    { title: '脈拍', unit: '回/分', rows: [{ label: `${month}月推移`, value: stats.pulseAll, highlight: true }] },
+    { title: '体温', unit: '℃', rows: [{ label: `${month}月推移`, value: stats.tempAll, highlight: true }] },
+    { title: '水分摂取', unit: 'ml', rows: [{ label: `${month}月推移`, value: stats.fluidAll, highlight: true }] },
     {
-      title: '食事量（月平均）', unit: '割',
+      title: '食事量', unit: '割',
       rows: [
         { label: '主食', value: stats.mealMain, highlight: false },
         { label: '主菜', value: stats.mealSide, highlight: false },
@@ -96,7 +108,7 @@ export default async function AnalyticsPage({
     {
       title: '体重', unit: 'kg',
       rows: [
-        { label: '月平均', value: stats.weight, highlight: true },
+        { label: `${month}月推移`, value: stats.weight, highlight: true },
       ],
     },
   ]
@@ -285,13 +297,22 @@ export default async function AnalyticsPage({
         />
       </div>
 
+      {/* 月次報告書をまとめて作成 */}
+      <BatchReport
+        residents={batchResidents}
+        year={year}
+        month={month}
+        savedIds={savedReportIds}
+        provider={process.env.ANTHROPIC_API_KEY ? 'claude' : 'groq'}
+      />
+
       {/* バイタル系グループ */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-4">
           {groups.map(group => (
             <div key={group.title}>
               <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-2">
-                {group.title} <span className="text-xs font-normal text-gray-400">月平均</span>
+                {group.title} <span className="text-xs font-normal text-gray-400">{month}月推移</span>
               </h3>
               <div className="flex flex-col gap-2">
                 {group.rows.map(row => (
@@ -336,6 +357,7 @@ export default async function AnalyticsPage({
             year={year}
             month={month}
             photos={photos}
+            savedReport={savedReport?.body ?? ''}
           />
         </div>
       ) : residentId ? (
