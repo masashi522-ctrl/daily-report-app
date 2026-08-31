@@ -63,6 +63,13 @@ const ACTIVITY_NOTES = [
   { date: '2026-08-29', label: 'その日の様子', text: '箱折りと新聞を折る作業に取り組まれる。' },
   { date: '2026-08-31', label: 'その日の様子', text: '誕生日会に参加され、皆と過ごされる。' },
 ]
+// 体調の記録はあるが、デイの中で完結していて自宅に確認することが無い月
+const MILD_NOTES = [
+  { date: '2026-08-07', label: '機能訓練', text: '立ち上がり訓練の後半に疲労の訴えあり。回数を調整して実施。' },
+  { date: '2026-08-13', label: 'その日の様子', text: '塗り絵の活動に参加され、笑顔が多く見られる。' },
+  { date: '2026-08-25', label: '特記事項', text: '午後に37.2度の微熱。水分をこまめに勧め経過観察。夕方には36.6度まで下がる。' },
+]
+
 async function main() {
   // detailed=詳しく報告する指定 / light=通常 / empty=記録がまったく無い月
   const mode = process.argv[2] ?? 'detailed'
@@ -70,11 +77,12 @@ async function main() {
   const target: ReportStats =
     mode === 'empty' ? { ...stats, careNotes: [], serviceGaps: [] }
     : mode === 'activity' ? { ...stats, careNotes: ACTIVITY_NOTES, serviceGaps: [] }
+    : mode === 'mild' ? { ...stats, careNotes: MILD_NOTES, serviceGaps: [] }
     : stats
 
   const { systemMessage, prompt } = buildCareReportPrompt(target, forceDetailed)
   const chars = [...systemMessage].length + [...prompt].length
-  console.log('条件:', mode === 'empty' ? '記録が無い月' : mode === 'activity' ? '活動の記録だけの月' : forceDetailed ? '詳しく報告する指定' : '通常')
+  console.log('条件:', mode === 'empty' ? '記録が無い月' : mode === 'activity' ? '活動の記録だけの月' : mode === 'mild' ? 'デイ内で完結した体調の記録がある月' : forceDetailed ? '詳しく報告する指定' : '通常')
   console.log('プロンプト長:', chars, '文字（日本語はおおよそ0.8倍のトークン数）')
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY
