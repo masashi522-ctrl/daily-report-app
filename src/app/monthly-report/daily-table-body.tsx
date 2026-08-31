@@ -17,6 +17,24 @@ export interface DailyTableRow {
 
 const DOW = ['日', '月', '火', '水', '木', '金', '土']
 
+// 欠席者の区分は、表の要介護・要支援の列と同じ色で示して一目で分かるようにする
+const CARE_BADGE: Record<string, string> = {
+  要介護: 'bg-rose-50 text-rose-700',
+  要支援: 'bg-sky-50 text-sky-700',
+  区分未設定: 'bg-gray-100 text-gray-500',
+}
+
+/** 「要介護2・要支援1」のような内訳。1区分だけの日は出さない */
+function absentBreakdown(absent: { care: string }[]): string {
+  const counts = new Map<string, number>()
+  for (const a of absent) counts.set(a.care, (counts.get(a.care) ?? 0) + 1)
+  if (counts.size <= 1) return ''
+  return ['要介護', '要支援', '区分未設定']
+    .filter(k => counts.has(k))
+    .map(k => `${k}${counts.get(k)}`)
+    .join('・')
+}
+
 function NameGroup({ label, names, color }: { label: string; names: string[]; color: string }) {
   if (names.length === 0) return null
   return (
@@ -76,10 +94,20 @@ export default function DailyTableBody({ rows }: { rows: DailyTableRow[] }) {
                   <NameGroup label="要支援" names={r.names.support} color="text-sky-700" />
                   <NameGroup label="区分未設定" names={r.names.unset} color="text-gray-500" />
                   {r.names.absent.length > 0 && (
-                    <div className="flex gap-2 items-baseline">
-                      <span className="shrink-0 text-xs font-medium text-amber-700">欠席（{r.names.absent.length}名）</span>
-                      <span className="text-xs text-gray-700 leading-relaxed">
-                        {r.names.absent.map(a => `${a.name}（${a.care}）`).join('、')}
+                    <div className="flex gap-2 items-baseline flex-wrap">
+                      <span className="shrink-0 text-xs font-medium text-amber-700">
+                        欠席（{r.names.absent.length}名
+                        {absentBreakdown(r.names.absent) && `：${absentBreakdown(r.names.absent)}`}）
+                      </span>
+                      <span className="flex gap-x-3 gap-y-1 flex-wrap">
+                        {r.names.absent.map(a => (
+                          <span key={a.name} className="text-xs text-gray-700 inline-flex items-center gap-1">
+                            {a.name}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${CARE_BADGE[a.care] ?? CARE_BADGE['区分未設定']}`}>
+                              {a.care}
+                            </span>
+                          </span>
+                        ))}
                       </span>
                     </div>
                   )}
