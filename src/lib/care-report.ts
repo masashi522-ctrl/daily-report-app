@@ -71,6 +71,7 @@ export function buildCareReportPrompt(
 【言語ルール・最優先】
 ・出力は必ず日本語（ひらがな・カタカナ・漢字・数字・句読点）のみで記述すること
 ・ハングル・簡体字・英単語など、日本語以外の文字を一切混在させないこと（「状态」「记录」のような簡体字は日本語の字体で書くこと）
+・数字はアラビア数字（1、2、3）で書くこと。「八月十一日」「三センチ」「二名」のような漢数字は使わないこと（「一緒に」「十分に」「お一人で」のような言葉はそのままでよい）
 
 【文体・表現のルール】
 ・文体は「です・ます」調。丁寧さは保ちながらも、硬すぎず読みやすい自然な文章にすること
@@ -81,6 +82,11 @@ export function buildCareReportPrompt(
 ・「食事量が少ない」「体重が減少」「活動が困難」などのネガティブな表現は、できるかぎりポジティブな表現に言い換えること（例：「少しずつ召し上がっていただいております」「変化に気を配りながら経過を見守っております」「サポートしながら楽しんで取り組まれています」など）
 ・ただしポジティブな言い換えが不自然になる場合は、柔らかく中立的な表現にとどめること
 ・この言い換えルールは、日々の様子に関する一般的な表現にのみ適用すること。皮膚状態の異常・外傷・体調急変など、事実として観察された安全・健康上の所見は、婉曲化・軽視せず、正確にそのまま報告すること（例：「発赤を確認しました」を「少し気になる様子でした」のように弱めないこと）
+
+【誰が行ったことかを取り違えないこと（重要）】
+・「現場の記録」に書かれている行為が、デイの職員が行ったことなのか、ご利用者やご家族がなさったことなのかを見分けて書くこと
+・職員が行った対応（湿布を貼る、患部を保護する、水分を勧める、見守る、体位を変えるなど）を、観察したように書かないこと。「湿布を貼付されていることを確認しております」は誤りで、「湿布を貼らせていただきました」「湿布での対応をさせていただきました」のように、自分たちが行ったこととして書くこと
+・ご利用者やご家族がなさったことを、デイが行ったように書かないこと。ご家庭での出来事は「〜とのことでした」「〜と伺っております」と、聞き取った形で書くこと
 
 【姿勢のルール（最重要・全体に関わる）】
 ・書き手はデイサービスの一職員であり、読み手であるケアマネジャーに対しては、あくまで謙虚な姿勢でご報告する立場です
@@ -287,10 +293,46 @@ const PHRASE_FIXES: [RegExp, string][] = [
   [/今月は落ち着いてお過ごしいただいております。?/g, '体調面で特にお伝えすべき変化はございませんでした。'],
 ]
 
+// 数字はアラビア数字に統一する。ただし「一緒に」「十分に」「お一人で」のような語まで
+// 変換してしまうと日本語が壊れるため、日付や単位が続く場合だけ置き換える。
+const KANJI_NUMBER_UNITS = '月|日|回|名|センチ|ミリ|メートル|キロ|グラム|割|枚|個|ml|cc'
+const KANJI_NUMBER_PATTERN = new RegExp(`([〇零一二三四五六七八九十百千]+)(?=(?:${KANJI_NUMBER_UNITS}))`, 'g')
+const KANJI_DIGITS: Record<string, number> = {
+  〇: 0, 零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9,
+}
+
+/** 「二十」「三百五十」のような漢数字を数値に直す。読めない並びは null を返す */
+function kanjiToArabic(text: string): number | null {
+  let total = 0
+  let current = 0
+  let seen = false
+  for (const ch of text) {
+    const digit = KANJI_DIGITS[ch]
+    if (digit != null) {
+      current = current * 10 + digit
+      seen = true
+      continue
+    }
+    const unit = ch === '十' ? 10 : ch === '百' ? 100 : ch === '千' ? 1000 : null
+    if (unit == null) return null
+    total += (current || 1) * unit
+    current = 0
+    seen = true
+  }
+  return seen ? total + current : null
+}
+
+function normalizeKanjiNumbers(text: string): string {
+  return text.replace(KANJI_NUMBER_PATTERN, matched => {
+    const value = kanjiToArabic(matched)
+    return value == null ? matched : String(value)
+  })
+}
+
 function sanitizeReportText(text: string): string {
   const fixed = [...SIMPLIFIED_CHINESE_FIXES, ...PHRASE_FIXES]
     .reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text)
-  return collapseRepeatedSentences(stripStrayForeignScript(fixed))
+  return collapseRepeatedSentences(normalizeKanjiNumbers(stripStrayForeignScript(fixed)))
 }
 
 // Groq/Llamaが稀に文末や短い文を連続で繰り返す（例:「いただけました。いただけました。」）ほか、
