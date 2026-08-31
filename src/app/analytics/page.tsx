@@ -8,8 +8,7 @@ import BatchReport from './batch-report'
 import { listSavedReportIds, getSavedReport } from './report-actions'
 import PrintButton from './print-button'
 import { overlapsServicePeriod } from '@/lib/service-period'
-
-const PHOTO_BUCKET = 'resident-monthly-photos'
+import { buildVitalCards, buildChartData, loadResidentPhotos, loadWeightTrend, CARDS_WITHOUT_CHART, type WeightTrend } from '@/lib/analytics-view'
 
 export default async function AnalyticsPage({
   searchParams,
@@ -92,26 +91,9 @@ export default async function AnalyticsPage({
     training:        `${countOf(r.map(x => x.trainingDone))}/${total}回`,
   }
 
-  const groups = [
-    { title: '血圧（収縮期）', unit: 'mmHg', rows: [{ label: `${month}月推移`, value: stats.bpSystolicAll, highlight: true }] },
-    { title: '血圧（拡張期）', unit: 'mmHg', rows: [{ label: `${month}月推移`, value: stats.bpDiastolicAll, highlight: true }] },
-    { title: '脈拍', unit: '回/分', rows: [{ label: `${month}月推移`, value: stats.pulseAll, highlight: true }] },
-    { title: '体温', unit: '℃', rows: [{ label: `${month}月推移`, value: stats.tempAll, highlight: true }] },
-    { title: '水分摂取', unit: 'ml', rows: [{ label: `${month}月推移`, value: stats.fluidAll, highlight: true }] },
-    {
-      title: '食事量', unit: '割',
-      rows: [
-        { label: '主食', value: stats.mealMain, highlight: false },
-        { label: '主菜', value: stats.mealSide, highlight: false },
-      ],
-    },
-    {
-      title: '体重', unit: 'kg',
-      rows: [
-        { label: `${month}月推移`, value: stats.weight, highlight: true },
-      ],
-    },
-  ]
+  // 利用者を選んでいるときは、血圧・体温・水分・体重の平均をグラフの見出しに出すため、ここでは重ねない
+  const allCards = buildVitalCards(records, month)
+  const groups = residentId ? allCards.filter(c => CARDS_WITHOUT_CHART.includes(c.title)) : allCards
 
   const counts = [
     { label: '入浴 実施',    value: stats.bathing },
@@ -126,33 +108,10 @@ export default async function AnalyticsPage({
   let chartData: ChartData | null = null
   let reportStats: ReportStats | null = null
   let photos: ResidentPhoto[] = []
+  let weightTrend: WeightTrend = { months: [], change: null, points: [], ticks: [] }
 
   if (residentId && r.length > 0) {
-    const allDays = Array.from({ length: lastDay }, (_, i) => i + 1)
-    const byDay = new Map<number, typeof r[0]>()
-    for (const rec of r) {
-      const day = parseInt(rec.date.split('-')[2])
-      byDay.set(day, rec)
-    }
-
-    chartData = {
-      days: allDays,
-      bpSys:  allDays.map(d => byDay.get(d)?.bpSystolic ?? null),
-      bpDia:  allDays.map(d => byDay.get(d)?.bpDiastolic ?? null),
-      temp:   allDays.map(d => byDay.get(d)?.tempMorning ?? null),
-      fluid:  allDays.map(d => {
-        const rec = byDay.get(d)
-        if (!rec) return null
-        const am = rec.fluidIntakeAm ?? 0
-        const pm = rec.fluidIntakePm ?? 0
-        return (am > 0 || pm > 0) ? am + pm : null
-      }),
-      meal:   allDays.map(d => byDay.get(d)?.mealMainFood ?? null),
-      weight: allDays.map(d => {
-        const w = byDay.get(d)?.weight
-        return (w != null && w > 0) ? w : null
-      }),
-    }
+    chartData = buildChartData(r, year, month)
 
     const attendingRecs = r.filter(x => !x.isAbsent)
     const bathingCount = countOf(r.map(x => x.bathing === 'DONE'))
@@ -243,22 +202,9 @@ export default async function AnalyticsPage({
       serviceGaps,
     }
 
-    const { data: photoRows } = await supabase
-      .from('ResidentMonthlyPhoto')
-      .select('id, storagePath')
-      .eq('residentId', residentId)
-      .eq('year', year)
-      .eq('month', month)
-      .order('sortOrder', { ascending: true })
-
-    if (photoRows && photoRows.length > 0) {
-      const { data: signedUrls } = await supabase.storage
-        .from(PHOTO_BUCKET)
-        .createSignedUrls(photoRows.map(p => p.storagePath), 3600)
-      photos = photoRows
-        .map((p, i) => ({ id: p.id, url: signedUrls?.[i]?.signedUrl ?? '' }))
-        .filter(p => p.url)
-    }
+    photos = await loadResidentPhotos(residentId, year, month)
+    // 体重は当月だけでは増減が読めないため、前々月からの3か月分を読む
+    weightTrend = await loadWeightTrend(residentId, year, month)
   }
 
   return (
@@ -306,7 +252,8 @@ export default async function AnalyticsPage({
         provider={process.env.ANTHROPIC_API_KEY ? 'claude' : 'groq'}
       />
 
-      {/* バイタル系グループ */}
+      {/* バイタル系グループ（グラフのある項目はグラフ側に平均を出すため、ここには残らない） */}
+      {groups.length > 0 && (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-4">
           {groups.map(group => (
@@ -329,6 +276,7 @@ export default async function AnalyticsPage({
           ))}
         </div>
       </div>
+      )}
 
       {/* ケア実施回数 */}
       <div>
@@ -358,6 +306,7 @@ export default async function AnalyticsPage({
             month={month}
             photos={photos}
             savedReport={savedReport?.body ?? ''}
+            weightTrend={weightTrend}
           />
         </div>
       ) : residentId ? (

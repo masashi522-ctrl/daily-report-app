@@ -4,15 +4,164 @@ import { useState } from 'react'
 import { type ReportStats } from './actions'
 import { generateAndSaveReport } from './report-actions'
 import PhotoGallery, { type ResidentPhoto } from './photo-gallery'
+import type { WeightTrend } from '@/lib/analytics-view'
 
 export interface ChartData {
   days: number[]
   bpSys: (number | null)[]
   bpDia: (number | null)[]
+  pulse: (number | null)[]
   temp: (number | null)[]
   fluid: (number | null)[]
   meal: (number | null)[]
   weight: (number | null)[]
+}
+
+type ChartSeries = {
+  values: (number | null)[]
+  color: string
+  label: string
+  unit: string
+  /** 平均・範囲を表示するときの小数点以下の桁数 */
+  digits: number
+}
+
+/** グラフが描いている値そのものから、平均と最小〜最大を出して見出しに添える */
+function SeriesSummary({ series, showLabel }: { series: ChartSeries[]; showLabel: boolean }) {
+  return (
+    <div className="flex items-baseline gap-4 flex-wrap">
+      {series.map(s => {
+        const vals = s.values.filter((v): v is number => v != null)
+        if (vals.length === 0) return null
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+        return (
+          <span key={s.label} className="flex items-baseline gap-1.5 text-[11px] text-gray-500">
+            <span className="inline-block w-4 h-0.5 rounded self-center" style={{ backgroundColor: s.color }} />
+            {showLabel && <span>{s.label}</span>}
+            <span className="text-base font-bold text-gray-800 tabular-nums">{avg.toFixed(s.digits)}</span>
+            <span>{s.unit}</span>
+            <span className="tabular-nums">（{Math.min(...vals).toFixed(s.digits)}〜{Math.max(...vals).toFixed(s.digits)}）</span>
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+function CardFrame({
+  title,
+  titleColor,
+  month,
+  series,
+  children,
+  periodLabel,
+}: {
+  title: string
+  titleColor: string
+  month: number
+  series: ChartSeries[]
+  children: React.ReactNode
+  periodLabel?: string
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 border-b pb-2">
+        <h3 className={`text-sm font-semibold ${titleColor}`}>
+          {title} <span className="text-xs font-normal text-gray-400">{periodLabel ?? `${month}月推移`}</span>
+        </h3>
+        <SeriesSummary series={series} showLabel={series.length > 1} />
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * 集計とグラフを1つの枠にまとめたカード。
+ * 数値の表とグラフを別々に置くと縦に伸びて印刷時に分断されるため、
+ * 平均と範囲を見出しに並べている。
+ */
+function ChartCard({
+  title,
+  titleColor,
+  month,
+  series,
+  days,
+  forcedMin,
+  forcedMax,
+  height,
+  xTicks,
+  periodLabel,
+}: {
+  title: string
+  titleColor: string
+  month: number
+  series: ChartSeries[]
+  days: number[]
+  forcedMin?: number
+  forcedMax?: number
+  height?: number
+  xTicks?: { index: number; label: string }[]
+  periodLabel?: string
+}) {
+  return (
+    <CardFrame title={title} titleColor={titleColor} month={month} series={series} periodLabel={periodLabel}>
+      <SvgLineChart
+        days={days}
+        series={series}
+        forcedMin={forcedMin}
+        forcedMax={forcedMax}
+        height={height}
+        unit={series[0]?.unit ?? ''}
+        xTicks={xTicks}
+      />
+    </CardFrame>
+  )
+}
+
+/**
+ * 単位も目盛りもまったく違う2項目を1枚にまとめるカード（食事量と水分摂取量）。
+ * 1つのグラフに重ねると目盛りが噛み合わないため、横に並べてそれぞれの目盛りで描く。
+ */
+function SplitChartCard({
+  title,
+  titleColor,
+  month,
+  days,
+  panels,
+}: {
+  title: string
+  titleColor: string
+  month: number
+  days: number[]
+  panels: { series: ChartSeries; forcedMin?: number; forcedMax?: number }[]
+}) {
+  return (
+    <CardFrame title={title} titleColor={titleColor} month={month} series={panels.map(p => p.series)}>
+      <div className="grid grid-cols-2 gap-4">
+        {panels.map(panel => (
+          <div key={panel.series.label}>
+            <p className="text-[11px] text-gray-500 mb-0.5">{panel.series.label}</p>
+            <SvgLineChart
+              days={days}
+              series={[panel.series]}
+              forcedMin={panel.forcedMin}
+              forcedMax={panel.forcedMax}
+              height={90}
+              unit={panel.series.unit}
+            />
+          </div>
+        ))}
+      </div>
+    </CardFrame>
+  )
+}
+
+// 目盛りの刻み幅の候補。体重のように変動が1kg程度の項目で10刻みにすると、
+// 線がほぼ平らになって変化が読み取れなくなるため、データの幅に合わせて選ぶ。
+const NICE_STEPS = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500]
+function niceStep(raw: number) {
+  return NICE_STEPS.find(s => s >= raw) ?? NICE_STEPS[NICE_STEPS.length - 1]
 }
 
 function SvgLineChart({
@@ -22,6 +171,7 @@ function SvgLineChart({
   forcedMax,
   height = 110,
   unit = '',
+  xTicks,
 }: {
   days: number[]
   series: { values: (number | null)[]; color: string; label: string }[]
@@ -29,6 +179,8 @@ function SvgLineChart({
   forcedMax?: number
   height?: number
   unit?: string
+  /** 指定すると、日付ではなくこの目盛りを横軸に出す */
+  xTicks?: { index: number; label: string }[]
 }) {
   const W = 560
   const H = height
@@ -44,8 +196,11 @@ function SvgLineChart({
 
   const rawMin = Math.min(...allVals)
   const rawMax = Math.max(...allVals)
-  const dataMin = forcedMin ?? Math.floor(rawMin / 10) * 10
-  const dataMax = forcedMax ?? Math.ceil(rawMax / 10) * 10
+  // 実際の幅に少し余白を足し、読みやすい刻みに丸める
+  const spread = (rawMax - rawMin) || Math.max(Math.abs(rawMax) * 0.1, 1)
+  const step = niceStep((spread * 1.3) / 4)
+  const dataMin = forcedMin ?? Math.floor((rawMin - spread * 0.15) / step) * step
+  const dataMax = forcedMax ?? Math.ceil((rawMax + spread * 0.15) / step) * step
   const dataRange = dataMax === dataMin ? 1 : dataMax - dataMin
 
   const xScale = (i: number) => PAD.left + (n <= 1 ? chartW / 2 : (i / (n - 1)) * chartW)
@@ -67,9 +222,13 @@ function SvgLineChart({
           </g>
         )
       })}
-      {days.map((d, i) => (d === 1 || d % 5 === 0) && (
-        <text key={d} x={xScale(i)} y={H - 4} textAnchor="middle" fontSize="8" fill="#9ca3af">{d}</text>
-      ))}
+      {xTicks
+        ? xTicks.map(t => (
+            <text key={t.label} x={xScale(t.index)} y={H - 4} textAnchor="middle" fontSize="8" fill="#9ca3af">{t.label}</text>
+          ))
+        : days.map((d, i) => (d === 1 || d % 5 === 0) && (
+            <text key={d} x={xScale(i)} y={H - 4} textAnchor="middle" fontSize="8" fill="#9ca3af">{d}</text>
+          ))}
       {/* unit label */}
       {unit && <text x={PAD.left - 3} y={PAD.top - 2} textAnchor="end" fontSize="7" fill="#9ca3af">{unit}</text>}
       {series.map(s => {
@@ -101,6 +260,7 @@ export default function ResidentReport({
   month,
   photos,
   savedReport,
+  weightTrend,
 }: {
   stats: ReportStats
   chartData: ChartData
@@ -109,6 +269,8 @@ export default function ResidentReport({
   month: number
   photos: ResidentPhoto[]
   savedReport: string
+  /** 体重は当月だけでは傾向が読めないため、前々月からの3か月分を受け取る */
+  weightTrend: WeightTrend
 }) {
   // 保存済みの報告書があれば、開いた時点で表示する（作り直さなくても印刷・出力できる）
   const [report, setReport] = useState(savedReport)
@@ -175,74 +337,95 @@ export default function ResidentReport({
   }
 
   const hasBp   = chartData.bpSys.some(v => v != null)
+  const hasPulse = chartData.pulse.some(v => v != null)
   const hasTemp = chartData.temp.some(v => v != null)
+  const hasMeal = chartData.meal.some(v => v != null)
   const hasFluid = chartData.fluid.some(v => v != null)
-  const hasWeight = chartData.weight.some(v => v != null)
 
   return (
     <div className="flex flex-col gap-4 mt-2">
       {/* Charts */}
-      {hasBp && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-sm font-semibold text-rose-700">血圧推移（mmHg）</h3>
-            <span className="flex items-center gap-1 text-[11px] text-gray-500">
-              <span className="inline-block w-5 h-0.5 bg-red-500 rounded"></span>収縮期
-            </span>
-            <span className="flex items-center gap-1 text-[11px] text-gray-500">
-              <span className="inline-block w-5 h-0.5 bg-orange-400 rounded"></span>拡張期
-            </span>
-          </div>
-          <SvgLineChart
-            days={chartData.days}
-            series={[
-              { values: chartData.bpSys, color: '#ef4444', label: '収縮期' },
-              { values: chartData.bpDia, color: '#fb923c', label: '拡張期' },
-            ]}
-            unit="mmHg"
-          />
-        </div>
+      {(hasBp || hasPulse) && (
+        <ChartCard title="血圧・脈拍" titleColor="text-rose-700" month={month}
+          series={[
+            ...(hasBp ? [
+              { values: chartData.bpSys, color: '#ef4444', label: '収縮期', unit: 'mmHg', digits: 0 },
+              { values: chartData.bpDia, color: '#fb923c', label: '拡張期', unit: 'mmHg', digits: 0 },
+            ] : []),
+            ...(hasPulse ? [
+              { values: chartData.pulse, color: '#8b5cf6', label: '脈拍', unit: '回/分', digits: 0 },
+            ] : []),
+          ]}
+          days={chartData.days}
+        />
       )}
       {hasTemp && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-blue-700 mb-2">体温推移（℃）</h3>
-          <SvgLineChart
-            days={chartData.days}
-            series={[{ values: chartData.temp, color: '#3b82f6', label: '体温' }]}
-            forcedMin={35}
-            forcedMax={38.5}
-            height={90}
-            unit="℃"
-          />
-        </div>
+        <ChartCard title="体温" titleColor="text-blue-700" month={month}
+          series={[{ values: chartData.temp, color: '#3b82f6', label: '体温', unit: '℃', digits: 1 }]}
+          days={chartData.days}
+          forcedMin={35} forcedMax={38.5} height={90}
+        />
       )}
-      {hasFluid && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-sky-700 mb-2">水分摂取量推移（ml）</h3>
-          <SvgLineChart
-            days={chartData.days}
-            series={[{ values: chartData.fluid, color: '#0ea5e9', label: '水分' }]}
-            forcedMin={0}
-            height={90}
-            unit="ml"
-          />
-        </div>
+      {(hasMeal || hasFluid) && (
+        <SplitChartCard title="食事量・水分摂取量" titleColor="text-amber-700" month={month} days={chartData.days}
+          panels={[
+            ...(hasMeal ? [{
+              series: { values: chartData.meal, color: '#f59e0b', label: '食事量', unit: '割', digits: 1 },
+              forcedMin: 0, forcedMax: 10,
+            }] : []),
+            ...(hasFluid ? [{
+              series: { values: chartData.fluid, color: '#0ea5e9', label: '水分摂取量', unit: 'ml', digits: 0 },
+              forcedMin: 0,
+            }] : []),
+          ]}
+        />
       )}
-      {hasWeight && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-teal-700 mb-2">体重推移（kg）</h3>
-          <SvgLineChart
-            days={chartData.days}
-            series={[{ values: chartData.weight, color: '#0d9488', label: '体重' }]}
-            height={90}
-            unit="kg"
-          />
+      {weightTrend.months.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 border-b pb-2">
+            <h3 className="text-sm font-semibold text-teal-700">
+              体重 <span className="text-xs font-normal text-gray-400">3か月の推移</span>
+            </h3>
+            {weightTrend.change != null && (
+              <span className="text-[11px] text-gray-500">
+                {weightTrend.months[0].label}から
+                <span className={`ml-1 text-base font-bold tabular-nums ${
+                  weightTrend.change > 0 ? 'text-orange-600' : weightTrend.change < 0 ? 'text-blue-600' : 'text-gray-700'
+                }`}>
+                  {weightTrend.change > 0 ? '+' : ''}{weightTrend.change.toFixed(1)}
+                </span>
+                <span className="ml-0.5">kg</span>
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            {weightTrend.months.map(m => (
+              <div key={m.label} className="rounded-lg bg-gray-50 px-3 py-2 text-center">
+                <p className="text-xs text-gray-500">{m.label}</p>
+                <p className="text-xl font-bold text-gray-800 tabular-nums">
+                  {m.avg.toFixed(1)}<span className="text-xs font-normal text-gray-400 ml-1">kg</span>
+                </p>
+                <p className="text-[10px] text-gray-400 tabular-nums">
+                  {m.min === m.max ? `${m.count}回測定` : `${m.min.toFixed(1)}〜${m.max.toFixed(1)} / ${m.count}回`}
+                </p>
+              </div>
+            ))}
+          </div>
+          {weightTrend.points.length >= 2 && (
+            <SvgLineChart
+              days={weightTrend.points.map((_, i) => i)}
+              series={[{ values: weightTrend.points, color: '#0d9488', label: '体重' }]}
+              xTicks={weightTrend.ticks}
+              height={90}
+              unit="kg"
+            />
+          )}
         </div>
       )}
 
       {/* 当月の特記事項 */}
       {stats.dailyNotes.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">
             当月の特記事項
             <span className="ml-2 text-xs font-normal text-gray-400">{stats.dailyNotes.length}件</span>
@@ -268,7 +451,7 @@ export default function ResidentReport({
         <PhotoGallery residentId={residentId} year={year} month={month} photos={photos} />
       </div>
       {photos.length > 0 && (
-        <div className="hidden print:block">
+        <div className="hidden print:block print:break-inside-avoid">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">今月の様子（写真）</h3>
           <div className="grid print:grid-cols-3 gap-2">
             {photos.map(photo => (
@@ -280,7 +463,7 @@ export default function ResidentReport({
       )}
 
       {/* AI Report */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="text-sm font-semibold text-gray-700">
             {/* 画面では何の報告書か分かるように、印刷物ではケアマネジャーにお渡しする体裁で「月次報告書」と出す */}

@@ -49,6 +49,12 @@ export default function BatchReport({
     setStates(prev => ({ ...prev, [id]: s }))
   }
 
+  // 選んだ方の報告書を、集計・分析の個別印刷と同じ内容で続けて印刷する画面を開く
+  function openPrint() {
+    const ids = selectedTargets.map(t => t.id).join(',')
+    window.open(`/print/care-reports?year=${year}&month=${month}&ids=${ids}`, '_blank')
+  }
+
   function toggle(id: string) {
     if (running) return
     setSelected(prev => {
@@ -167,6 +173,16 @@ export default function BatchReport({
               >
                 {pending.length === 0 ? '全員分できています' : `未作成の${pending.length}名を作成`}
               </button>
+              <button
+                onClick={openPrint}
+                disabled={selectedTargets.length === 0}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition disabled:border-gray-200 disabled:text-gray-300 flex items-center gap-1.5"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                {selectedTargets.length === 0 ? 'まとめて印刷' : `選択した${selectedTargets.length}名を印刷`}
+              </button>
             </>
           )}
         </div>
@@ -233,6 +249,7 @@ export default function BatchReport({
 
       <p className="text-[11px] text-gray-400 mt-3">
         名前を選んで「選択した◯名を作成」を押すと、その方だけ作成します。作成済みの方を選んだ場合は作り直し（上書き）になります。
+        「選択した◯名を印刷」を押すと、集計・グラフを含めた個別印刷と同じ内容が、利用者ごとに改ページされて続けて出ます。
         {CONCURRENCY}名ずつ同時に作成し、1名あたり15秒ほどかかります。上限に当たった場合は自動で待って続きから作成します。
         中断しても、作成済みの分は保存されています。
       </p>
