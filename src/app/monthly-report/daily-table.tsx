@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { formatHours } from '@/lib/attendance-stats'
 import type { MonthlyDailyStats } from '@/lib/monthly-daily-stats'
-
-const DOW = ['日', '月', '火', '水', '木', '金', '土']
+import DailyTableBody from './daily-table-body'
 
 function fmt(n: number | null, unit = '') {
   return n == null ? '―' : `${n.toFixed(1)}${unit}`
@@ -45,27 +44,19 @@ export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats 
                 <th className="py-2 text-right pl-2 font-medium">送迎減</th>
               </tr>
             </thead>
-            <tbody>
-              {stats.rows.map(r => {
-                const day = Number(r.date.slice(8))
-                const isSun = r.dow === 0
-                const isSat = r.dow === 6
-                return (
-                  <tr key={r.date} className="border-b border-gray-50">
-                    <td className={`py-1.5 tabular-nums ${isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-gray-700'}`}>
-                      {day}日<span className="text-xs ml-1">（{DOW[r.dow]}）</span>
-                    </td>
-                    <td className="py-1.5 text-right px-2 font-medium text-gray-800 tabular-nums">{r.total}</td>
-                    <td className="py-1.5 text-right px-2 text-rose-700 tabular-nums">{r.care}</td>
-                    <td className="py-1.5 text-right px-2 text-sky-700 tabular-nums">{r.support}</td>
-                    <td className="py-1.5 text-right px-2 text-gray-700 tabular-nums">{formatHours(r.avgHours)}</td>
-                    <td className={`py-1.5 text-right pl-2 tabular-nums ${r.pickupDropCount > 0 ? 'text-amber-700 font-medium' : 'text-gray-300'}`}>
-                      {r.pickupDropCount > 0 ? r.pickupDropCount : '―'}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
+            <DailyTableBody
+              rows={stats.rows.map(r => ({
+                date: r.date,
+                day: Number(r.date.slice(8)),
+                dow: r.dow,
+                total: r.total,
+                care: r.care,
+                support: r.support,
+                hours: formatHours(r.avgHours),
+                pickupDropCount: r.pickupDropCount,
+                names: r.names,
+              }))}
+            />
             <tfoot>
               <tr className="border-t-2 border-gray-300 font-semibold text-gray-800">
                 <td className="py-2">合計</td>
@@ -91,6 +82,7 @@ export default function MonthlyDailyTable({ stats }: { stats: MonthlyDailyStats 
       <div className="text-[10px] text-gray-400 mt-2 flex flex-col gap-0.5">
         <p>日次記録があり、欠席でない利用者を1人と数えています（稼働率の集計と同じ数え方です）。</p>
         <p>記録が1件も無い日は休業日とみなし、行に出していません。</p>
+        <p className="print:hidden">日付をクリックすると、その日の要介護・要支援の利用者と欠席者の氏名が出ます（印刷には含まれません）。</p>
         <p>平均提供時間は、特記事項に「利用時間 9:30-15:00」と記載があればその時間を優先します。記載が無ければ登録されている提供開始・終了時刻、それも無ければ利用時間区分の下限（例：5-6時間なら5時間）を使い、どちらも無い方は平均から除いています。</p>
         <p>送迎減は、特記事項の「迎えなし」「送りなし」をそれぞれ1回として数えています（「送迎なし」は往復とみなして2回）。</p>
       </div>

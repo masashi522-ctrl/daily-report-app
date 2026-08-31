@@ -1,12 +1,20 @@
 import 'server-only'
 import { supabase } from './supabase'
-import { summarizeDay, type DaySummary } from './attendance-stats'
+import { summarizeDay, careGroupOf, type DaySummary } from './attendance-stats'
 
 // 月次報告に載せる「日別の利用状況」。
 // その日に日次記録があり、欠席でない利用者を「利用者」として数える。
 // 稼働率の集計と同じ数え方に揃えている。
 
-export type DailyRow = { date: string; dow: number } & DaySummary
+/** その日の内訳。表の日付をクリックしたときに出す */
+export type DayNames = {
+  care: string[]
+  support: string[]
+  unset: string[]
+  absent: string[]
+}
+
+export type DailyRow = { date: string; dow: number; names: DayNames } & DaySummary
 
 export type MonthlyDailyStats = {
   year: number
@@ -38,12 +46,18 @@ export async function computeMonthlyDailyStats(
 
   const { data: residentsRaw } = await supabase
     .from('Resident')
-    .select('id, careLevel, serviceTimeCategory, serviceStartTime, serviceEndTime')
+    .select('id, name, furigana, careLevel, serviceTimeCategory, serviceStartTime, serviceEndTime')
     .eq('facilityId', facilityId)
 
   const residents = residentsRaw ?? []
   const byId = new Map(residents.map(r => [r.id, r]))
   const ids = residents.map(r => r.id)
+
+  // 内訳に出す氏名は、他の画面と同じくふりがな順に並べる
+  const nameOf = (id: string) => byId.get(id)?.name ?? '（不明）'
+  const furiganaOf = (id: string) => byId.get(id)?.furigana ?? byId.get(id)?.name ?? ''
+  const sortByFurigana = (ids: string[]) =>
+    [...ids].sort((a, b) => furiganaOf(a).localeCompare(furiganaOf(b), 'ja')).map(nameOf)
 
   // 記録は件数が多くなるため分割して読む
   const records: { residentId: string; date: string; isAbsent: boolean; specialNotes: string | null }[] = []
@@ -59,10 +73,16 @@ export async function computeMonthlyDailyStats(
   // 日付ごとの出席者を集める。同じ日に重複した記録があっても1人と数える。
   // 特記事項は利用時間の変更と送迎減を読み取るために持ち回る
   const attendeesByDate = new Map<string, Map<string, string | null>>()
+  // 欠席者も日付ごとに持っておき、表の日付をクリックしたときに名前を出せるようにする
+  const absenteesByDate = new Map<string, Set<string>>()
   const datesWithRecords = new Set<string>()
   for (const rec of records) {
     datesWithRecords.add(rec.date)
-    if (rec.isAbsent) continue
+    if (rec.isAbsent) {
+      if (!absenteesByDate.has(rec.date)) absenteesByDate.set(rec.date, new Set())
+      absenteesByDate.get(rec.date)!.add(rec.residentId)
+      continue
+    }
     if (!attendeesByDate.has(rec.date)) attendeesByDate.set(rec.date, new Map())
     attendeesByDate.get(rec.date)!.set(rec.residentId, rec.specialNotes)
   }
@@ -80,7 +100,15 @@ export async function computeMonthlyDailyStats(
       })
       .filter((x): x is NonNullable<typeof x> => !!x)
 
-    rows.push({ date, dow: new Date(date + 'T00:00:00').getDay(), ...summarizeDay(attendees) })
+    const attendeeIds = attendees.map(a => a.resident.id)
+    const names: DayNames = {
+      care:    sortByFurigana(attendeeIds.filter(id => careGroupOf(byId.get(id)?.careLevel) === 'CARE')),
+      support: sortByFurigana(attendeeIds.filter(id => careGroupOf(byId.get(id)?.careLevel) === 'SUPPORT')),
+      unset:   sortByFurigana(attendeeIds.filter(id => careGroupOf(byId.get(id)?.careLevel) === 'UNSET')),
+      absent:  sortByFurigana(Array.from(absenteesByDate.get(date) ?? [])),
+    }
+
+    rows.push({ date, dow: new Date(date + 'T00:00:00').getDay(), names, ...summarizeDay(attendees) })
   }
 
   const businessDays = rows.length
