@@ -113,16 +113,6 @@ export default function AnalyticsFilter({
           集計
         </button>
 
-        {!residentId && (
-          <a href={`/api/analytics/export?year=${year}&month=${month}`}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 flex items-center gap-1.5"
-            download>
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            全員 Excel
-          </a>
-        )}
 
         <span className="text-xs text-gray-400 self-end mb-2">記録 {total}件</span>
       </div>
