@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { type ReportStats } from './actions'
-import { generateAndSaveReport } from './report-actions'
+import { generateAndSaveReport, saveReportBody } from './report-actions'
 import PhotoGallery, { type ResidentPhoto } from './photo-gallery'
 import type { WeightTrend } from '@/lib/analytics-view'
 
@@ -275,7 +275,11 @@ export default function ResidentReport({
   // 保存済みの報告書があれば、開いた時点で表示する（作り直さなくても印刷・出力できる）
   const [report, setReport] = useState(savedReport)
   const [generating, setGenerating] = useState(false)
-  const [copied, setCopied] = useState(false)
+  // 生成した本文はそのまま印刷・保存されるため、職員が手直しできるようにする
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [forceDetailed, setForceDetailed] = useState(false)
   // 現場の記録がある月は、チェックしなくてもその内容は詳しく報告される
   const hasRecords = stats.careNotes.length > 0 || stats.serviceGaps.length > 0
@@ -299,10 +303,26 @@ export default function ResidentReport({
     }
   }
 
-  async function handleCopy() {
-    await navigator.clipboard.writeText(report)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  function startEditing() {
+    setDraft(report)
+    setSaveError('')
+    setEditing(true)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    setSaveError('')
+    try {
+      const ok = await saveReportBody(residentId, year, month, draft)
+      if (!ok) {
+        setSaveError('保存できませんでした。時間をおいてもう一度お試しください。')
+        return
+      }
+      setReport(draft)
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleReportDownload(format: 'pdf' | 'word') {
@@ -473,15 +493,23 @@ export default function ResidentReport({
             <span className="ml-2 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded print:hidden">AI生成</span>
           </h3>
           <div className="flex gap-2 flex-wrap print:hidden">
-            {report && (
-              <button onClick={handleCopy}
-                className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition ${
-                  copied
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                }`}>
-                {copied ? '✓ コピー済み' : 'コピー'}
+            {report && !editing && (
+              <button onClick={startEditing}
+                className="text-xs px-3 py-1.5 rounded-lg border font-medium transition bg-white text-gray-600 border-gray-200 hover:border-gray-400">
+                編集
               </button>
+            )}
+            {editing && (
+              <>
+                <button onClick={handleSave} disabled={saving}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium transition bg-teal-600 text-white hover:bg-teal-700 disabled:bg-gray-300">
+                  {saving ? '保存中…' : '保存'}
+                </button>
+                <button onClick={() => setEditing(false)} disabled={saving}
+                  className="text-xs px-3 py-1.5 rounded-lg border font-medium transition bg-white text-gray-600 border-gray-200 hover:border-gray-400">
+                  取り消し
+                </button>
+              </>
             )}
             {report && (
               <button
@@ -539,7 +567,20 @@ export default function ResidentReport({
               : '通常の分量で作成します。'}
           </p>
         </div>
-        {report ? (
+        {editing ? (
+          <div className="print:hidden">
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              rows={16}
+              className="w-full bg-white rounded-lg p-4 text-sm text-gray-700 leading-relaxed border border-teal-300 focus:outline-none focus:border-teal-500"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              段落は空行で区切ってください。保存すると、この内容が印刷・PDF・Word出力に使われます。
+            </p>
+            {saveError && <p className="text-xs text-red-600 mt-1">{saveError}</p>}
+          </div>
+        ) : report ? (
           <div className="bg-slate-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border border-slate-100">
             {report}
           </div>
@@ -550,19 +591,6 @@ export default function ResidentReport({
         )}
       </div>
 
-      {/* Excel Download */}
-      <div className="flex justify-end print:hidden">
-        <a
-          href={`/api/analytics/export?year=${year}&month=${month}&residentId=${residentId}`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition font-medium"
-          download
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Excelダウンロード（{stats.residentName}）
-        </a>
-      </div>
     </div>
   )
 }
