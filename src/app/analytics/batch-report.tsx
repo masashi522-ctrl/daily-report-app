@@ -49,7 +49,7 @@ export default function BatchReport({
     setStates(prev => ({ ...prev, [id]: s }))
   }
 
-  // 選んだ方の報告書を、集計・分析の個別印刷と同じ内容で続けて印刷する画面を開く
+  // 選んだ方の報告書を、利用者月次報告の個別印刷と同じ内容で続けて印刷する画面を開く
   function openPrint() {
     const ids = selectedTargets.map(t => t.id).join(',')
     window.open(`/print/care-reports?year=${year}&month=${month}&ids=${ids}`, '_blank')

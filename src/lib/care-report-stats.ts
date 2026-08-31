@@ -1,5 +1,5 @@
 // 月次報告書のもとになる集計データを作る。
-// 集計・分析の画面と、まとめて生成する処理の両方から使うため、画面から切り出している。
+// 利用者月次報告の画面と、まとめて生成する処理の両方から使うため、画面から切り出している。
 
 import { supabase } from '@/lib/supabase'
 import type { ReportStats, CarePlanSummary } from '@/lib/care-report'

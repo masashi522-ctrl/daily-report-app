@@ -215,13 +215,13 @@ export default async function AnalyticsPage({
       `}</style>
 
       <div className="flex items-center justify-between gap-3 print:hidden">
-        <h2 className="text-xl font-bold text-gray-800">集計・分析</h2>
+        <h2 className="text-xl font-bold text-gray-800">利用者月次報告</h2>
         <PrintButton />
       </div>
 
       {/* 印刷用ヘッダー（画面には非表示） */}
       <div className="hidden print:block print:mb-3">
-        <h1 className="text-lg font-bold text-gray-900">デイサービス 集計・分析</h1>
+        <h1 className="text-lg font-bold text-gray-900">デイサービス 利用者月次報告</h1>
         <p className="text-2xl font-bold text-gray-900 mt-1">
           対象：{targetName}
           <span className="text-base font-normal text-gray-600 ml-3">{year}年{month}月</span>

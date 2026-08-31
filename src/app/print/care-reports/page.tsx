@@ -6,7 +6,7 @@ import { buildVitalCards, buildChartData, loadResidentPhotos, loadWeightTrend, C
 import ResidentReport from '@/app/analytics/resident-report'
 import CareReportsPrintActions from './print-actions'
 
-// 選んだ利用者の月次報告書を、集計・分析の個別印刷と同じ内容で続けて印刷する画面。
+// 選んだ利用者の月次報告書を、利用者月次報告の個別印刷と同じ内容で続けて印刷する画面。
 // 中身（集計カード・グラフ・報告書・特記事項・写真）は個別印刷と同じ部品を使っているため、
 // どちらか一方だけ見た目がずれることはない。
 
@@ -36,7 +36,7 @@ export default async function CareReportsPrintPage({
       <div className="min-h-screen bg-gray-50">
         <CareReportsPrintActions count={0} backHref={backHref} />
         <p className="text-sm text-gray-500 text-center py-20">
-          印刷する利用者が選ばれていません。集計・分析の「月次報告書をまとめて作成」でお名前を選んでから、もう一度お試しください。
+          印刷する利用者が選ばれていません。利用者月次報告の「月次報告書をまとめて作成」でお名前を選んでから、もう一度お試しください。
         </p>
       </div>
     )

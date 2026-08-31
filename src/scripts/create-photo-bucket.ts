@@ -1,4 +1,4 @@
-// 集計・分析の月次報告書に添付する写真を保存するための、非公開Storageバケットを作成する一回限りのスクリプト。
+// 利用者月次報告の月次報告書に添付する写真を保存するための、非公開Storageバケットを作成する一回限りのスクリプト。
 // 実行方法: npx tsx src/scripts/create-photo-bucket.ts
 // （NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_KEY が環境変数に設定されている必要があります）
 

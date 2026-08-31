@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { href: '/care-plan',       label: '介護計画書', mobileLabel: '介護計画', icon: ClipboardCheck },
   { href: '/training-plan',   label: '機能訓練計画書', mobileLabel: '訓練計画', icon: Target },
   { href: '/monthly-report',  label: '月次報告',   mobileLabel: '月次',   icon: CalendarCheck },
-  { href: '/analytics',       label: '集計・分析', mobileLabel: '集計',   icon: BarChart2 },
+  { href: '/analytics',       label: '利用者月次報告', mobileLabel: '利用者月次', icon: BarChart2 },
   { href: '/residents',       label: '利用者管理', mobileLabel: '利用者', icon: Users },
   { href: '/dashboard/staff', label: 'スタッフ',   mobileLabel: 'スタッフ', icon: UserCog },
   { href: '/history',         label: '過去記録',   mobileLabel: '過去',   icon: BookOpen },
