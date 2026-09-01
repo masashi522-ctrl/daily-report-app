@@ -15,7 +15,7 @@ export default function CareReportsPrintActions({
       <span className="text-xs text-gray-500">{count}名分</span>
 
       <div className="flex items-center gap-2 ml-auto">
-        <span className="text-xs text-gray-400 hidden sm:inline">利用者ごとに改ページされます</span>
+        <span className="text-xs text-gray-400 hidden sm:inline">お一人ずつ新しい用紙から始まります（両面印刷でも裏面に別の方は入りません）</span>
         <button
           onClick={() => window.print()}
           className="px-4 py-1.5 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 flex items-center gap-1.5"
