@@ -43,6 +43,7 @@ export default async function TrainingPlanPage({
       selectedResident={selectedResident}
       plan={plan}
       facilityName={session.facilityName}
+      facilitySlug={session.facilitySlug}
     />
   )
 }

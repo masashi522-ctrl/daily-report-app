@@ -58,6 +58,7 @@ export default async function CarePlanPage({
       history={history}
       editingHistory={editingHistory}
       facilityName={session.facilityName}
+      facilitySlug={session.facilitySlug}
     />
   )
 }

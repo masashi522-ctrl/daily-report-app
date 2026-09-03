@@ -4,6 +4,8 @@ import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Download, Sparkles, Loader2 } from 'lucide-react'
 import { saveTrainingPlan } from './actions'
+import { planStaffOptions } from '@/lib/plan-staff'
+import StaffNameSelect from '@/components/staff-name-select'
 import {
   ADL_INDEPENDENCE_LEVEL_OPTIONS,
   DEMENTIA_INDEPENDENCE_LEVEL_OPTIONS,
@@ -20,6 +22,7 @@ interface Props {
   selectedResident: Resident | null
   plan: TrainingPlan | null
   facilityName: string
+  facilitySlug: string
 }
 
 const EMPTY_GOAL: TrainingPlanGoal = { issue: '', longTermGoal: '', shortTermGoal: '', serviceContent: '', frequency: '' }
@@ -47,7 +50,7 @@ interface GenerateResult {
   trainingPrecautions: string
 }
 
-export default function TrainingPlanClient({ residents, selectedResidentId, selectedResident, plan, facilityName }: Props) {
+export default function TrainingPlanClient({ residents, selectedResidentId, selectedResident, plan, facilityName, facilitySlug }: Props) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState(saveTrainingPlan.bind(null, selectedResidentId), null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
@@ -284,9 +287,8 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 block mb-1">作成者</label>
-                  <input type="text" name="staffName" defaultValue={effectivePlan?.staffName ?? ''}
-                    placeholder="担当者名"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                  <StaffNameSelect name="staffName" defaultValue={effectivePlan?.staffName ?? ''} placeholder="担当者名"
+                    options={planStaffOptions(facilitySlug, 'trainingPlanAuthor')} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 block mb-1">前回作成日</label>
@@ -498,8 +500,8 @@ export default function TrainingPlanClient({ residents, selectedResidentId, sele
                   </div>
                   <div>
                     <label className="text-xs text-gray-600 block mb-1">説明者</label>
-                    <input type="text" name="explainerName" defaultValue={effectivePlan?.explainerName ?? ''}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                    <StaffNameSelect name="explainerName" defaultValue={effectivePlan?.explainerName ?? ''}
+                      options={planStaffOptions(facilitySlug, 'trainingPlanExplainer')} />
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">事業所名称：{facilityName}</p>

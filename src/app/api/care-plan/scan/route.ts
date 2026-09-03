@@ -22,7 +22,6 @@ const CARE_PLAN_SCAN_SCHEMA = {
   type: 'object',
   properties: {
     planDate: { type: 'string', description: '作成年月日。西暦のYYYY-MM-DD形式。読み取れなければ空文字列' },
-    staffName: { type: 'string', description: '作成者' },
     birthDate: { type: 'string', description: '生年月日。西暦のYYYY-MM-DD形式。読み取れなければ空文字列' },
     careLevel: { type: 'string', description: '要介護度（例: 要介護2。数字は必ず半角で出力すること）' },
     needsAnalysis: { type: 'string', description: '利用者及び家族の生活に対する意向を踏まえた課題分析の結果' },
@@ -34,14 +33,11 @@ const CARE_PLAN_SCAN_SCHEMA = {
     evaluationPeriodEnd: { type: 'string', description: '評価期間の終了日。西暦のYYYY-MM-DD形式' },
     evaluationContent: { type: 'string', description: 'サービス達成状況の評価内容' },
     explanationDate: { type: 'string', description: '説明日。西暦のYYYY-MM-DD形式' },
-    explainerName: { type: 'string', description: '説明者' },
-    familyConfirmation: { type: 'string', description: '利用者同意署名欄の記載内容' },
-    proxySigner: { type: 'string', description: '代筆者署名欄（続柄）の記載内容' },
   },
   required: [
-    'planDate', 'staffName', 'birthDate', 'careLevel', 'needsAnalysis', 'supportPolicy', 'goalImage',
+    'planDate', 'birthDate', 'careLevel', 'needsAnalysis', 'supportPolicy', 'goalImage',
     'goals', 'monitoringDate', 'evaluationPeriodStart', 'evaluationPeriodEnd', 'evaluationContent',
-    'explanationDate', 'explainerName', 'familyConfirmation', 'proxySigner',
+    'explanationDate',
   ],
   additionalProperties: false,
 }

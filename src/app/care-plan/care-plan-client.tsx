@@ -6,6 +6,8 @@ import { Plus, Trash2, Download, Camera, Loader2, Sparkles, History, Pencil } fr
 import { saveCarePlan } from './actions'
 import { CARE_LEVEL_OPTIONS, PREVENTION_PROGRAMS, type CarePlan, type CarePlanGoal, type CarePlanHistoryEntry } from '@/types/database'
 import { mergeGoalsBySameIssue } from '@/lib/care-plan-goals'
+import { planStaffOptions } from '@/lib/plan-staff'
+import StaffNameSelect from '@/components/staff-name-select'
 
 interface Resident { id: string; name: string; furigana: string | null; careLevel: string | null }
 
@@ -18,6 +20,7 @@ interface Props {
   /** 保存済みの版を開いて編集しているときは、その版 */
   editingHistory: CarePlanHistoryEntry | null
   facilityName: string
+  facilitySlug: string
 }
 
 const EMPTY_GOAL: CarePlanGoal = {
@@ -34,7 +37,6 @@ function normalizeCareLevel(v: string | null | undefined): string {
 
 interface ScanResult {
   planDate: string
-  staffName: string
   birthDate: string
   careLevel: string
   needsAnalysis: string
@@ -46,15 +48,12 @@ interface ScanResult {
   evaluationPeriodEnd: string
   evaluationContent: string
   explanationDate: string
-  explainerName: string
-  familyConfirmation: string
-  proxySigner: string
 }
 
 const SCAN_SCALAR_FIELDS: (keyof Omit<ScanResult, 'goals'>)[] = [
-  'planDate', 'staffName', 'birthDate', 'careLevel', 'needsAnalysis', 'supportPolicy', 'goalImage',
+  'planDate', 'birthDate', 'careLevel', 'needsAnalysis', 'supportPolicy', 'goalImage',
   'monitoringDate', 'evaluationPeriodStart', 'evaluationPeriodEnd', 'evaluationContent',
-  'explanationDate', 'explainerName', 'familyConfirmation', 'proxySigner',
+  'explanationDate',
 ]
 
 const GOJUUON_ROWS = [
@@ -70,7 +69,7 @@ const GOJUUON_ROWS = [
   { label: 'わ', chars: 'わをんワヲン' },
 ]
 
-export default function CarePlanClient({ residents, selectedResidentId, selectedResident, plan, history, editingHistory, facilityName }: Props) {
+export default function CarePlanClient({ residents, selectedResidentId, selectedResident, plan, history, editingHistory, facilityName, facilitySlug }: Props) {
   // 版を開いているときは、その版の内容をフォームの初期値にする
   const basePlan: CarePlan | null = editingHistory ? editingHistory.snapshot : plan
   const router = useRouter()
@@ -515,9 +514,8 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 block mb-1">作成者</label>
-                  <input type="text" name="staffName" defaultValue={effectivePlan?.staffName ?? ''}
-                    placeholder="担当者名"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                  <StaffNameSelect name="staffName" defaultValue={effectivePlan?.staffName ?? ''} placeholder="担当者名"
+                    options={planStaffOptions(facilitySlug, 'carePlanAuthor')} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 block mb-1">生年月日</label>
@@ -791,8 +789,8 @@ export default function CarePlanClient({ residents, selectedResidentId, selected
                   </div>
                   <div>
                     <label className="text-xs text-gray-600 block mb-1">説明者</label>
-                    <input type="text" name="explainerName" defaultValue={effectivePlan?.explainerName ?? ''}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                    <StaffNameSelect name="explainerName" defaultValue={effectivePlan?.explainerName ?? ''}
+                      options={planStaffOptions(facilitySlug, 'carePlanExplainer')} />
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">事業所名称：{facilityName}</p>
