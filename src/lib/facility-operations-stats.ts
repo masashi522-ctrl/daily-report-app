@@ -363,8 +363,10 @@ export async function computeFacilityOperationsOverview(
     capacity,
   )
 
-  // ── 介護度 × 利用時間の構成（在籍中の利用者） ──
-  const activeResidents = residents.filter(r => r.isActive)
+  // ── 介護度 × 利用時間の構成（その日の在籍者） ──
+  // 利用開始前・利用終了後の方は数えない。翌月から利用の方を前もって登録しても、
+  // その月の構成や定員の自動反映には入らないようにする
+  const activeResidents = residents.filter(r => r.isActive && isInServicePeriod(r, today))
   const levelOf = (careLevel: string | null) =>
     careLevel && (CARE_LEVEL_OPTIONS as readonly string[]).includes(careLevel)
       ? careLevel

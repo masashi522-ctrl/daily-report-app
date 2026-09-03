@@ -1,12 +1,15 @@
 import { requireSession } from '@/lib/session'
+import { supabase } from '@/lib/supabase'
 import { computeMonthlyDailyStats } from '@/lib/monthly-daily-stats'
 import MonthlyDailyTable from './daily-table'
 import {
   computeFacilityOperationsOverview,
+  fiscalYearOf,
   type Metrics,
   type MonthSummary,
 } from '@/lib/facility-operations-stats'
 import CapacityForm from './capacity-form'
+import MonthPicker from './month-picker'
 import PrintButton from '@/app/analytics/print-button'
 
 const DOW = ['日', '月', '火', '水', '木', '金', '土']
@@ -25,6 +28,43 @@ function jstToday() {
 
 function jstNowLabel() {
   return new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+}
+
+function monthLabel(ym: string) {
+  const [y, m] = ym.split('-')
+  return `${y}年${parseInt(m)}月`
+}
+
+/** 「YYYY-MM」を diff か月ずらす */
+function shiftMonth(ym: string, diff: number) {
+  const d = new Date(parseInt(ym.slice(0, 4)), parseInt(ym.slice(5, 7)) - 1 + diff, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function lastDayOf(ym: string) {
+  const d = new Date(parseInt(ym.slice(0, 4)), parseInt(ym.slice(5, 7)), 0)
+  return `${ym}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * 選べる月の一覧（新しい順）。
+ * 記録が1件も無い施設でも今月は選べるようにしておく
+ */
+async function selectableMonths(facilityId: string, currentMonth: string): Promise<string[]> {
+  const { data: residents } = await supabase.from('Resident').select('id').eq('facilityId', facilityId)
+  const ids = (residents ?? []).map(r => r.id)
+
+  let earliest = currentMonth
+  if (ids.length > 0) {
+    const { data } = await supabase
+      .from('DailyRecord').select('date').in('residentId', ids)
+      .order('date', { ascending: true }).limit(1).maybeSingle()
+    if (data?.date && data.date.slice(0, 7) < currentMonth) earliest = data.date.slice(0, 7)
+  }
+
+  const months: string[] = []
+  for (let ym = currentMonth; ym >= earliest; ym = shiftMonth(ym, -1)) months.push(ym)
+  return months
 }
 
 function fmtRate(rate: number | null) {
@@ -105,14 +145,45 @@ function MonthCard({
   )
 }
 
-export default async function MonthlyReportPage() {
+export default async function MonthlyReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>
+}) {
   const session = await requireSession()
   const today = jstToday()
-  const overview = await computeFacilityOperationsOverview(session.facilityId, today)
+  const currentMonth = today.slice(0, 7)
+
+  const months = await selectableMonths(session.facilityId, currentMonth)
+  const { month: monthParam = '' } = await searchParams
+  const selectedMonth = months.includes(monthParam) ? monthParam : currentMonth
+  const isCurrentMonth = selectedMonth === currentMonth
+
+  // 過ぎた月は、その月の末日時点で集計する（今月は本日時点）
+  const asOf = isCurrentMonth ? today : lastDayOf(selectedMonth)
+
+  const overview = await computeFacilityOperationsOverview(session.facilityId, asOf)
   const dailyStats = await computeMonthlyDailyStats(
-    session.facilityId, parseInt(today.slice(0, 4)), parseInt(today.slice(5, 7)),
+    session.facilityId, parseInt(selectedMonth.slice(0, 4)), parseInt(selectedMonth.slice(5, 7)),
   )
   const { composition } = overview
+
+  // 「前月・当月・翌月」は、選んだ月ではなく今日を基準に実績か予測かが決まる
+  const modeOf = (ym: string): 'actual' | 'partial' | 'forecast' =>
+    ym < currentMonth ? 'actual' : ym === currentMonth ? 'partial' : 'forecast'
+  const captionOf = (mode: 'actual' | 'partial' | 'forecast') =>
+    mode === 'actual' ? '実績' : mode === 'partial' ? '実績（本日まで）' : '予測'
+  const ymOf = (s: MonthSummary) => `${s.year}-${String(s.month).padStart(2, '0')}`
+
+  // 翌月のカードは予測を出すためのもの。実績は集計していないので、
+  // 過ぎた月を見ているとき（＝その翌月も過去）は出さない
+  const monthCards = isCurrentMonth
+    ? [overview.prevMonth, overview.currentMonth, overview.nextMonth]
+    : [overview.prevMonth, overview.currentMonth]
+
+  const nowFiscalYear = fiscalYearOf(today)
+  const fiscalYearLabel = (fy: number) =>
+    fy === nowFiscalYear ? '今年度' : fy === nowFiscalYear - 1 ? '前年度' : `${fy}年度`
 
   const registeredCategoryCounts: Record<string, number> = {}
   composition.categories.forEach((cat, i) => {
@@ -120,8 +191,8 @@ export default async function MonthlyReportPage() {
   })
 
   const fiscalYears = [
-    { ...overview.currentFiscalYear, label: '今年度' },
-    { ...overview.previousFiscalYear, label: '前年度' },
+    { ...overview.currentFiscalYear, label: fiscalYearLabel(overview.currentFiscalYear.fiscalYear) },
+    { ...overview.previousFiscalYear, label: fiscalYearLabel(overview.previousFiscalYear.fiscalYear) },
   ]
 
   return (
@@ -136,33 +207,42 @@ export default async function MonthlyReportPage() {
       `}</style>
 
       {/* ヘッダー */}
-      <div className="flex items-start justify-between gap-3 print:hidden">
+      <div className="flex items-start justify-between gap-3 flex-wrap print:hidden">
         <div>
           <h2 className="text-lg font-bold text-gray-800">月次報告</h2>
           <p className="text-sm text-gray-500">
-            {today.replace(/-/g, '/')} 時点 ・ 営業曜日{' '}
+            {monthLabel(selectedMonth)}
+            {isCurrentMonth ? `（${today.replace(/-/g, '/')} 時点）` : '（確定）'} ・ 営業曜日{' '}
             {overview.operatingDows.map(d => DOW[d]).join('・') || '-'}
           </p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <MonthPicker months={months} selected={selectedMonth} />
+          <PrintButton />
+        </div>
       </div>
 
       {/* 印刷用ヘッダー（画面には非表示） */}
       <div className="hidden print:block print:mb-3">
-        <h1 className="text-lg font-bold text-gray-900">{session.facilityName}　月次報告</h1>
+        <h1 className="text-lg font-bold text-gray-900">
+          {session.facilityName}　月次報告（{monthLabel(selectedMonth)}）
+        </h1>
         <p className="text-xs text-gray-600 mt-1">
-          {today.replace(/-/g, '/')} 時点 ・ 営業曜日{' '}
+          {isCurrentMonth ? `${today.replace(/-/g, '/')} 時点` : '確定'} ・ 営業曜日{' '}
           {overview.operatingDows.map(d => DOW[d]).join('・') || '-'}
         </p>
         <p className="text-[10px] text-gray-400">印刷日時: {jstNowLabel()}</p>
       </div>
 
-      <div className="print:hidden">
-        <CapacityForm
-          facility={{ capacity: overview.capacity, capacityByCategory: overview.capacityByCategory }}
-          registeredCategoryCounts={registeredCategoryCounts}
-        />
-      </div>
+      {/* 定員は施設の設定なので、過ぎた月を見ているときは触らせない */}
+      {isCurrentMonth && (
+        <div className="print:hidden">
+          <CapacityForm
+            facility={{ capacity: overview.capacity, capacityByCategory: overview.capacityByCategory }}
+            registeredCategoryCounts={registeredCategoryCounts}
+          />
+        </div>
+      )}
 
       {/* 日別の利用状況 */}
       <MonthlyDailyTable stats={dailyStats} />
@@ -171,7 +251,10 @@ export default async function MonthlyReportPage() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
         <h3 className="text-sm font-semibold text-gray-700 mb-1">介護度 × 利用時間 の構成</h3>
         <p className="text-[10px] text-gray-400 mb-3">
-          在籍中の利用者を、介護度と利用時間区分で集計しています。「按分後」は 5時間以上=1.0人／3時間以上5時間未満=0.5人／3時間未満=0人 で換算した人数です
+          {isCurrentMonth ? '本日' : `${monthLabel(selectedMonth)}末`}
+          時点で利用期間中の方を、介護度と利用時間区分で集計しています（利用開始前・利用終了後の方は含みません）。「按分後」は
+          5時間以上=1.0人／3時間以上5時間未満=0.5人／3時間未満=0人 で換算した人数です
+          {!isCurrentMonth && '。介護度と利用時間区分は現在の登録内容で数えています'}
         </p>
         {composition.grandTotal === 0 ? (
           <p className="text-xs text-gray-400 text-center py-6">在籍中の利用者が登録されていません</p>
@@ -255,16 +338,23 @@ export default async function MonthlyReportPage() {
 
       {/* 前月・当月・翌月 */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">前月・当月・翌月</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 print:grid-cols-3 gap-3">
-          <MonthCard summary={overview.prevMonth} caption="実績" mode="actual" />
-          <MonthCard summary={overview.currentMonth} caption="実績（本日まで）" mode="partial" />
-          <MonthCard summary={overview.nextMonth} caption="予測" mode="forecast" />
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+          {isCurrentMonth ? '前月・当月・翌月' : `${monthLabel(selectedMonth)}とその前後`}
+        </h3>
+        <div className={`grid grid-cols-1 gap-3 ${
+          monthCards.length === 3 ? 'sm:grid-cols-3 print:grid-cols-3' : 'sm:grid-cols-2 print:grid-cols-2'
+        }`}>
+          {monthCards.map(summary => {
+            const mode = modeOf(ymOf(summary))
+            return <MonthCard key={ymOf(summary)} summary={summary} caption={captionOf(mode)} mode={mode} />
+          })}
         </div>
-        <p className="text-[10px] text-gray-400 mt-2">
-          予測は、利用者マスタの利用曜日と直近3か月の営業曜日・実績出席率（予定に対して
-          {Math.round(overview.forecastRatio * 100)}%）をもとに算出した目安です。祝日等の臨時休業は反映されません。
-        </p>
+        {isCurrentMonth && (
+          <p className="text-[10px] text-gray-400 mt-2">
+            予測は、利用者マスタの利用曜日と直近3か月の営業曜日・実績出席率（予定に対して
+            {Math.round(overview.forecastRatio * 100)}%）をもとに算出した目安です。祝日等の臨時休業は反映されません。
+          </p>
+        )}
       </div>
 
       {/* 年度サマリー */}
@@ -288,7 +378,8 @@ export default async function MonthlyReportPage() {
                   <td className="py-2 whitespace-nowrap">
                     {fy.label}
                     <span className="text-xs text-gray-400 ml-1">
-                      （{fy.fiscalYear}年度{fy.inProgress ? '・本日まで' : ''}）
+                      （{fy.fiscalYear}年度
+                      {fy.inProgress ? (isCurrentMonth ? '・本日まで' : `・${monthLabel(selectedMonth)}末まで`) : ''}）
                     </span>
                   </td>
                   <td className="py-2 text-right px-2 font-medium text-gray-700">
