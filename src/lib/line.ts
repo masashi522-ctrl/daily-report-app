@@ -81,15 +81,32 @@ export async function pushText(accessToken: string, to: string, text: string): P
   await pushMessages(accessToken, to, [{ type: 'text', text }])
 }
 
-/** 公式アカウント自身の情報。トークンが正しいかの確認にも使う */
-export async function getBotInfo(accessToken: string): Promise<{ userId: string; displayName: string; basicId: string } | null> {
+export type BotInfo = { userId: string; displayName: string; basicId: string }
+export type BotInfoResult = { ok: true; info: BotInfo } | { ok: false; reason: string }
+
+/**
+ * 公式アカウント自身の情報。トークンが正しいかの確認にも使う。
+ * うまくいかなかったときは、LINEが返した理由をそのまま伝える
+ * （「接続できません」だけでは、どこを直せばよいか分からないため）
+ */
+export async function getBotInfo(accessToken: string): Promise<BotInfoResult> {
+  let res: Response
   try {
-    const res = await fetch(`${API}/info`, { headers: { Authorization: `Bearer ${accessToken}` } })
-    if (!res.ok) return null
-    return (await res.json()) as { userId: string; displayName: string; basicId: string }
-  } catch {
-    return null
+    res = await fetch(`${API}/info`, { headers: { Authorization: `Bearer ${accessToken}` } })
+  } catch (e) {
+    return { ok: false, reason: e instanceof Error ? e.message : 'LINEへ接続できませんでした' }
   }
+
+  if (res.ok) return { ok: true, info: (await res.json()) as BotInfo }
+
+  const body = await res.text().catch(() => '')
+  let message = body.slice(0, 200)
+  try {
+    message = (JSON.parse(body) as { message?: string }).message ?? message
+  } catch {
+    // JSONで返らないこともある。そのときは本文をそのまま使う
+  }
+  return { ok: false, reason: `${res.status} ${message}`.trim() }
 }
 
 /** Webhookの返信。プッシュ送信の通数を消費しないので、連携時の案内はこちらを使う */

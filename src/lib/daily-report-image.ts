@@ -107,7 +107,7 @@ function render(
     ctx.font = '30px MPLUS1p'
     ctx.fillText(facilityName, PAD, 52)
     ctx.font = '44px MPLUS1pBold'
-    ctx.fillText('れんらくちょう', PAD, 105)
+    ctx.fillText('連絡帳', PAD, 105)
   }
   y = headerH + 40
 

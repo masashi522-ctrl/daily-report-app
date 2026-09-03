@@ -37,21 +37,30 @@ export async function getLineSetting(): Promise<LineSettingView> {
 export async function saveLineSetting(_prev: LineSettingState, formData: FormData): Promise<LineSettingState> {
   const session = await requireAdmin()
 
-  const accessToken = (formData.get('accessToken') as string)?.trim()
-  const channelSecret = (formData.get('channelSecret') as string)?.trim()
+  // コピーしたときに改行や空白が紛れ込むことがある。
+  // 混ざったままだと通信の見出しに載せられず、理由の分からない失敗になる
+  const accessToken = ((formData.get('accessToken') as string) ?? '').replace(/\s+/g, '')
+  const channelSecret = ((formData.get('channelSecret') as string) ?? '').replace(/\s+/g, '')
 
   if (!accessToken) return { error: 'チャネルアクセストークンを入力してください' }
   if (!channelSecret) return { error: 'チャネルシークレットを入力してください' }
+  if (/^\d{10}$/.test(accessToken)) {
+    return { error: 'トークンの欄にチャネルIDが入っています。「Messaging API設定」タブの一番下で発行する、長い文字列の方を入れてください' }
+  }
+  if (/^[0-9a-f]{32}$/i.test(accessToken)) {
+    return { error: 'トークンの欄にチャネルシークレットが入っています。「Messaging API設定」タブの一番下で発行する、長い文字列の方を入れてください' }
+  }
   if (!/^[0-9a-f]{32}$/i.test(channelSecret)) {
     return { error: 'チャネルシークレットの形式が違います（32文字の英数字）。チャネルIDやトークンと取り違えていないかご確認ください' }
   }
 
   // 入力されたトークンが本当に使えるかLINEに問い合わせる。
   // あわせて、Webhookで施設を判別するためのアカウントIDを受け取る
-  const info = await getBotInfo(accessToken)
-  if (!info?.userId) {
-    return { error: 'このトークンではLINEに接続できませんでした。値が正しいか、有効期限が切れていないかご確認ください' }
+  const result = await getBotInfo(accessToken)
+  if (!result.ok) {
+    return { error: `このトークンではLINEに接続できませんでした。LINEからの返答: ${result.reason}` }
   }
+  const info = result.info
 
   // 別の施設が同じアカウントを登録していないか
   const { data: taken } = await supabase
