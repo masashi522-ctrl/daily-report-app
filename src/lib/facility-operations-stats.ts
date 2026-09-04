@@ -6,6 +6,7 @@ import {
 } from '@/types/database'
 import { isAwayOn } from '@/lib/hospitalization'
 import { isInServicePeriod } from '@/lib/service-period'
+import { fetchDailyRecords } from '@/lib/daily-records'
 
 // 予測の補正率と営業曜日を推定するために遡る日数
 const LOOKBACK_DAYS = 90
@@ -173,21 +174,7 @@ type RecordRow = { residentId: string; date: string; isAbsent: boolean }
 
 // PostgRESTの1回あたり取得上限に掛からないよう分割して取得する
 async function fetchRecords(residentIds: string[], from: string, to: string): Promise<RecordRow[]> {
-  const PAGE = 1000
-  const all: RecordRow[] = []
-  for (let offset = 0; ; offset += PAGE) {
-    const { data } = await supabase
-      .from('DailyRecord')
-      .select('residentId, date, isAbsent')
-      .in('residentId', residentIds)
-      .gte('date', from)
-      .lte('date', to)
-      .order('date', { ascending: true })
-      .range(offset, offset + PAGE - 1)
-    const rows = (data ?? []) as RecordRow[]
-    all.push(...rows)
-    if (rows.length < PAGE) return all
-  }
+  return fetchDailyRecords<RecordRow>(residentIds, from, to, 'residentId, date, isAbsent')
 }
 
 export async function computeFacilityOperationsOverview(

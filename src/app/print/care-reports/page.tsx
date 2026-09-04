@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { residentIdsInFacility } from '@/lib/facility-guard'
 import { computeReportStats, fetchCarePlanSummary } from '@/lib/care-report-stats'
 import { buildVitalCards, buildChartData, buildDailyRows, loadResidentPhotos, CARDS_WITHOUT_CHART } from '@/lib/analytics-view'
+import { fetchDailyRecords } from '@/lib/daily-records'
 import ResidentReport from '@/app/analytics/resident-report'
 import CareReportsPrintActions from './print-actions'
 import DuplexFillers from './duplex-fillers'
@@ -49,9 +50,10 @@ export default async function CareReportsPrintPage({
   const to = `${year}-${mm}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
   // 記録・氏名・報告書は人数分まとめて読む
-  const [{ data: residentRows }, { data: recordRows }, { data: reportRows }, { data: facility }] = await Promise.all([
+  const [{ data: residentRows }, recordRows, { data: reportRows }, { data: facility }] = await Promise.all([
     supabase.from('Resident').select('id, name').in('id', ids),
-    supabase.from('DailyRecord').select('*').in('residentId', ids).gte('date', from).lte('date', to),
+    // 人数が多いと月1,000件を超えるため、続きまで読む
+    fetchDailyRecords<any>(ids, from, to),
     supabase.from('CareReport').select('residentId, body').eq('year', year).eq('month', month).in('residentId', ids),
     supabase.from('Facility').select('name').eq('id', session.facilityId).maybeSingle(),
   ])
@@ -59,7 +61,7 @@ export default async function CareReportsPrintPage({
   const nameById = new Map((residentRows ?? []).map(r => [r.id, r.name as string]))
   const bodyById = new Map((reportRows ?? []).map(r => [r.residentId as string, r.body as string]))
   const recordsById = new Map<string, any[]>()
-  for (const rec of recordRows ?? []) {
+  for (const rec of recordRows) {
     if (!recordsById.has(rec.residentId)) recordsById.set(rec.residentId, [])
     recordsById.get(rec.residentId)!.push(rec)
   }

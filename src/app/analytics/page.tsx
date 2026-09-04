@@ -8,6 +8,7 @@ import BatchReport from './batch-report'
 import { listSavedReportIds, getSavedReport } from './report-actions'
 import PrintButton from './print-button'
 import { overlapsServicePeriod } from '@/lib/service-period'
+import { fetchDailyRecords } from '@/lib/daily-records'
 import { buildVitalCards, buildChartData, buildDailyRows, loadResidentPhotos, CARDS_WITHOUT_CHART, type DailyRow } from '@/lib/analytics-view'
 
 export default async function AnalyticsPage({
@@ -37,12 +38,7 @@ export default async function AnalyticsPage({
 
   // その月の記録。月の途中で利用を終えた方の記録も、利用日までは集計に入れる
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let monthRecords: any[] = []
-  if (facilityResidentIds.length > 0) {
-    const { data } = await supabase.from('DailyRecord').select('*')
-      .gte('date', from).lte('date', to).in('residentId', facilityResidentIds)
-    monthRecords = data ?? []
-  }
+  const monthRecords: any[] = await fetchDailyRecords(facilityResidentIds, from, to)
   const recordedIds = new Set(monthRecords.map(x => x.residentId))
 
   // 選べる利用者：その月に記録がある方と、その月に在籍していた在籍中の方

@@ -1,6 +1,7 @@
 import 'server-only'
 import { supabase } from './supabase'
 import { summarizeDay, careGroupOf, type DaySummary } from './attendance-stats'
+import { fetchDailyRecords } from './daily-records'
 
 // 月次報告に載せる「日別の利用状況」。
 // その日に日次記録があり、欠席でない利用者を「利用者」として数える。
@@ -67,16 +68,13 @@ export async function computeMonthlyDailyStats(
   const withCareLabel = (ids: string[]) =>
     sortIds(ids).map(id => ({ name: nameOf(id), care: careLabelOf(id) }))
 
-  // 記録は件数が多くなるため分割して読む
-  const records: { residentId: string; date: string; isAbsent: boolean; specialNotes: string | null }[] = []
-  for (let i = 0; i < ids.length; i += 200) {
-    const { data } = await supabase
-      .from('DailyRecord')
-      .select('residentId, date, isAbsent, specialNotes')
-      .in('residentId', ids.slice(i, i + 200))
-      .gte('date', from).lte('date', to)
-    records.push(...(data ?? []))
-  }
+  // 記録は月1,000件を超えることがあるため、続きまで読む共通処理を使う
+  const records = await fetchDailyRecords<{
+    residentId: string
+    date: string
+    isAbsent: boolean
+    specialNotes: string | null
+  }>(ids, from, to, 'residentId, date, isAbsent, specialNotes')
 
   // 日付ごとの出席者を集める。同じ日に重複した記録があっても1人と数える。
   // 特記事項は利用時間の変更と送迎減を読み取るために持ち回る
