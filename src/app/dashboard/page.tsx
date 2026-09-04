@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { type Resident, type DailyRecord } from '@/types/database'
@@ -67,6 +68,10 @@ export default async function DashboardPage({
     attendees.map((r: Resident) => ({ resident: r, specialNotes: recordMap.get(r.id)?.specialNotes ?? null })),
   )
 
+  // 利用開始日が未入力の方。記録を書く画面で気づけるよう、その日に並ぶ方から数える。
+  // 一覧に出ている＝その日の記録を付ける方なので、記録の有無を別途調べる必要はない
+  const missingStartDate = residents.filter((r: Resident) => !String(r.serviceStartDate ?? '').trim())
+
   // 本日すでに臨時追加済みの residentId
   const temporaryIds = (records ?? [])
     .filter(r => r.isTemporaryAttendance)
@@ -99,6 +104,25 @@ export default async function DashboardPage({
           </form>
         </div>
       </div>
+
+      {missingStartDate.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="text-sm text-amber-900 flex-1 min-w-[16rem]">
+            <span className="font-semibold">
+              本日の一覧に、利用開始日が未入力の方が{missingStartDate.length}名います。
+            </span>
+            <span className="block text-xs mt-0.5">
+              未入力のままだと、実際に利用を始める前の月にも集計対象として並び、月次報告の「新規利用開始」にも出てきません。
+            </span>
+          </p>
+          <Link
+            href="/residents?filter=missing-start"
+            className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 font-medium whitespace-nowrap hover:border-amber-500"
+          >
+            利用者管理で設定する
+          </Link>
+        </div>
+      )}
 
       <DaySummaryBar summary={daySummary} />
 

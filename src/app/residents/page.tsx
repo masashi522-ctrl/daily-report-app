@@ -8,11 +8,16 @@ import FamilyContactPanel from './family-contact-panel'
 import { isLineConfigured } from '@/lib/line'
 import type { FamilyContact, Resident } from '@/types/database'
 import { jstToday } from '@/lib/service-period'
+import { residentIdsMissingServiceStart } from '@/lib/resident-warnings'
 
-export default async function ResidentsPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
+export default async function ResidentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string; filter?: string }>
+}) {
   const session = await requireSession()
 
-  const { edit: editId } = await searchParams
+  const { edit: editId, filter } = await searchParams
 
   const { data: residents } = await supabase
     .from('Resident')
@@ -31,6 +36,9 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
     : { data: [] }
 
   const lineConfigured = await isLineConfigured(session.facilityId)
+
+  // 利用開始日が未入力のまま記録がある方。集計の対象月がずれるため、一覧で知らせる
+  const missingStartDateIds = await residentIdsMissingServiceStart(residents ?? [])
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,7 +77,13 @@ export default async function ResidentsPage({ searchParams }: { searchParams: Pr
 
         {/* リスト: モバイルで2番目、PCで左側(2列) */}
         <div className="order-2 lg:order-1 lg:col-span-2">
-          <ResidentList residents={residents ?? []} editId={editId} today={jstToday()} />
+          <ResidentList
+            residents={residents ?? []}
+            editId={editId}
+            today={jstToday()}
+            missingStartDateIds={missingStartDateIds}
+            initialOnlyMissingStartDate={filter === 'missing-start'}
+          />
         </div>
       </div>
     </div>

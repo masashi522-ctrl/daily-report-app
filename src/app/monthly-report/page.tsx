@@ -237,6 +237,18 @@ export default async function MonthlyReportPage({
         <p className="text-[10px] text-gray-400">印刷日時: {jstNowLabel()}</p>
       </div>
 
+      {/* 定員が無いと稼働率がすべて「未設定」になり、この画面が数字として機能しない */}
+      {overview.capacity == null && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 print:hidden">
+          <p className="text-sm font-semibold text-amber-900">定員が未設定です。</p>
+          <p className="text-xs text-amber-800 mt-0.5">
+            単純稼働率・実質稼働率は「延べ利用者数 ÷（定員 × 営業日数）」で計算するため、
+            定員が入るまで稼働率と年度サマリーは「未設定」と表示されます。
+            {isCurrentMonth ? '下の定員設定から入力してください。' : '今月の画面から入力できます。'}
+          </p>
+        </div>
+      )}
+
       {/* 定員は施設の設定なので、過ぎた月を見ているときは触らせない */}
       {isCurrentMonth && (
         <div className="print:hidden">

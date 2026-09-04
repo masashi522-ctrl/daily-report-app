@@ -67,9 +67,73 @@ interface Props {
   editId?: string
   /** 在籍／退所の判定に使う日本時間の今日 */
   today: string
+  /** 利用開始日が未入力のまま記録がある方のID */
+  missingStartDateIds: string[]
+  /** 日次記録の案内から開いたときは、はじめから該当者だけを表示する */
+  initialOnlyMissingStartDate?: boolean
 }
 
-export default function ResidentList({ residents, editId, today }: Props) {
+/** 入力漏れの目印 */
+function WarningBadge({ label, title }: { label: string; title: string }) {
+  return (
+    <span
+      className="text-[10px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap bg-amber-50 text-amber-700 border border-amber-300"
+      title={title}
+    >
+      {label}
+    </span>
+  )
+}
+
+const blank = (v: unknown) => !String(v ?? '').trim()
+
+export default function ResidentList({
+  residents,
+  editId,
+  today,
+  missingStartDateIds,
+  initialOnlyMissingStartDate = false,
+}: Props) {
+  // 集計に影響する入力漏れ。どれも「入っていないと静かに数字がずれる」項目にしぼっている
+  const warnings = [
+    {
+      key: 'start-date',
+      label: '利用開始日',
+      badge: '開始日なし',
+      detail: '記録があるため、実際に利用を始める前の月にも集計対象として並び、月次報告の「新規利用開始」にも出てきません。',
+      ids: new Set(missingStartDateIds),
+    },
+    {
+      key: 'attendance-days',
+      label: '利用曜日',
+      badge: '曜日なし',
+      detail: '毎日ご利用とみなして数えるため、翌月予測が多めに出ます。',
+      ids: new Set(residents.filter(r => r.isActive && blank(r.attendanceDays)).map(r => r.id)),
+    },
+    {
+      key: 'service-time',
+      label: '提供時間',
+      badge: '提供時間なし',
+      detail: '時間区分も提供時刻も無いため、5時間以上（1.0人）として数えます。実質稼働率が多めに出ます。',
+      ids: new Set(
+        residents
+          .filter(r => r.isActive && blank(r.serviceTimeCategory) && (blank(r.serviceStartTime) || blank(r.serviceEndTime)))
+          .map(r => r.id),
+      ),
+    },
+    {
+      key: 'end-date',
+      label: '利用終了日',
+      badge: '終了日なし',
+      detail: '退所の扱いですが終了日が無いため、いつまでの在籍だったかが集計に反映されません。',
+      ids: new Set(residents.filter(r => !r.isActive && blank(r.serviceEndDate)).map(r => r.id)),
+    },
+  ].filter(w => w.ids.size > 0)
+
+  const [warningFilter, setWarningFilter] = useState<string | null>(
+    initialOnlyMissingStartDate ? 'start-date' : null,
+  )
+  const activeWarning = warnings.find(w => w.key === warningFilter) ?? null
   const [inputText, setInputText] = useState('')
   const [appliedText, setAppliedText] = useState('')
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
@@ -115,6 +179,7 @@ export default function ResidentList({ residents, editId, today }: Props) {
 
   const filtered = residents
     .filter(r => {
+      if (activeWarning && !activeWarning.ids.has(r.id)) return false
       // テキスト検索：名前またはふりがなに含まれるか
       const matchName = !appliedText ||
         r.name.includes(appliedText) ||
@@ -134,6 +199,33 @@ export default function ResidentList({ residents, editId, today }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* 入力漏れ。どれも入っていないと集計が静かにずれる項目 */}
+      {warnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex flex-col gap-2">
+          <p className="text-sm font-semibold text-amber-900">利用者登録に入力漏れがあります</p>
+          <ul className="flex flex-col gap-1.5">
+            {warnings.map(w => (
+              <li key={w.key} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-sm text-amber-900 flex-1 min-w-[16rem]">
+                  <span className="font-medium">{w.label}が未入力 {w.ids.size}名</span>
+                  <span className="block text-xs text-amber-800">{w.detail}</span>
+                </span>
+                <button
+                  onClick={() => setWarningFilter(warningFilter === w.key ? null : w.key)}
+                  className={`text-xs px-3 py-1.5 rounded-lg border font-medium whitespace-nowrap transition ${
+                    warningFilter === w.key
+                      ? 'bg-amber-600 text-white border-amber-600'
+                      : 'bg-white text-amber-800 border-amber-300 hover:border-amber-500'
+                  }`}
+                >
+                  {warningFilter === w.key ? '全員を表示' : '該当者だけ表示'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* 検索バー */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-2">
         {/* テキスト検索 */}
@@ -218,10 +310,15 @@ export default function ResidentList({ residents, editId, today }: Props) {
             {filtered.map((r, i) => (
               <tr key={r.id} className={`border-t hover:bg-violet-50/40 transition ${editId === r.id ? 'bg-violet-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}`}>
                 <td className="px-4 py-2">
-                  <button
-                    onClick={() => setDetailId(r.id)}
-                    className="font-medium text-violet-700 hover:text-violet-900 hover:underline text-left"
-                  >{r.name}</button>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => setDetailId(r.id)}
+                      className="font-medium text-violet-700 hover:text-violet-900 hover:underline text-left"
+                    >{r.name}</button>
+                    {warnings.filter(w => w.ids.has(r.id)).map(w => (
+                      <WarningBadge key={w.key} label={w.badge} title={`${w.label}が未入力です。${w.detail}`} />
+                    ))}
+                  </div>
                 </td>
                 <td className="px-3 py-2"><CareLevelBadge careLevel={r.careLevel} /></td>
                 <td className="px-3 py-2 text-xs"><ServiceTimeCell resident={r} /></td>
@@ -279,7 +376,7 @@ export default function ResidentList({ residents, editId, today }: Props) {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={10} className="text-center py-8 text-gray-400">
-                  {appliedText || gojuuonRow ? '該当する利用者が見つかりません' : '利用者が登録されていません'}
+                  {appliedText || gojuuonRow || activeWarning ? '該当する利用者が見つかりません' : '利用者が登録されていません'}
                 </td>
               </tr>
             )}
@@ -291,16 +388,21 @@ export default function ResidentList({ residents, editId, today }: Props) {
       <div className="md:hidden flex flex-col gap-3">
         {filtered.length === 0 && (
           <div className="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-200">
-            {appliedText || gojuuonRow ? '該当する利用者が見つかりません' : '利用者が登録されていません'}
+            {appliedText || gojuuonRow || activeWarning ? '該当する利用者が見つかりません' : '利用者が登録されていません'}
           </div>
         )}
         {filtered.map(r => (
           <div key={r.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${editId === r.id ? 'border-violet-400' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between px-4 py-2.5 mb-0" style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)' }}>
-              <button
-                onClick={() => setDetailId(r.id)}
-                className="font-semibold text-violet-900 text-base underline decoration-violet-300 underline-offset-2 text-left"
-              >{r.name}</button>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setDetailId(r.id)}
+                  className="font-semibold text-violet-900 text-base underline decoration-violet-300 underline-offset-2 text-left"
+                >{r.name}</button>
+                {warnings.filter(w => w.ids.has(r.id)).map(w => (
+                  <WarningBadge key={w.key} label={w.badge} title={`${w.label}が未入力です。${w.detail}`} />
+                ))}
+              </div>
               <EnrollmentBadge resident={r} today={today} padding="px-3 py-1" />
             </div>
             <div className="p-4 pt-3">
