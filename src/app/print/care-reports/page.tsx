@@ -3,7 +3,7 @@ import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { residentIdsInFacility } from '@/lib/facility-guard'
 import { computeReportStats, fetchCarePlanSummary } from '@/lib/care-report-stats'
-import { buildVitalCards, buildChartData, loadResidentPhotos, loadWeightTrend, CARDS_WITHOUT_CHART } from '@/lib/analytics-view'
+import { buildVitalCards, buildChartData, buildDailyRows, loadResidentPhotos, CARDS_WITHOUT_CHART } from '@/lib/analytics-view'
 import ResidentReport from '@/app/analytics/resident-report'
 import CareReportsPrintActions from './print-actions'
 import DuplexFillers from './duplex-fillers'
@@ -37,7 +37,7 @@ export default async function CareReportsPrintPage({
     return (
       <div className="min-h-screen bg-gray-50">
         <CareReportsPrintActions count={0} backHref={backHref} />
-        <p className="text-sm text-gray-500 text-center py-20">
+        <p className="text-sm text-gray-900 text-center py-20">
           印刷する利用者が選ばれていません。利用者月次報告の「月次報告書をまとめて作成」でお名前を選んでから、もう一度お試しください。
         </p>
       </div>
@@ -67,20 +67,19 @@ export default async function CareReportsPrintPage({
   const sheets = await Promise.all(ids.map(async id => {
     const records = recordsById.get(id) ?? []
     const name = nameById.get(id) ?? '（不明）'
-    const [carePlan, photos, weightTrend] = await Promise.all([
+    const [carePlan, photos] = await Promise.all([
       fetchCarePlanSummary(id),
       loadResidentPhotos(id, year, month),
-      loadWeightTrend(id, year, month),
     ])
     return {
       id,
       name,
       records,
       photos,
-      weightTrend,
       body: bodyById.get(id) ?? '',
       cards: buildVitalCards(records, month).filter(c => CARDS_WITHOUT_CHART.includes(c.title)),
       chartData: buildChartData(records, year, month),
+      dailyRows: buildDailyRows(records),
       stats: computeReportStats(name, year, month, records, carePlan),
     }
   }))
@@ -113,6 +112,7 @@ export default async function CareReportsPrintPage({
         .measuring [class~="print:p-0"] { padding: 0 !important; }
         .measuring [class~="print:mb-3"] { margin-bottom: 0.75rem !important; }
         .measuring [class~="print:break-inside-avoid"] { break-inside: avoid; }
+        .measuring [class~="print:break-after-avoid"] { break-after: avoid; }
         .measuring .resident-sheet svg { break-inside: avoid; }
       `}</style>
 
@@ -129,12 +129,12 @@ export default async function CareReportsPrintPage({
               <div className="border-b-2 border-gray-800 pb-2 mb-4">
                 <div className="flex items-end justify-between">
                   <div>
-                    <h1 className="text-lg font-bold text-gray-900">月次報告書</h1>
+                    <h1 className="text-lg font-bold text-gray-900">月間報告書</h1>
                     <p className="text-2xl font-bold text-gray-900 mt-0.5">{sheet.name} 様</p>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-gray-900 tabular-nums">{year}年{month}月</p>
-                    <p className="text-xs text-gray-500">{facility?.name ?? ''}　/　記録{sheet.records.length}件</p>
+                    <p className="text-xs text-gray-900">{facility?.name ?? ''}　/　記録{sheet.records.length}件</p>
                   </div>
                 </div>
               </div>
@@ -145,16 +145,16 @@ export default async function CareReportsPrintPage({
                 <div className="grid grid-cols-2 gap-4">
                   {sheet.cards.map(card => (
                     <div key={card.title}>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2 border-b pb-1.5">
-                        {card.title} <span className="text-xs font-normal text-gray-400">{month}月推移</span>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2 border-b pb-1.5">
+                        {card.title} <span className="text-xs font-normal text-gray-700">{month}月推移</span>
                       </h3>
                       <div className="flex flex-col gap-1.5">
                         {card.rows.map(row => (
                           <div key={row.label} className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${row.highlight ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                            <span className={`text-xs ${row.highlight ? 'font-semibold text-blue-700' : 'text-gray-500'}`}>{row.label}</span>
-                            <span className={`font-bold ${row.highlight ? 'text-blue-700 text-lg' : 'text-gray-700'}`}>
+                            <span className={`text-xs ${row.highlight ? 'font-semibold text-blue-700' : 'text-gray-900'}`}>{row.label}</span>
+                            <span className={`font-bold ${row.highlight ? 'text-blue-700 text-lg' : 'text-gray-900'}`}>
                               {row.value}
-                              {row.value !== '-' && <span className="text-xs font-normal text-gray-400 ml-1">{card.unit}</span>}
+                              {row.value !== '-' && <span className="text-xs font-normal text-gray-700 ml-1">{card.unit}</span>}
                             </span>
                           </div>
                         ))}
@@ -166,7 +166,7 @@ export default async function CareReportsPrintPage({
               )}
 
               {sheet.body ? null : (
-                <p className="text-sm text-gray-500 mb-3">この月の月次報告書はまだ作成されていません。</p>
+                <p className="text-sm text-gray-900 mb-3">この月の月次報告書はまだ作成されていません。</p>
               )}
 
               <ResidentReport
@@ -177,7 +177,7 @@ export default async function CareReportsPrintPage({
                 month={month}
                 photos={sheet.photos}
                 savedReport={sheet.body}
-                weightTrend={sheet.weightTrend}
+                dailyRows={sheet.dailyRows}
               />
             </div>
           </Fragment>

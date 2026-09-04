@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { type ReportStats } from './actions'
 import { generateAndSaveReport, saveReportBody } from './report-actions'
 import PhotoGallery, { type ResidentPhoto } from './photo-gallery'
-import type { WeightTrend } from '@/lib/analytics-view'
+import type { DailyRow } from '@/lib/analytics-view'
 
 export interface ChartData {
   days: number[]
@@ -12,6 +12,7 @@ export interface ChartData {
   bpDia: (number | null)[]
   pulse: (number | null)[]
   temp: (number | null)[]
+  spo2: (number | null)[]
   fluid: (number | null)[]
   meal: (number | null)[]
   weight: (number | null)[]
@@ -35,10 +36,10 @@ function SeriesSummary({ series, showLabel }: { series: ChartSeries[]; showLabel
         if (vals.length === 0) return null
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length
         return (
-          <span key={s.label} className="flex items-baseline gap-1.5 text-[11px] text-gray-500">
+          <span key={s.label} className="flex items-baseline gap-1.5 text-[11px] text-gray-900">
             <span className="inline-block w-4 h-0.5 rounded self-center" style={{ backgroundColor: s.color }} />
             {showLabel && <span>{s.label}</span>}
-            <span className="text-base font-bold text-gray-800 tabular-nums">{avg.toFixed(s.digits)}</span>
+            <span className="text-base font-bold text-gray-900 tabular-nums">{avg.toFixed(s.digits)}</span>
             <span>{s.unit}</span>
             <span className="tabular-nums">（{Math.min(...vals).toFixed(s.digits)}〜{Math.max(...vals).toFixed(s.digits)}）</span>
           </span>
@@ -54,20 +55,18 @@ function CardFrame({
   month,
   series,
   children,
-  periodLabel,
 }: {
   title: string
   titleColor: string
   month: number
   series: ChartSeries[]
   children: React.ReactNode
-  periodLabel?: string
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
+    <div className="report-card bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
       <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 border-b pb-2">
         <h3 className={`text-sm font-semibold ${titleColor}`}>
-          {title} <span className="text-xs font-normal text-gray-400">{periodLabel ?? `${month}月推移`}</span>
+          {title} <span className="text-xs font-normal text-gray-700">{`${month}月推移`}</span>
         </h3>
         <SeriesSummary series={series} showLabel={series.length > 1} />
       </div>
@@ -90,8 +89,6 @@ function ChartCard({
   forcedMin,
   forcedMax,
   height,
-  xTicks,
-  periodLabel,
 }: {
   title: string
   titleColor: string
@@ -101,11 +98,9 @@ function ChartCard({
   forcedMin?: number
   forcedMax?: number
   height?: number
-  xTicks?: { index: number; label: string }[]
-  periodLabel?: string
 }) {
   return (
-    <CardFrame title={title} titleColor={titleColor} month={month} series={series} periodLabel={periodLabel}>
+    <CardFrame title={title} titleColor={titleColor} month={month} series={series}>
       <SvgLineChart
         days={days}
         series={series}
@@ -113,47 +108,64 @@ function ChartCard({
         forcedMax={forcedMax}
         height={height}
         unit={series[0]?.unit ?? ''}
-        xTicks={xTicks}
       />
     </CardFrame>
   )
 }
 
 /**
- * 単位も目盛りもまったく違う2項目を1枚にまとめるカード（食事量と水分摂取量）。
- * 1つのグラフに重ねると目盛りが噛み合わないため、横に並べてそれぞれの目盛りで描く。
+ * 報告書の本文を【見出し】ごとに分ける。
+ * 本文は「活動の様子」と「機能訓練の様子」の2項目で作られるが、
+ * 見出しを付ける前に作った報告書や生成エラーの文言もそのまま出せるようにしている。
  */
-function SplitChartCard({
-  title,
-  titleColor,
-  month,
-  days,
-  panels,
+function splitReportSections(text: string) {
+  return text
+    .split(/(?=【[^】]+】)/)
+    .map(part => {
+      const matched = part.match(/^【([^】]+)】\s*([\s\S]*)$/)
+      return matched
+        ? { header: matched[1], body: matched[2].trim() }
+        : { header: '', body: part.trim() }
+    })
+    .filter(section => section.header || section.body)
+}
+
+/** 日ごとの値から平均と最小〜最大を出す。記録が1つも無ければ null */
+function summarize(values: (number | null)[], digits: number) {
+  const vals = values.filter((v): v is number => v != null)
+  if (vals.length === 0) return null
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+  return {
+    avg: avg.toFixed(digits),
+    min: Math.min(...vals).toFixed(digits),
+    max: Math.max(...vals).toFixed(digits),
+    count: vals.length,
+  }
+}
+
+function SummaryTile({
+  label,
+  value,
+  unit,
+  sub,
+  alert = false,
 }: {
-  title: string
-  titleColor: string
-  month: number
-  days: number[]
-  panels: { series: ChartSeries; forcedMin?: number; forcedMax?: number }[]
+  label: string
+  value: string
+  unit: string
+  sub?: React.ReactNode
+  /** 目を留めていただきたい項目（特記事項）を赤字にする */
+  alert?: boolean
 }) {
   return (
-    <CardFrame title={title} titleColor={titleColor} month={month} series={panels.map(p => p.series)}>
-      <div className="grid grid-cols-2 gap-4">
-        {panels.map(panel => (
-          <div key={panel.series.label}>
-            <p className="text-[11px] text-gray-500 mb-0.5">{panel.series.label}</p>
-            <SvgLineChart
-              days={days}
-              series={[panel.series]}
-              forcedMin={panel.forcedMin}
-              forcedMax={panel.forcedMax}
-              height={90}
-              unit={panel.series.unit}
-            />
-          </div>
-        ))}
-      </div>
-    </CardFrame>
+    <div className="rounded-lg bg-gray-50 px-3 py-2">
+      <p className={`text-[11px] ${alert ? 'text-red-600' : 'text-gray-900'}`}>{label}</p>
+      <p className={`text-lg font-bold tabular-nums leading-tight ${alert ? 'text-red-600' : 'text-gray-900'}`}>
+        {value}
+        <span className={`text-[11px] font-normal ml-1 ${alert ? 'text-red-600' : 'text-gray-700'}`}>{unit}</span>
+      </p>
+      {sub && <p className="text-[11px] text-gray-700 tabular-nums leading-tight mt-0.5">{sub}</p>}
+    </div>
   )
 }
 
@@ -171,7 +183,6 @@ function SvgLineChart({
   forcedMax,
   height = 110,
   unit = '',
-  xTicks,
 }: {
   days: number[]
   series: { values: (number | null)[]; color: string; label: string }[]
@@ -179,8 +190,6 @@ function SvgLineChart({
   forcedMax?: number
   height?: number
   unit?: string
-  /** 指定すると、日付ではなくこの目盛りを横軸に出す */
-  xTicks?: { index: number; label: string }[]
 }) {
   const W = 560
   const H = height
@@ -191,7 +200,7 @@ function SvgLineChart({
 
   const allVals = series.flatMap(s => s.values).filter((v): v is number => v != null)
   if (allVals.length === 0) {
-    return <div className="flex items-center justify-center text-xs text-gray-400 py-6">データなし</div>
+    return <div className="flex items-center justify-center text-xs text-gray-700 py-6">データなし</div>
   }
 
   const rawMin = Math.min(...allVals)
@@ -216,21 +225,17 @@ function SvgLineChart({
         return (
           <g key={gi}>
             <line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="#f3f4f6" strokeWidth="1" />
-            <text x={PAD.left - 3} y={y + 3.5} textAnchor="end" fontSize="8" fill="#9ca3af">
+            <text x={PAD.left - 3} y={y + 3.5} textAnchor="end" fontSize="9" fill="#4b5563">
               {Number.isInteger(v) ? v : v.toFixed(1)}
             </text>
           </g>
         )
       })}
-      {xTicks
-        ? xTicks.map(t => (
-            <text key={t.label} x={xScale(t.index)} y={H - 4} textAnchor="middle" fontSize="8" fill="#9ca3af">{t.label}</text>
-          ))
-        : days.map((d, i) => (d === 1 || d % 5 === 0) && (
-            <text key={d} x={xScale(i)} y={H - 4} textAnchor="middle" fontSize="8" fill="#9ca3af">{d}</text>
-          ))}
+      {days.map((d, i) => (d === 1 || d % 5 === 0) && (
+        <text key={d} x={xScale(i)} y={H - 4} textAnchor="middle" fontSize="9" fill="#4b5563">{d}</text>
+      ))}
       {/* unit label */}
-      {unit && <text x={PAD.left - 3} y={PAD.top - 2} textAnchor="end" fontSize="7" fill="#9ca3af">{unit}</text>}
+      {unit && <text x={PAD.left - 3} y={PAD.top - 2} textAnchor="end" fontSize="7" fill="#4b5563">{unit}</text>}
       {series.map(s => {
         let d = ''
         s.values.forEach((v, i) => {
@@ -260,7 +265,7 @@ export default function ResidentReport({
   month,
   photos,
   savedReport,
-  weightTrend,
+  dailyRows,
 }: {
   stats: ReportStats
   chartData: ChartData
@@ -269,8 +274,8 @@ export default function ResidentReport({
   month: number
   photos: ResidentPhoto[]
   savedReport: string
-  /** 体重は当月だけでは傾向が読めないため、前々月からの3か月分を受け取る */
-  weightTrend: WeightTrend
+  /** 日別記録の表に出す行。ご利用のあった日を日付順に並べたもの */
+  dailyRows: DailyRow[]
 }) {
   // 保存済みの報告書があれば、開いた時点で表示する（作り直さなくても印刷・出力できる）
   const [report, setReport] = useState(savedReport)
@@ -359,12 +364,332 @@ export default function ResidentReport({
   const hasBp   = chartData.bpSys.some(v => v != null)
   const hasPulse = chartData.pulse.some(v => v != null)
   const hasTemp = chartData.temp.some(v => v != null)
-  const hasMeal = chartData.meal.some(v => v != null)
-  const hasFluid = chartData.fluid.some(v => v != null)
+
+  // 当月の概要。血圧・脈拍・体温は下のグラフと同じ日別データから出しているため、
+  // グラフの見出しに並ぶ平均と必ず一致する
+  const bpSys = summarize(chartData.bpSys, 0)
+  const bpDia = summarize(chartData.bpDia, 0)
+  const pulse = summarize(chartData.pulse, 0)
+  const temp = summarize(chartData.temp, 1)
+  const spo2 = summarize(chartData.spo2, 1)
+  const fluid = summarize(chartData.fluid, 0)
+  const weight = summarize(chartData.weight, 1)
+
+  // 概要は主要な数値だけを並べる。範囲や内訳などの補足は、
+  // 枠が狭いと折り返して読みにくくなるため出していない
+  const summaryTiles: { label: string; value: string; unit: string; alert?: boolean }[] = []
+  summaryTiles.push({ label: '利用日数', value: String(stats.attendanceCount), unit: '日' })
+  summaryTiles.push({ label: '欠席', value: String(stats.absentCount), unit: '日' })
+  if (bpSys || bpDia) {
+    summaryTiles.push({
+      label: '血圧',
+      value: bpSys && bpDia ? `${bpSys.avg}/${bpDia.avg}` : (bpSys ?? bpDia)!.avg,
+      unit: 'mmHg',
+    })
+  }
+  if (pulse) {
+    summaryTiles.push({ label: '脈拍', value: pulse.avg, unit: '回/分' })
+  }
+  if (temp) {
+    summaryTiles.push({ label: '体温', value: temp.avg, unit: '℃' })
+  }
+  if (spo2) {
+    summaryTiles.push({ label: 'SpO2', value: spo2.avg, unit: '%' })
+  }
+  if (stats.mealMainAvg != null || stats.mealSideAvg != null) {
+    summaryTiles.push({
+      label: '食事量',
+      value: `${stats.mealMainAvg?.toFixed(1) ?? '-'}/${stats.mealSideAvg?.toFixed(1) ?? '-'}`,
+      unit: '割',
+    })
+  }
+  if (fluid) {
+    summaryTiles.push({ label: '水分', value: fluid.avg, unit: 'ml' })
+  }
+  if (weight) {
+    summaryTiles.push({ label: '体重', value: weight.avg, unit: 'kg' })
+  }
+  summaryTiles.push({ label: '入浴', value: String(stats.bathingCount), unit: '回' })
+  summaryTiles.push({ label: '機能訓練', value: String(stats.trainingCount), unit: '回' })
+  // 特記事項は目を留めていただきたい項目なので、件数の有無にかかわらず赤字で出す
+  summaryTiles.push({ label: '特記事項', value: String(stats.dailyNotes.length), unit: '件', alert: true })
+
+  // 概要は印刷時に必ず2段で収める。項目は記録の有無で増減するため、列数は件数から決める
+  const summaryCols = Math.max(1, Math.ceil(summaryTiles.length / 2))
 
   return (
-    <div className="flex flex-col gap-4 mt-2">
-      {/* Charts */}
+    <div className="report-body flex flex-col gap-4 mt-2">
+      <style>{`
+        /* 概要は2段で収める。項目数は人によって変わるため、列数は件数の半分にしている。
+           幅の足りない画面では折り返しても読めるよう、広い画面と印刷のときだけ適用する */
+        @media print, (min-width: 1024px) {
+          .summary-tiles { grid-template-columns: repeat(var(--summary-cols), minmax(0, 1fr)) !important; }
+        }
+        /* 週2回ほどのご利用の方がA4両面1枚（2ページ）に収まるよう、印刷では余白を詰める。
+           まとめて印刷のページ数計測（.measuring）は画面上で行うため、同じ指定を効かせる */
+        @media print {
+          .report-body { gap: 0.5rem !important; margin-top: 0 !important; }
+          .report-card { padding: 0.5rem 0.625rem !important; box-shadow: none !important; }
+          .report-card h3 { margin-bottom: 0.375rem !important; padding-bottom: 0.25rem !important; }
+          .report-section { padding: 0.5rem 0.625rem !important; }
+          .summary-tiles { gap: 0.25rem !important; }
+          .summary-tiles > div { padding: 0.125rem 0.5rem !important; }
+          .daily-table th, .daily-table td { padding-top: 0.0625rem !important; padding-bottom: 0.0625rem !important; }
+        }
+        .measuring .summary-tiles { grid-template-columns: repeat(var(--summary-cols), minmax(0, 1fr)) !important; }
+        .measuring .report-body { gap: 0.5rem !important; margin-top: 0 !important; }
+        .measuring .report-card { padding: 0.5rem 0.625rem !important; box-shadow: none !important; }
+        .measuring .report-card h3 { margin-bottom: 0.375rem !important; padding-bottom: 0.25rem !important; }
+        .measuring .report-section { padding: 0.5rem 0.625rem !important; }
+        .measuring .summary-tiles { gap: 0.25rem !important; }
+        .measuring .summary-tiles > div { padding: 0.125rem 0.5rem !important; }
+        .measuring .daily-table th, .measuring .daily-table td { padding-top: 0.0625rem !important; padding-bottom: 0.0625rem !important; }
+      `}</style>
+      {/* 当月の概要。報告書のいちばん最初に、その月の数字をまとめて置く */}
+      <div className="report-card bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3 border-b pb-2">
+          当月の概要 <span className="text-xs font-normal text-gray-700">{year}年{month}月</span>
+        </h3>
+        <div
+          className="summary-tiles grid grid-cols-2 sm:grid-cols-3 gap-2"
+          style={{ '--summary-cols': summaryCols } as React.CSSProperties}
+        >
+          {summaryTiles.map(tile => (
+            <SummaryTile key={tile.label} {...tile} />
+          ))}
+        </div>
+      </div>
+
+      {/* ゴールのイメージ。介護計画書に書かれているものをそのまま載せ、報告書の前提を示す */}
+      {stats.carePlan?.goalImage?.trim() && (
+        <div className="report-card bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2 border-b pb-2">
+            ゴールのイメージ
+            <span className="ml-2 text-xs font-normal text-gray-700">介護計画書より</span>
+          </h3>
+          <p className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap">
+            {stats.carePlan.goalImage.trim()}
+          </p>
+        </div>
+      )}
+
+      {/* 月次報告書（AI生成）。特記事項→日別記録→グラフ→写真と続く並びは、
+          これまで使っていた月間報告書と同じ順序にそろえている。
+          印刷では本文の途中で改ページできるようにしている。枠ごと次のページへ送ると、
+          手前のページが大きく空いてしまうため（見出しだけが行末に残らないよう break-after は禁じている） */}
+      <div className="report-card bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2 print:break-after-avoid">
+          <h3 className="text-sm font-semibold text-gray-900">
+            {/* 画面ではどの報告書かが分かるように、印刷物では書類の見出しとして「当月の様子」と出す
+                （書類全体の題名は「月間報告書」で、上部に別途印刷される） */}
+            <span className="print:hidden">ケアマネジャー向け月次報告書</span>
+            <span className="hidden print:inline">当月の様子</span>
+            {/* 画面上の目印。ケアマネジャーへお渡しする印刷物には出さない */}
+            <span className="ml-2 text-[11px] font-normal text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded print:hidden">AI生成</span>
+          </h3>
+          <div className="flex gap-2 flex-wrap print:hidden">
+            {report && !editing && (
+              <button onClick={startEditing}
+                className="text-xs px-3 py-1.5 rounded-lg border font-medium transition bg-white text-gray-700 border-gray-200 hover:border-gray-400">
+                編集
+              </button>
+            )}
+            {editing && (
+              <>
+                <button onClick={handleSave} disabled={saving}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium transition bg-teal-600 text-white hover:bg-teal-700 disabled:bg-gray-300">
+                  {saving ? '保存中…' : '保存'}
+                </button>
+                <button onClick={() => setEditing(false)} disabled={saving}
+                  className="text-xs px-3 py-1.5 rounded-lg border font-medium transition bg-white text-gray-700 border-gray-200 hover:border-gray-400">
+                  取り消し
+                </button>
+              </>
+            )}
+            {report && (
+              <button
+                onClick={() => handleReportDownload('pdf')}
+                disabled={downloadingFormat !== null}
+                className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition inline-flex items-center gap-1 ${
+                  downloadingFormat !== null
+                    ? 'bg-gray-100 text-gray-700 border-gray-200 cursor-not-allowed'
+                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                }`}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                {downloadingFormat === 'pdf' ? 'PDF生成中...' : 'PDF ダウンロード'}
+              </button>
+            )}
+            {report && (
+              <button
+                onClick={() => handleReportDownload('word')}
+                disabled={downloadingFormat !== null}
+                className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition inline-flex items-center gap-1 ${
+                  downloadingFormat !== null
+                    ? 'bg-gray-100 text-gray-700 border-gray-200 cursor-not-allowed'
+                    : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                }`}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                {downloadingFormat === 'word' ? 'Word生成中...' : 'Word ダウンロード'}
+              </button>
+            )}
+            <button onClick={handleGenerate} disabled={generating}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
+                generating
+                  ? 'bg-gray-100 text-gray-700 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}>
+              {generating ? '生成中...' : report ? '再生成' : 'レポート生成'}
+            </button>
+          </div>
+        </div>
+        <div className="mb-3 print:hidden">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none w-fit">
+            <input type="checkbox" checked={forceDetailed} onChange={e => setForceDetailed(e.target.checked)}
+              className="w-3.5 h-3.5 accent-blue-600" />
+            <span className="text-xs text-gray-700">
+              加算対象・ケアプラン更新月・状態に変化があった方 — 詳しく報告する
+            </span>
+          </label>
+          <p className="text-[11px] text-gray-700 mt-1 ml-5">
+            {forceDetailed
+              ? '各見出しを4〜6文に増やし、月前半と後半での様子の違いやご本人の表情・お言葉まで詳しくお伝えします。'
+              : hasRecords
+              ? '今月は現場の記録があるため、チェックしなくてもその内容は詳しく報告されます。'
+              : '通常の分量で作成します。'}
+          </p>
+        </div>
+        {editing ? (
+          <div className="print:hidden">
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              rows={16}
+              className="w-full bg-white rounded-lg p-4 text-sm text-gray-900 leading-relaxed border border-teal-300 focus:outline-none focus:border-teal-500"
+            />
+            <p className="text-[11px] text-gray-700 mt-1">
+              段落は空行で区切ってください。【活動の様子】【機能訓練の様子】の見出しはそのまま残してください。
+              保存すると、この内容が印刷・PDF・Word出力に使われます。
+            </p>
+            {saveError && <p className="text-xs text-red-600 mt-1">{saveError}</p>}
+          </div>
+        ) : report ? (
+          <div className="flex flex-col gap-3">
+            {/* 「活動の様子」と「機能訓練の様子」は、ケアマネジャーが読み分けられるよう別々の枠に入れる */}
+            {splitReportSections(report).map((section, i) => (
+              <div
+                key={`${section.header}-${i}`}
+                className="report-section rounded-lg border border-gray-200 bg-slate-50 p-4"
+              >
+                {section.header && (
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2 pb-1.5 border-b border-gray-200 print:break-after-avoid">
+                    {section.header}
+                  </h4>
+                )}
+                <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">{section.body}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-700 text-center py-8">
+            「レポート生成」を押すと、月次データをもとにAIがケアマネジャー向け報告書を自動作成します。
+            本文は「活動の様子」と「機能訓練の様子」の2項目に分かれます。
+          </p>
+        )}
+      </div>
+
+      {/* 当月の特記事項。件数が多い月は1ページに収まらないため、カードごと次のページへ送らず、
+          途中で改ページできるようにしている（1件ずつは下で分けないようにしている） */}
+      {stats.dailyNotes.length > 0 && (
+        <div className="report-card bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-red-600 mb-3 print:break-after-avoid">
+            当月の特記事項
+            <span className="ml-2 text-xs font-normal text-red-600">{stats.dailyNotes.length}件</span>
+          </h3>
+          <div className="flex flex-col gap-2">
+            {stats.dailyNotes.map((note, i) => {
+              const d = note.date.split('-')
+              return (
+                <div key={`${note.date}-${i}`} className="flex gap-3 bg-gray-50 rounded-lg px-3 py-2 print:break-inside-avoid">
+                  <span className="text-xs font-medium text-red-600 shrink-0 w-16">
+                    {parseInt(d[1])}月{parseInt(d[2])}日
+                  </span>
+                  <span className="text-sm text-gray-900 whitespace-pre-wrap">{note.text}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 日別記録。平均だけでは分からない日ごとの実施状況を、1か月分そのまま載せる */}
+      {dailyRows.length > 0 && (
+        <div className="report-card bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 border-b pb-2 print:break-after-avoid">
+            日別記録
+            <span className="ml-2 text-xs font-normal text-gray-700">{month}月</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="daily-table w-full text-xs tabular-nums text-gray-900">
+              <thead>
+                <tr className="text-gray-900 border-b border-gray-200">
+                  <th className="text-left font-medium py-1.5 pr-2 whitespace-nowrap">日付</th>
+                  <th className="text-right font-medium py-1.5 px-2 whitespace-nowrap">主食</th>
+                  <th className="text-right font-medium py-1.5 px-2 whitespace-nowrap">主菜</th>
+                  <th className="text-right font-medium py-1.5 px-2 whitespace-nowrap">水分</th>
+                  <th className="text-left font-medium py-1.5 px-2 whitespace-nowrap">排便</th>
+                  <th className="text-center font-medium py-1.5 px-2 whitespace-nowrap">服薬</th>
+                  <th className="text-center font-medium py-1.5 px-2 whitespace-nowrap">口腔ケア</th>
+                  <th className="text-center font-medium py-1.5 px-2 whitespace-nowrap">入浴</th>
+                  <th className="text-center font-medium py-1.5 px-2 whitespace-nowrap">機能訓練</th>
+                  <th className="text-right font-medium py-1.5 px-2 whitespace-nowrap">体重</th>
+                  <th className="text-center font-medium py-1.5 pl-2 whitespace-nowrap text-red-600">特記</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyRows.map(row => (
+                  <tr key={row.date} className="border-b border-gray-100 last:border-0 print:break-inside-avoid">
+                    <td className="py-1 pr-2 whitespace-nowrap text-gray-700">
+                      {row.day}日（{row.weekday}）
+                    </td>
+                    {row.isAbsent ? (
+                      <td className="py-1 px-2 text-gray-700" colSpan={9}>
+                        欠席{row.absenceReason ? `：${row.absenceReason}` : ''}
+                      </td>
+                    ) : (
+                      <>
+                        <td className="text-right py-1 px-2">{row.mealMain ?? '-'}</td>
+                        <td className="text-right py-1 px-2">{row.mealSide ?? '-'}</td>
+                        <td className="text-right py-1 px-2">{row.fluid ?? '-'}</td>
+                        <td className="py-1 px-2 whitespace-nowrap">{row.bowel ?? '—'}</td>
+                        <td className="text-center py-1 px-2 whitespace-nowrap">{row.medication ?? '—'}</td>
+                        <td className="text-center py-1 px-2">{row.oralCare ? '○' : '—'}</td>
+                        <td className="text-center py-1 px-2">
+                          {row.bathing === 'DONE' ? '○' : row.bathing === 'NOT_DONE' ? '×' : '—'}
+                        </td>
+                        <td className="text-center py-1 px-2">{row.training ? '○' : '—'}</td>
+                        <td className="text-right py-1 px-2">{row.weight != null ? row.weight.toFixed(1) : '—'}</td>
+                      </>
+                    )}
+                    <td className="text-center py-1 pl-2 text-rose-500">{row.hasNote ? '★' : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-gray-700 mt-2">
+            主食・主菜は割、水分はml、体重はkg。★はその日に特記事項の記録があることを示します。
+          </p>
+        </div>
+      )}
+
+      {/* Charts。血圧・脈拍と体温は続けて見るものなので、印刷では2つでひとまとまりに扱い、
+          体温のグラフだけが次のページに取り残されないようにしている */}
+      {(hasBp || hasPulse || hasTemp) && (
+      <div className="flex flex-col gap-4 print:break-inside-avoid">
       {(hasBp || hasPulse) && (
         <ChartCard title="血圧・脈拍" titleColor="text-rose-700" month={month}
           series={[
@@ -386,85 +711,9 @@ export default function ResidentReport({
           forcedMin={35} forcedMax={38.5} height={90}
         />
       )}
-      {(hasMeal || hasFluid) && (
-        <SplitChartCard title="食事量・水分摂取量" titleColor="text-amber-700" month={month} days={chartData.days}
-          panels={[
-            ...(hasMeal ? [{
-              series: { values: chartData.meal, color: '#f59e0b', label: '食事量', unit: '割', digits: 1 },
-              forcedMin: 0, forcedMax: 10,
-            }] : []),
-            ...(hasFluid ? [{
-              series: { values: chartData.fluid, color: '#0ea5e9', label: '水分摂取量', unit: 'ml', digits: 0 },
-              forcedMin: 0,
-            }] : []),
-          ]}
-        />
+      </div>
       )}
-      {weightTrend.months.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 border-b pb-2">
-            <h3 className="text-sm font-semibold text-teal-700">
-              体重 <span className="text-xs font-normal text-gray-400">3か月の推移</span>
-            </h3>
-            {weightTrend.change != null && (
-              <span className="text-[11px] text-gray-500">
-                {weightTrend.months[0].label}から
-                <span className={`ml-1 text-base font-bold tabular-nums ${
-                  weightTrend.change > 0 ? 'text-orange-600' : weightTrend.change < 0 ? 'text-blue-600' : 'text-gray-700'
-                }`}>
-                  {weightTrend.change > 0 ? '+' : ''}{weightTrend.change.toFixed(1)}
-                </span>
-                <span className="ml-0.5">kg</span>
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            {weightTrend.months.map(m => (
-              <div key={m.label} className="rounded-lg bg-gray-50 px-3 py-2 text-center">
-                <p className="text-xs text-gray-500">{m.label}</p>
-                <p className="text-xl font-bold text-gray-800 tabular-nums">
-                  {m.avg.toFixed(1)}<span className="text-xs font-normal text-gray-400 ml-1">kg</span>
-                </p>
-                <p className="text-[10px] text-gray-400 tabular-nums">
-                  {m.min === m.max ? `${m.count}回測定` : `${m.min.toFixed(1)}〜${m.max.toFixed(1)} / ${m.count}回`}
-                </p>
-              </div>
-            ))}
-          </div>
-          {weightTrend.points.length >= 2 && (
-            <SvgLineChart
-              days={weightTrend.points.map((_, i) => i)}
-              series={[{ values: weightTrend.points, color: '#0d9488', label: '体重' }]}
-              xTicks={weightTrend.ticks}
-              height={90}
-              unit="kg"
-            />
-          )}
-        </div>
-      )}
-
-      {/* 当月の特記事項 */}
-      {stats.dailyNotes.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            当月の特記事項
-            <span className="ml-2 text-xs font-normal text-gray-400">{stats.dailyNotes.length}件</span>
-          </h3>
-          <div className="flex flex-col gap-2">
-            {stats.dailyNotes.map((note, i) => {
-              const d = note.date.split('-')
-              return (
-                <div key={`${note.date}-${i}`} className="flex gap-3 bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-xs font-medium text-gray-500 shrink-0 w-16">
-                    {parseInt(d[1])}月{parseInt(d[2])}日
-                  </span>
-                  <span className="text-sm text-gray-700 whitespace-pre-wrap">{note.text}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* 食事量・水分摂取量・体重は、グラフをやめて当月の概要に数値でまとめている */}
 
       {/* 写真（最大5枚） */}
       <div className="print:hidden">
@@ -472,7 +721,7 @@ export default function ResidentReport({
       </div>
       {photos.length > 0 && (
         <div className="hidden print:block print:break-inside-avoid">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">今月の様子（写真）</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">今月の様子（写真）</h3>
           <div className="grid print:grid-cols-3 gap-2">
             {photos.map(photo => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -481,115 +730,6 @@ export default function ResidentReport({
           </div>
         </div>
       )}
-
-      {/* AI Report */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print:break-inside-avoid">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="text-sm font-semibold text-gray-700">
-            {/* 画面では何の報告書か分かるように、印刷物ではケアマネジャーにお渡しする体裁で「月次報告書」と出す */}
-            <span className="print:hidden">ケアマネジャー向け月次報告書</span>
-            <span className="hidden print:inline">月次報告書</span>
-            {/* 画面上の目印。ケアマネジャーへお渡しする印刷物には出さない */}
-            <span className="ml-2 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded print:hidden">AI生成</span>
-          </h3>
-          <div className="flex gap-2 flex-wrap print:hidden">
-            {report && !editing && (
-              <button onClick={startEditing}
-                className="text-xs px-3 py-1.5 rounded-lg border font-medium transition bg-white text-gray-600 border-gray-200 hover:border-gray-400">
-                編集
-              </button>
-            )}
-            {editing && (
-              <>
-                <button onClick={handleSave} disabled={saving}
-                  className="text-xs px-3 py-1.5 rounded-lg font-medium transition bg-teal-600 text-white hover:bg-teal-700 disabled:bg-gray-300">
-                  {saving ? '保存中…' : '保存'}
-                </button>
-                <button onClick={() => setEditing(false)} disabled={saving}
-                  className="text-xs px-3 py-1.5 rounded-lg border font-medium transition bg-white text-gray-600 border-gray-200 hover:border-gray-400">
-                  取り消し
-                </button>
-              </>
-            )}
-            {report && (
-              <button
-                onClick={() => handleReportDownload('pdf')}
-                disabled={downloadingFormat !== null}
-                className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition inline-flex items-center gap-1 ${
-                  downloadingFormat !== null
-                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                }`}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                {downloadingFormat === 'pdf' ? 'PDF生成中...' : 'PDF ダウンロード'}
-              </button>
-            )}
-            {report && (
-              <button
-                onClick={() => handleReportDownload('word')}
-                disabled={downloadingFormat !== null}
-                className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition inline-flex items-center gap-1 ${
-                  downloadingFormat !== null
-                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                    : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
-                }`}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                {downloadingFormat === 'word' ? 'Word生成中...' : 'Word ダウンロード'}
-              </button>
-            )}
-            <button onClick={handleGenerate} disabled={generating}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
-                generating
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}>
-              {generating ? '生成中...' : report ? '再生成' : 'レポート生成'}
-            </button>
-          </div>
-        </div>
-        <div className="mb-3 print:hidden">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none w-fit">
-            <input type="checkbox" checked={forceDetailed} onChange={e => setForceDetailed(e.target.checked)}
-              className="w-3.5 h-3.5 accent-blue-600" />
-            <span className="text-xs text-gray-600">
-              加算対象・ケアプラン更新月・状態に変化があった方 — 詳しく報告する
-            </span>
-          </label>
-          <p className="text-[10px] text-gray-400 mt-1 ml-5">
-            {forceDetailed
-              ? '各見出しを4〜6文に増やし、月前半と後半での様子の違いやご本人の表情・お言葉まで詳しくお伝えします。'
-              : hasRecords
-              ? '今月は現場の記録があるため、チェックしなくてもその内容は詳しく報告されます。'
-              : '通常の分量で作成します。'}
-          </p>
-        </div>
-        {editing ? (
-          <div className="print:hidden">
-            <textarea
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              rows={16}
-              className="w-full bg-white rounded-lg p-4 text-sm text-gray-700 leading-relaxed border border-teal-300 focus:outline-none focus:border-teal-500"
-            />
-            <p className="text-[11px] text-gray-400 mt-1">
-              段落は空行で区切ってください。保存すると、この内容が印刷・PDF・Word出力に使われます。
-            </p>
-            {saveError && <p className="text-xs text-red-600 mt-1">{saveError}</p>}
-          </div>
-        ) : report ? (
-          <div className="bg-slate-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border border-slate-100">
-            {report}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400 text-center py-8">
-            「レポート生成」を押すと、月次データをもとにAIがケアマネジャー向け報告書を自動作成します。
-          </p>
-        )}
-      </div>
 
     </div>
   )

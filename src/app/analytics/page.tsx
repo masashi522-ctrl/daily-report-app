@@ -8,7 +8,7 @@ import BatchReport from './batch-report'
 import { listSavedReportIds, getSavedReport } from './report-actions'
 import PrintButton from './print-button'
 import { overlapsServicePeriod } from '@/lib/service-period'
-import { buildVitalCards, buildChartData, loadResidentPhotos, loadWeightTrend, CARDS_WITHOUT_CHART, type WeightTrend } from '@/lib/analytics-view'
+import { buildVitalCards, buildChartData, buildDailyRows, loadResidentPhotos, CARDS_WITHOUT_CHART, type DailyRow } from '@/lib/analytics-view'
 
 export default async function AnalyticsPage({
   searchParams,
@@ -108,10 +108,11 @@ export default async function AnalyticsPage({
   let chartData: ChartData | null = null
   let reportStats: ReportStats | null = null
   let photos: ResidentPhoto[] = []
-  let weightTrend: WeightTrend = { months: [], change: null, points: [], ticks: [] }
+  let dailyRows: DailyRow[] = []
 
   if (residentId && r.length > 0) {
     chartData = buildChartData(r, year, month)
+    dailyRows = buildDailyRows(r)
 
     const attendingRecs = r.filter(x => !x.isAbsent)
     const bathingCount = countOf(r.map(x => x.bathing === 'DONE'))
@@ -203,8 +204,6 @@ export default async function AnalyticsPage({
     }
 
     photos = await loadResidentPhotos(residentId, year, month)
-    // 体重は当月だけでは増減が読めないため、前々月からの3か月分を読む
-    weightTrend = await loadWeightTrend(residentId, year, month)
   }
 
   return (
@@ -221,7 +220,8 @@ export default async function AnalyticsPage({
 
       {/* 印刷用ヘッダー（画面には非表示） */}
       <div className="hidden print:block print:mb-3">
-        <h1 className="text-lg font-bold text-gray-900">デイサービス 利用者月次報告</h1>
+        {/* 書類の題名。まとめて印刷（/print/care-reports）と同じ「月間報告書」にそろえている */}
+        <h1 className="text-lg font-bold text-gray-900">月間報告書</h1>
         <p className="text-2xl font-bold text-gray-900 mt-1">
           対象：{targetName}
           <span className="text-base font-normal text-gray-600 ml-3">{year}年{month}月</span>
@@ -306,7 +306,7 @@ export default async function AnalyticsPage({
             month={month}
             photos={photos}
             savedReport={savedReport?.body ?? ''}
-            weightTrend={weightTrend}
+            dailyRows={dailyRows}
           />
         </div>
       ) : residentId ? (

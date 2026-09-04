@@ -17,8 +17,9 @@ function avgCombined(a: (number | null | undefined)[], b: (number | null | undef
   return avg([...a, ...b])
 }
 
-// グラフを持たない項目。今はすべての項目がグラフ側に平均を出しているため空だが、
-// グラフの無い項目を足したときにここへ入れれば、利用者を選んだ画面と印刷にカードとして出る。
+// グラフを持たない項目。利用者を選んでいるときは、血圧・脈拍・体温はグラフの見出しに、
+// それ以外は月次報告書の「当月の概要」に数値を出しているため、いまは空。
+// どちらにも出さない項目を足したときにここへ入れれば、カードとして出る。
 export const CARDS_WITHOUT_CHART: string[] = []
 
 export interface VitalCard {
@@ -57,6 +58,7 @@ export interface ChartData {
   bpDia: (number | null)[]
   pulse: (number | null)[]
   temp: (number | null)[]
+  spo2: (number | null)[]
   fluid: (number | null)[]
   meal: (number | null)[]
   weight: (number | null)[]
@@ -75,6 +77,13 @@ export function buildChartData(records: Rec[], year: number, month: number): Cha
     bpDia:  allDays.map(d => byDay.get(d)?.bpDiastolic ?? null),
     pulse:  allDays.map(d => byDay.get(d)?.pulse ?? null),
     temp:   allDays.map(d => byDay.get(d)?.tempMorning ?? null),
+    // SpO2は入浴の前後で2回測ることがあるため、その日に測れた値の平均をとる
+    spo2:   allDays.map(d => {
+      const rec = byDay.get(d)
+      if (!rec) return null
+      const vals = [rec.spo2Before, rec.spo2After].filter((v): v is number => v != null && v > 0)
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+    }),
     fluid:  allDays.map(d => {
       const rec = byDay.get(d)
       if (!rec) return null
@@ -96,6 +105,69 @@ export function buildChartData(records: Rec[], year: number, month: number): Cha
   }
 }
 
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
+
+/** 服薬欄に出す時間帯。記録の項目名と表示名をここで対応させている */
+const MEDICATION_TIMINGS: [string, string][] = [
+  ['medicationMorning', '朝'],
+  ['medicationBeforeLunch', '昼前'],
+  ['medicationAfterLunch', '昼後'],
+  ['medicationBeforeEvening', '夕前'],
+  ['medicationEvening', '夕後'],
+]
+
+/** 月次報告書の「日別記録」1行分 */
+export interface DailyRow {
+  date: string
+  day: number
+  weekday: string
+  isAbsent: boolean
+  absenceReason: string | null
+  mealMain: number | null
+  mealSide: number | null
+  fluid: number | null
+  weight: number | null
+  bowel: string | null
+  medication: string | null
+  oralCare: boolean
+  bathing: string
+  training: boolean
+  hasNote: boolean
+}
+
+/**
+ * 日別記録の表に出す行。ご利用のあった日を日付順に並べる。
+ * 画面と印刷の両方から使うため、記録そのものではなく表示に必要な形にして渡す。
+ */
+export function buildDailyRows(records: Rec[]): DailyRow[] {
+  return [...records]
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .map(rec => {
+      const date = String(rec.date).slice(0, 10)
+      const [y, m, d] = date.split('-').map(Number)
+      const am = rec.fluidIntakeAm ?? 0
+      const pm = rec.fluidIntakePm ?? 0
+      const taken = MEDICATION_TIMINGS.filter(([field]) => rec[field]).map(([, label]) => label)
+      return {
+        date,
+        day: d,
+        weekday: WEEKDAYS[new Date(y, m - 1, d).getDay()],
+        isAbsent: !!rec.isAbsent,
+        absenceReason: rec.absenceReason ?? null,
+        mealMain: rec.mealMainFood ?? null,
+        mealSide: rec.mealSideFood ?? null,
+        fluid: (am > 0 || pm > 0) ? am + pm : null,
+        weight: (rec.weight != null && rec.weight > 0) ? rec.weight : null,
+        bowel: [rec.bowelAmount, rec.bowelQuality].filter(Boolean).join(' / ') || null,
+        medication: taken.length ? taken.join(' ') : null,
+        oralCare: !!rec.oralCare,
+        bathing: rec.bathing ?? 'NOT_APPLICABLE',
+        training: !!rec.trainingDone,
+        hasNote: !!rec.specialNotes?.trim(),
+      }
+    })
+}
+
 /** その月に登録された写真（署名付きURL） */
 export async function loadResidentPhotos(residentId: string, year: number, month: number) {
   const { data: photoRows } = await supabase
@@ -114,64 +186,4 @@ export async function loadResidentPhotos(residentId: string, year: number, month
   return photoRows
     .map((p, i) => ({ id: p.id, url: signedUrls?.[i]?.signedUrl ?? '' }))
     .filter(p => p.url)
-}
-
-export interface WeightTrend {
-  /** 前々月・前月・当月の順。記録のある月だけが入る */
-  months: { label: string; avg: number; min: number; max: number; count: number }[]
-  /** いちばん古い月から当月までの増減（2か月以上そろっている場合のみ） */
-  change: number | null
-  /** グラフ用。測定した日の値を古い順に並べたもの */
-  points: number[]
-  /** 横軸の目盛り。各月の最初の測定日に「◯月」を置く */
-  ticks: { index: number; label: string }[]
-}
-
-/**
- * 体重の推移。当月の平均だけでは増減が読み取れないため、前々月からの3か月分を月ごとにまとめる。
- * 測定回数が月に数回のため折れ線では読み取りにくく、数値で並べている。
- */
-export async function loadWeightTrend(residentId: string, year: number, month: number): Promise<WeightTrend> {
-  const start = new Date(year, month - 3, 1)
-  const from = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`
-  const lastDay = new Date(year, month, 0).getDate()
-  const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-
-  const { data } = await supabase
-    .from('DailyRecord')
-    .select('date, weight')
-    .eq('residentId', residentId)
-    .gte('date', from).lte('date', to)
-    .order('date', { ascending: true })
-
-  const measured = (data ?? [] as Rec[]).filter((r: Rec) => r.weight != null && r.weight > 0)
-
-  const byMonth = new Map<string, number[]>()
-  const ticks: { index: number; label: string }[] = []
-  let lastKey = ''
-  measured.forEach((rec: Rec, i: number) => {
-    const key = (rec.date as string).slice(0, 7)
-    if (!byMonth.has(key)) byMonth.set(key, [])
-    byMonth.get(key)!.push(rec.weight as number)
-    if (key !== lastKey) {
-      ticks.push({ index: i, label: `${parseInt(key.slice(5, 7))}月` })
-      lastKey = key
-    }
-  })
-
-  const months = Array.from(byMonth.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([key, values]) => ({
-      label: `${parseInt(key.slice(5, 7))}月`,
-      avg: parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)),
-      min: Math.min(...values),
-      max: Math.max(...values),
-      count: values.length,
-    }))
-
-  const change = months.length >= 2
-    ? parseFloat((months[months.length - 1].avg - months[0].avg).toFixed(1))
-    : null
-
-  return { months, change, points: measured.map((r: Rec) => r.weight as number), ticks }
 }
