@@ -107,7 +107,7 @@ function MonthCard({
 }) {
   return (
     <div
-      className={`bg-white rounded-xl border shadow-sm p-4 print-block ${
+      className={`bg-white rounded-xl border shadow-sm p-4 print-block print-keep ${
         mode === 'partial' ? 'border-teal-300' : 'border-gray-200'
       }`}
     >
@@ -197,8 +197,15 @@ export default async function MonthlyReportPage({
         @page { size: A4 portrait; margin: 12mm; }
         @media print {
           body { background: white; }
-          /* 枠ごとにページをまたがないようにする */
-          .print-block { break-inside: avoid; page-break-inside: avoid; box-shadow: none; }
+          .print-block { box-shadow: none; }
+          /* 高さのある枠（日別の利用状況・入退院の一覧）は、途中で改ページできるようにする。
+             枠ごと次のページへ送ると、手前のページが大きく空いてしまうため */
+          .print-keep { break-inside: avoid; page-break-inside: avoid; }
+          /* 見出しだけがページ末に取り残されないようにする */
+          h3, h4 { break-after: avoid; }
+          /* 表は行の途中で切らない。見出し行は各ページの先頭で繰り返す */
+          .print-block tr { break-inside: avoid; }
+          .print-block thead { display: table-header-group; }
         }
       `}</style>
 
@@ -240,14 +247,85 @@ export default async function MonthlyReportPage({
         </div>
       )}
 
-      {/* 日別の利用状況 */}
-      <MonthlyDailyTable stats={dailyStats} />
+      {/* 稼働率。何人に対する割合なのかが分かるよう、見出しにこの事業所の定員を出す */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+          稼働率
+          <span className="text-xs font-normal text-gray-500 ml-2">
+            {overview.capacity != null ? `定員${overview.capacity}名` : '定員未設定'}
+          </span>
+        </h3>
+        <div className={`grid grid-cols-1 gap-3 ${
+          monthCards.length === 3 ? 'sm:grid-cols-3 print:grid-cols-3' : 'sm:grid-cols-2 print:grid-cols-2'
+        }`}>
+          {monthCards.map(summary => {
+            const mode = modeOf(ymOf(summary))
+            return <MonthCard key={ymOf(summary)} summary={summary} caption={captionOf(mode)} mode={mode} />
+          })}
+        </div>
+        {isCurrentMonth && (
+          <p className="text-[10px] text-gray-400 mt-2">
+            予測は、利用者マスタの利用曜日と直近3か月の営業曜日・実績出席率（予定に対して
+            {Math.round(overview.forecastRatio * 100)}%）をもとに算出した目安です。祝日等の臨時休業は反映されません。
+          </p>
+        )}
+      </div>
 
-      {/* 当月の入院・利用中止・新規利用開始 */}
-      <MonthlyChangesTable changes={changes} isCurrentMonth={isCurrentMonth} />
+      {/* 年度サマリー */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block print-keep">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">年度サマリー（4月〜3月）</h3>
+        <div className="overflow-x-auto print:overflow-visible">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-400 border-b border-gray-100">
+                <th className="text-left py-1.5 font-medium whitespace-nowrap">年度</th>
+                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">単純稼働率</th>
+                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">実質稼働率</th>
+                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">平均延べ利用者数</th>
+                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">営業日数</th>
+                <th className="text-right py-1.5 font-medium whitespace-nowrap pl-2">延べ利用者数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fiscalYears.map(fy => (
+                <tr key={fy.fiscalYear} className="border-b border-gray-50">
+                  <td className="py-2 whitespace-nowrap">
+                    {fy.label}
+                    <span className="text-xs text-gray-400 ml-1">
+                      （{fy.fiscalYear}年度
+                      {fy.inProgress ? (isCurrentMonth ? '・本日まで' : `・${monthLabel(selectedMonth)}末まで`) : ''}）
+                    </span>
+                  </td>
+                  <td className="py-2 text-right px-2 font-medium text-gray-700">
+                    {fmtRate(fy.metrics.occupancyRate)}
+                  </td>
+                  <td className="py-2 text-right px-2 font-medium text-teal-700">
+                    {fmtRate(fy.metrics.effectiveOccupancyRate)}
+                  </td>
+                  <td className="py-2 text-right px-2">{fmtAvg(fy.metrics.avgDailyVisits)}</td>
+                  <td className="py-2 text-right px-2">{fy.metrics.businessDays}日</td>
+                  <td className="py-2 text-right pl-2">
+                    {fy.metrics.totalVisits}人
+                    <span className="text-xs text-gray-400 ml-1">（按分 {fy.metrics.weightedVisits}）</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="text-[10px] text-gray-400 mt-2 flex flex-col gap-0.5">
+          <p>
+            按分：5時間以上=1.0人／3時間以上5時間未満=0.5人／3時間未満=0人（利用時間区分が未設定の場合は提供時刻から判定し、それも無ければ1.0人として計算）
+          </p>
+          <p>単純稼働率 = 延べ利用者数（実人数）÷（定員 × 営業日数）</p>
+          <p>実質稼働率 = 按分後の延べ利用者数 ÷（定員 × 営業日数）</p>
+          <p>平均延べ利用者数 = 按分後の延べ利用者数 ÷ 営業日数（1日あたり）</p>
+          <p>稼働率は現在の定員設定をもとに算出しています。</p>
+        </div>
+      </div>
 
       {/* 介護度 × 利用時間 の構成 */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block print-keep">
         <h3 className="text-sm font-semibold text-gray-700 mb-1">介護度 × 利用時間 の構成</h3>
         <p className="text-[10px] text-gray-400 mb-3">
           {isCurrentMonth ? '本日' : `${monthLabel(selectedMonth)}末`}
@@ -335,79 +413,12 @@ export default async function MonthlyReportPage({
         )}
       </div>
 
-      {/* 前月・当月・翌月 */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-          {isCurrentMonth ? '前月・当月・翌月' : `${monthLabel(selectedMonth)}とその前後`}
-        </h3>
-        <div className={`grid grid-cols-1 gap-3 ${
-          monthCards.length === 3 ? 'sm:grid-cols-3 print:grid-cols-3' : 'sm:grid-cols-2 print:grid-cols-2'
-        }`}>
-          {monthCards.map(summary => {
-            const mode = modeOf(ymOf(summary))
-            return <MonthCard key={ymOf(summary)} summary={summary} caption={captionOf(mode)} mode={mode} />
-          })}
-        </div>
-        {isCurrentMonth && (
-          <p className="text-[10px] text-gray-400 mt-2">
-            予測は、利用者マスタの利用曜日と直近3か月の営業曜日・実績出席率（予定に対して
-            {Math.round(overview.forecastRatio * 100)}%）をもとに算出した目安です。祝日等の臨時休業は反映されません。
-          </p>
-        )}
-      </div>
+      {/* 日別の利用状況 */}
+      <MonthlyDailyTable stats={dailyStats} />
 
-      {/* 年度サマリー */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">年度サマリー（4月〜3月）</h3>
-        <div className="overflow-x-auto print:overflow-visible">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-400 border-b border-gray-100">
-                <th className="text-left py-1.5 font-medium whitespace-nowrap">年度</th>
-                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">単純稼働率</th>
-                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">実質稼働率</th>
-                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">平均延べ利用者数</th>
-                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">営業日数</th>
-                <th className="text-right py-1.5 font-medium whitespace-nowrap pl-2">延べ利用者数</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fiscalYears.map(fy => (
-                <tr key={fy.fiscalYear} className="border-b border-gray-50">
-                  <td className="py-2 whitespace-nowrap">
-                    {fy.label}
-                    <span className="text-xs text-gray-400 ml-1">
-                      （{fy.fiscalYear}年度
-                      {fy.inProgress ? (isCurrentMonth ? '・本日まで' : `・${monthLabel(selectedMonth)}末まで`) : ''}）
-                    </span>
-                  </td>
-                  <td className="py-2 text-right px-2 font-medium text-gray-700">
-                    {fmtRate(fy.metrics.occupancyRate)}
-                  </td>
-                  <td className="py-2 text-right px-2 font-medium text-teal-700">
-                    {fmtRate(fy.metrics.effectiveOccupancyRate)}
-                  </td>
-                  <td className="py-2 text-right px-2">{fmtAvg(fy.metrics.avgDailyVisits)}</td>
-                  <td className="py-2 text-right px-2">{fy.metrics.businessDays}日</td>
-                  <td className="py-2 text-right pl-2">
-                    {fy.metrics.totalVisits}人
-                    <span className="text-xs text-gray-400 ml-1">（按分 {fy.metrics.weightedVisits}）</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="text-[10px] text-gray-400 mt-2 flex flex-col gap-0.5">
-          <p>
-            按分：5時間以上=1.0人／3時間以上5時間未満=0.5人／3時間未満=0人（利用時間区分が未設定の場合は提供時刻から判定し、それも無ければ1.0人として計算）
-          </p>
-          <p>単純稼働率 = 延べ利用者数（実人数）÷（定員 × 営業日数）</p>
-          <p>実質稼働率 = 按分後の延べ利用者数 ÷（定員 × 営業日数）</p>
-          <p>平均延べ利用者数 = 按分後の延べ利用者数 ÷ 営業日数（1日あたり）</p>
-          <p>稼働率は現在の定員設定をもとに算出しています。</p>
-        </div>
-      </div>
+      {/* 当月の入院・利用中止・新規利用開始 */}
+      <MonthlyChangesTable changes={changes} isCurrentMonth={isCurrentMonth} />
+
     </div>
   )
 }
