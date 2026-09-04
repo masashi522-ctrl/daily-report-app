@@ -4,7 +4,7 @@ import {
   SERVICE_TIME_CATEGORIES,
   type HospitalizationPeriod,
 } from '@/types/database'
-import { isHospitalizedOn } from '@/lib/hospitalization'
+import { isAwayOn } from '@/lib/hospitalization'
 import { isInServicePeriod } from '@/lib/service-period'
 
 // 予測の補正率と営業曜日を推定するために遡る日数
@@ -240,8 +240,8 @@ export async function computeFacilityOperationsOverview(
   const residentIds = residents.map(r => r.id)
   const records = residentIds.length
     ? (await fetchRecords(residentIds, rangeFrom, rangeTo)).filter(
-        // 入院期間中の記録は稼働率・利用実績から除外する
-        r => !isHospitalizedOn(hospitalizationsById.get(r.residentId), r.date),
+        // 入院中と、退院後まだ利用を再開していない間の記録は稼働率・利用実績から除外する
+        r => !isAwayOn(hospitalizationsById.get(r.residentId), r.date),
       )
     : []
 
@@ -299,7 +299,7 @@ export async function computeFacilityOperationsOverview(
     if (operatingDows.length === 0) operatingDows = [1, 2, 3, 4, 5, 6]
   }
 
-  // その日に利用予定の在籍者数（利用曜日・利用開始/終了日・入院期間を考慮）と、その按分後の人数
+  // その日に利用予定の在籍者数（利用曜日・利用開始/終了日・入院や退院後の休止を考慮）と、その按分後の人数
   const scheduledOn = (date: string) => {
     const dow = dowOf(date)
     let count = 0
@@ -308,7 +308,7 @@ export async function computeFacilityOperationsOverview(
       if (!r.isActive) continue
       if (r.attendanceDays && !r.attendanceDays.split(',').map(Number).includes(dow)) continue
       if (!isInServicePeriod(r, date)) continue
-      if (isHospitalizedOn(r.hospitalizations, date)) continue
+      if (isAwayOn(r.hospitalizations, date)) continue
       count++
       weighted += weightById.get(r.id) ?? 1
     }

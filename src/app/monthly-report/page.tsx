@@ -1,7 +1,10 @@
 import { requireSession } from '@/lib/session'
 import { supabase } from '@/lib/supabase'
 import { computeMonthlyDailyStats } from '@/lib/monthly-daily-stats'
+import { computeMonthlyChanges } from '@/lib/monthly-changes'
+import { SERVICE_TIME_CATEGORY_LABELS } from '@/types/database'
 import MonthlyDailyTable from './daily-table'
+import MonthlyChangesTable from './changes-table'
 import {
   computeFacilityOperationsOverview,
   fiscalYearOf,
@@ -13,14 +16,6 @@ import MonthPicker from './month-picker'
 import PrintButton from '@/app/analytics/print-button'
 
 const DOW = ['日', '月', '火', '水', '木', '金', '土']
-const CATEGORY_LABELS: Record<string, string> = {
-  '3-4': '3〜4時間',
-  '4-5': '4〜5時間',
-  '5-6': '5〜6時間',
-  '6-7': '6〜7時間',
-  '7-8': '7〜8時間',
-  '8-9': '8〜9時間',
-}
 
 function jstToday() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -163,9 +158,10 @@ export default async function MonthlyReportPage({
   const asOf = isCurrentMonth ? today : lastDayOf(selectedMonth)
 
   const overview = await computeFacilityOperationsOverview(session.facilityId, asOf)
-  const dailyStats = await computeMonthlyDailyStats(
-    session.facilityId, parseInt(selectedMonth.slice(0, 4)), parseInt(selectedMonth.slice(5, 7)),
-  )
+  const year = parseInt(selectedMonth.slice(0, 4))
+  const month = parseInt(selectedMonth.slice(5, 7))
+  const dailyStats = await computeMonthlyDailyStats(session.facilityId, year, month)
+  const changes = await computeMonthlyChanges(session.facilityId, year, month, asOf)
   const { composition } = overview
 
   // 「前月・当月・翌月」は、選んだ月ではなく今日を基準に実績か予測かが決まる
@@ -247,6 +243,9 @@ export default async function MonthlyReportPage({
       {/* 日別の利用状況 */}
       <MonthlyDailyTable stats={dailyStats} />
 
+      {/* 当月の入院・利用中止・新規利用開始 */}
+      <MonthlyChangesTable changes={changes} isCurrentMonth={isCurrentMonth} />
+
       {/* 介護度 × 利用時間 の構成 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 print-block">
         <h3 className="text-sm font-semibold text-gray-700 mb-1">介護度 × 利用時間 の構成</h3>
@@ -266,7 +265,7 @@ export default async function MonthlyReportPage({
                   <th className="text-left py-1.5 font-medium whitespace-nowrap">介護度</th>
                   {composition.categories.map((cat, i) => (
                     <th key={cat} className="text-right py-1.5 font-medium whitespace-nowrap px-2">
-                      {CATEGORY_LABELS[cat] ?? cat}
+                      {SERVICE_TIME_CATEGORY_LABELS[cat] ?? cat}
                       <span className="block text-[10px] text-gray-300 font-normal">
                         ×{composition.categoryWeights[i].toFixed(1)}
                       </span>

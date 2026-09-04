@@ -124,6 +124,7 @@ export default function ResidentDetailModal({
             <Row label="提供時間区分">{category || <Empty />}</Row>
             <Row label="利用開始日">{r.serviceStartDate || <Empty />}</Row>
             <Row label="利用終了日">{r.serviceEndDate || <Empty />}</Row>
+            {r.serviceEndReason && <Row label="中止理由">{r.serviceEndReason}</Row>}
           </Section>
 
           <Section title="利用予定">
@@ -186,6 +187,12 @@ export default function ResidentDetailModal({
                 {hospitalizations.map((h, i) => (
                   <p key={i} className="text-sm text-gray-800">
                     {h.admissionDate} 〜 {h.dischargeDate || <span className="text-amber-600">入院中</span>}
+                    {h.dischargeDate && (
+                      <span className="text-gray-500 ml-2">
+                        {h.resumeDate ? `利用再開 ${h.resumeDate}` : '利用再開日は未入力'}
+                      </span>
+                    )}
+                    {h.reason && <span className="text-gray-500 ml-2">（{h.reason}）</span>}
                   </p>
                 ))}
               </div>

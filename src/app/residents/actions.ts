@@ -17,13 +17,19 @@ function isActiveOn(serviceEndDate: string | null, date: string) {
   return !serviceEndDate || serviceEndDate >= date
 }
 
+// 入退院期間は行ごとに「入院日・退院日・利用再開日・入院理由」の入力を必ず出しているため、
+// getAll で取れる配列の並び順はどれも同じになる（i 番目が同じ行）
 function parseHospitalizations(formData: FormData): HospitalizationPeriod[] {
   const admissions = formData.getAll('hospAdmission') as string[]
   const discharges = formData.getAll('hospDischarge') as string[]
+  const resumes = formData.getAll('hospResume') as string[]
+  const reasons = formData.getAll('hospReason') as string[]
   return admissions
     .map((admissionDate, i) => ({
       admissionDate: admissionDate?.trim() ?? '',
       dischargeDate: discharges[i]?.trim() || null,
+      resumeDate: resumes[i]?.trim() || null,
+      reason: reasons[i]?.trim() || null,
     }))
     .filter(h => h.admissionDate)
 }
@@ -47,6 +53,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
   const serviceStartDate        = (formData.get('serviceStartDate') as string) || null
   const serviceEndDate          = (formData.get('serviceEndDate') as string) || null
+  const serviceEndReason        = (formData.get('serviceEndReason') as string)?.trim() || null
   const hospitalizations        = parseHospitalizations(formData)
   const weightMeasureEveryVisit  = formData.get('weightMeasureEveryVisit') === '1'
   const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
@@ -77,6 +84,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     serviceTimeCategory,
     serviceStartDate,
     serviceEndDate,
+    serviceEndReason,
     hospitalizations,
     weightMeasureEveryVisit,
     bathingCareItems,
@@ -98,6 +106,7 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+  revalidatePath('/monthly-report')
   redirect('/residents')
 }
 
@@ -121,6 +130,7 @@ export async function deleteResident(id: string): Promise<{ error?: string }> {
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+  revalidatePath('/monthly-report')
   return {}
 }
 
@@ -141,6 +151,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const serviceTimeCategory     = (formData.get('serviceTimeCategory') as string) || null
   const serviceStartDate        = (formData.get('serviceStartDate') as string) || null
   const serviceEndDate          = (formData.get('serviceEndDate') as string) || null
+  const serviceEndReason        = (formData.get('serviceEndReason') as string)?.trim() || null
   const hospitalizations        = parseHospitalizations(formData)
   const weightMeasureEveryVisit  = formData.get('weightMeasureEveryVisit') === '1'
   const bathingCareItems         = (formData.getAll('bathingCareItems') as string[]).join(',') || null
@@ -167,6 +178,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     serviceTimeCategory,
     serviceStartDate,
     serviceEndDate,
+    serviceEndReason,
     hospitalizations,
     isActive: isActiveOn(serviceEndDate, jstToday()),
     weightMeasureEveryVisit,
@@ -184,6 +196,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+  revalidatePath('/monthly-report')
   redirect('/residents')
 }
 
@@ -223,6 +236,7 @@ export async function generateAllFurigana(): Promise<{ updated: number; errors: 
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+  revalidatePath('/monthly-report')
   return { updated, errors }
 }
 
@@ -232,6 +246,7 @@ export async function toggleActive(id: string, isActive: boolean) {
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+  revalidatePath('/monthly-report')
 }
 
 // 氏名から性別を推定する。あくまで入力補助の候補であり、判断がつかない名前は空を返す。

@@ -88,6 +88,16 @@ export const SERVICE_START_TIMES = (() => {
 
 export const SERVICE_TIME_CATEGORIES = ['3-4', '4-5', '5-6', '6-7', '7-8', '8-9'] as const
 
+/** 提供時間区分の表示名。画面ごとに書き分けるとずれるため、ここに集約する */
+export const SERVICE_TIME_CATEGORY_LABELS: Record<string, string> = {
+  '3-4': '3〜4時間',
+  '4-5': '4〜5時間',
+  '5-6': '5〜6時間',
+  '6-7': '6〜7時間',
+  '7-8': '7〜8時間',
+  '8-9': '8〜9時間',
+}
+
 // 排便の記録項目
 export const BOWEL_AMOUNT_OPTIONS = ['少量', '片手', '両手', '多量'] as const
 export const BOWEL_QUALITY_OPTIONS = ['コロ便', '硬便', '普通', '軟便', '水様便'] as const
@@ -95,6 +105,13 @@ export const BOWEL_QUALITY_OPTIONS = ['コロ便', '硬便', '普通', '軟便',
 export interface HospitalizationPeriod {
   admissionDate: string
   dischargeDate: string | null
+  /**
+   * 退院後、実際に利用を再開した日。退院日と同じとは限らない（自宅療養をはさむことがある）。
+   * 未入力なら退院日をもって再開したものとして扱う
+   */
+  resumeDate?: string | null
+  /** 入院理由。以前に登録された期間には入っていないため任意 */
+  reason?: string | null
 }
 
 export interface Resident {
@@ -121,6 +138,8 @@ export interface Resident {
   serviceTimeCategory: string | null
   serviceStartDate: string | null
   serviceEndDate: string | null
+  /** 利用中止の理由（入所・入院・転居・死亡・自己都合など）。月次報告の中止者一覧に出す */
+  serviceEndReason: string | null
   hospitalizations: HospitalizationPeriod[] | null
   gender: string | null
   /** ACPの取り組みで設定するメインのゴールのイメージ */

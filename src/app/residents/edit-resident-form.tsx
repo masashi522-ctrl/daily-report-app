@@ -35,7 +35,7 @@ function HospitalizationEditor({
     onChange(periods.map((p, idx) => (idx === i ? { ...p, [field]: value || null } : p)))
   }
   function add() {
-    onChange([...periods, { admissionDate: '', dischargeDate: null }])
+    onChange([...periods, { admissionDate: '', dischargeDate: null, resumeDate: null, reason: null }])
   }
   function remove(i: number) {
     onChange(periods.filter((_, idx) => idx !== i))
@@ -46,7 +46,9 @@ function HospitalizationEditor({
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-semibold text-amber-800">
           入退院期間
-          <span className="ml-1 font-normal text-gray-400">（複数回登録可・退院日未定なら空欄のまま）</span>
+          <span className="ml-1 font-normal text-gray-400">
+            （複数回登録可・未定なら空欄のまま。利用再開日が空欄のときは、退院日に再開したものとして数えます）
+          </span>
         </label>
         <button type="button" onClick={add}
           className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-medium">
@@ -58,18 +60,36 @@ function HospitalizationEditor({
       ) : (
         <div className="flex flex-col gap-2">
           {periods.map((p, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input type="date" name="hospAdmission" value={p.admissionDate}
-                onChange={e => update(i, 'admissionDate', e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
-              <span className="text-xs text-gray-400">〜</span>
-              <input type="date" name="hospDischarge" value={p.dischargeDate ?? ''}
-                onChange={e => update(i, 'dischargeDate', e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
-              <button type="button" onClick={() => remove(i)}
-                className="text-red-400 hover:text-red-600 shrink-0">
-                <Trash2 size={14} />
-              </button>
+            <div key={i} className="flex flex-col gap-1.5 border-t border-amber-100 first:border-t-0 pt-2 first:pt-0">
+              <div className="flex items-start gap-2">
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-gray-500">入院日</span>
+                    <input type="date" name="hospAdmission" value={p.admissionDate}
+                      onChange={e => update(i, 'admissionDate', e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
+                  </label>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-gray-500">退院日</span>
+                    <input type="date" name="hospDischarge" value={p.dischargeDate ?? ''}
+                      onChange={e => update(i, 'dischargeDate', e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
+                  </label>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-gray-500">利用再開日</span>
+                    <input type="date" name="hospResume" value={p.resumeDate ?? ''}
+                      onChange={e => update(i, 'resumeDate', e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
+                  </label>
+                </div>
+                <button type="button" onClick={() => remove(i)}
+                  className="text-red-400 hover:text-red-600 shrink-0 mt-5">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <input name="hospReason" value={p.reason ?? ''} placeholder="入院理由（例: 肺炎で入院）"
+                onChange={e => update(i, 'reason', e.target.value)}
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-amber-400" />
             </div>
           ))}
         </div>
@@ -335,6 +355,14 @@ export default function EditResidentForm({
           <input type="date" name="serviceEndDate" defaultValue={resident.serviceEndDate ?? ''}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
         </div>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-700 block mb-1">
+          利用中止の理由 <span className="text-gray-400 font-normal text-[11px]">（月次報告の中止者一覧に出ます）</span>
+        </label>
+        <input name="serviceEndReason" defaultValue={resident.serviceEndReason ?? ''}
+          placeholder="例: 特養へ入所、入院のため、転居"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
       </div>
       <HospitalizationEditor periods={hospitalizations} onChange={setHospitalizations} />
       <div>
