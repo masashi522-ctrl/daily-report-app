@@ -13,6 +13,12 @@ const STAFF_BY_FACILITY: Record<string, Record<PlanStaffField, readonly string[]
     trainingPlanAuthor: ['山根正成', '奥田知佳'],
     trainingPlanExplainer: ['佐々木優', '曽谷圭助', '奥田知佳'],
   },
+  suginoko: {
+    carePlanAuthor: [],
+    carePlanExplainer: [],
+    trainingPlanAuthor: ['有安', '奥田', '和田', '松岡'],
+    trainingPlanExplainer: [],
+  },
 }
 
 export function planStaffOptions(facilitySlug: string, field: PlanStaffField): readonly string[] {

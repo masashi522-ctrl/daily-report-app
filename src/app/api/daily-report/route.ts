@@ -87,6 +87,21 @@ const COL = {
 }
 const FONT = 'メイリオ'
 
+// 健康チェック・機能訓練の担当者名は施設ごとに決まった顔ぶれ。
+// 一覧を持たない施設はこれまで通りの既定値（旧げんき村の顔ぶれ）を使う
+const DEFAULT_VITALS_STAFF = '屋島,上野,尾崎'
+const VITALS_STAFF_BY_FACILITY: Record<string, string> = {
+  suginoko: '和田,松岡,岡本',
+}
+const DEFAULT_TRAINING_STAFF = '山根,奥田,屋島,尾崎'
+const TRAINING_STAFF_BY_FACILITY: Record<string, string> = {
+  suginoko: '有安,奥田,和田,松岡',
+}
+// 機能訓練の実施項目。一覧を持たない施設は従来通り固定文言（上下肢・体幹運動 等）のまま
+const TRAINING_ITEMS_BY_FACILITY: Record<string, string> = {
+  suginoko: '下肢筋力増強訓練,立位バランス機能増強訓練,体幹進展訓練,段差昇降訓練,姿勢調整訓練,平行棒歩行訓練,立位移動動作訓練,立位バランス訓練,立位動作訓練,歩行器歩行訓練,足底筋リラクゼーション,筋緊張調整,立位バランス保持訓練,体幹・下肢筋力強化訓練,右手指上下肢可動訓練,上下肢関節可動域訓練,関節可動域訓練,四肢伸展訓練,頸部・肩・胸郭の可動拡大訓練,体幹筋力強化訓練,重心移動動作訓練,歩行訓練,下肢筋緊張調整',
+}
+
 function buildSheet(
   wb: ExcelJS.Workbook,
   resident: Resident,
@@ -94,6 +109,7 @@ function buildSheet(
   date: string,
   aiDaily: string,
   aiRehab: string,
+  facilitySlug: string,
 ) {
   const ws = wb.addWorksheet(sheetSafeName(resident.name), {
     pageSetup: {
@@ -306,7 +322,7 @@ function buildSheet(
   vitalsStaffCell.dataValidation = {
     type: 'list',
     allowBlank: true,
-    formulae: ['"屋島,上野,尾崎"'],
+    formulae: [`"${VITALS_STAFF_BY_FACILITY[facilitySlug] ?? DEFAULT_VITALS_STAFF}"`],
     showErrorMessage: false,
   }
 
@@ -368,17 +384,35 @@ function buildSheet(
   r++
 
   // ━━━ Row 12-14: 機能訓練（3行） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 実施項目の一覧を持つ施設は、固定文言の代わりにドロップダウンから選ぶ
+  const trainItemChoices = TRAINING_ITEMS_BY_FACILITY[facilitySlug]
   const trainStartRow = r
-  const trainItems = [
-    { label: '上下肢・体幹運動',
-      start: record?.trainingDone ? (record.functionalTrainingStart ?? '') : '',
-      end:   record?.trainingDone ? (record.functionalTrainingEnd   ?? '') : '' },
-    { label: '歩行訓練',    start: '', end: '' },
-    { label: '認知機能訓練', start: '', end: '' },
-  ]
+  const trainItems = trainItemChoices
+    ? [
+        { label: '',
+          start: record?.trainingDone ? (record.functionalTrainingStart ?? '') : '',
+          end:   record?.trainingDone ? (record.functionalTrainingEnd   ?? '') : '' },
+        { label: '', start: '', end: '' },
+        { label: '', start: '', end: '' },
+      ]
+    : [
+        { label: '上下肢・体幹運動',
+          start: record?.trainingDone ? (record.functionalTrainingStart ?? '') : '',
+          end:   record?.trainingDone ? (record.functionalTrainingEnd   ?? '') : '' },
+        { label: '歩行訓練',    start: '', end: '' },
+        { label: '認知機能訓練', start: '', end: '' },
+      ]
   trainItems.forEach((item, i) => {
     ws.getRow(r).height = H(20)
-    mg(`D${r}:H${r}`, `D${r}`, item.label, COL.lblBg, COL.lblFg, false, 9)
+    const itemCell = mg(`D${r}:H${r}`, `D${r}`, item.label, COL.lblBg, COL.lblFg, false, 9)
+    if (trainItemChoices) {
+      itemCell.dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: [`"${trainItemChoices}"`],
+        showErrorMessage: false,
+      }
+    }
     mg(`I${r}:J${r}`, `I${r}`, item.start, COL.valBg, COL.valFg, false, 10)
     sc(`K${r}`, item.start || item.end ? '～' : '', COL.lblBg, COL.lblFg, false, 9)
     sc(`L${r}`, '', COL.lblBg, COL.lblFg)
@@ -408,7 +442,7 @@ function buildSheet(
   trainStaffCell.dataValidation = {
     type: 'list',
     allowBlank: true,
-    formulae: ['"山根,奥田,屋島,尾崎"'],
+    formulae: [`"${TRAINING_STAFF_BY_FACILITY[facilitySlug] ?? DEFAULT_TRAINING_STAFF}"`],
     showErrorMessage: false,
   }
 
@@ -578,7 +612,7 @@ export async function GET(request: Request) {
     if (!resident) continue
     const record = recordMap.get(residentId) ?? null
     const ai = aiTexts.get(residentId) ?? { daily: '', rehab: '' }
-    buildSheet(wb, resident, record, date, ai.daily, ai.rehab)
+    buildSheet(wb, resident, record, date, ai.daily, ai.rehab, session.facilitySlug)
   }
 
   if (wb.worksheets.length === 0) return new Response('No residents found', { status: 404 })
