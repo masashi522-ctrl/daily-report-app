@@ -165,10 +165,18 @@ export interface DailyRecord {
   bpDiastolic: number | null
   bpSystolicPm: number | null
   bpDiastolicPm: number | null
+  /** 血圧再検（AM）の値。警告の元になった値は bpSystolic/bpDiastolic に残したまま、再検した値をこちらに入れる */
+  bpSystolicRecheck: number | null
+  bpDiastolicRecheck: number | null
+  bpSystolicPmRecheck: number | null
+  bpDiastolicPmRecheck: number | null
   pulse: number | null
   pulsePm: number | null
   tempMorning: number | null
   tempAfternoon: number | null
+  /** バイタルを測定した時刻（"HH:MM"）。AM/PMそれぞれ1回分 */
+  vitalsTimeAm: string | null
+  vitalsTimePm: string | null
   bathing: BathingStatus
   mealMainFood: number | null
   mealSideFood: number | null

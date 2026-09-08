@@ -675,6 +675,13 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     <div className="text-xs font-bold text-rose-500 text-center bg-rose-50/60 rounded py-0.5">PM</div>
                   </div>
                   <div className={vRow}>
+                    <span className={vLbl}>測定時刻</span>
+                    <input type="time" value={d.vitalsTimeAm ?? ''} onChange={e => upd(resident.id, 'vitalsTimeAm', e.target.value || null)}
+                      className="w-full border border-gray-200 rounded-lg px-1 py-1.5 text-center" style={{ ...inputStyle, fontSize: '16px' }} />
+                    <input type="time" value={d.vitalsTimePm ?? ''} onChange={e => upd(resident.id, 'vitalsTimePm', e.target.value || null)}
+                      className="w-full border border-gray-200 rounded-lg px-1 py-1.5 text-center" style={{ ...inputStyle, fontSize: '16px' }} />
+                  </div>
+                  <div className={vRow}>
                     <span className={vLbl}>収縮期<br /><span className="text-[10px] text-gray-400">mmHg</span></span>
                     <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolic}   onChange={v => upd(resident.id, 'bpSystolic',   v)} min={70}  max={200} required alert={d.bpSystolic != null && (d.bpSystolic >= 160 || d.bpSystolic <= 90)} />
                     <ComboNum listId="dl-bp-sys" values={BP_SYS} current={d.bpSystolicPm} onChange={v => upd(resident.id, 'bpSystolicPm', v)} min={70}  max={200} required alert={d.bpSystolicPm != null && (d.bpSystolicPm >= 160 || d.bpSystolicPm <= 90)} />
@@ -684,6 +691,37 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                     <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolic}   onChange={v => upd(resident.id, 'bpDiastolic',   v)} min={30}  max={200} required />
                     <ComboNum listId="dl-bp-dia" values={BP_DIA} current={d.bpDiastolicPm} onChange={v => upd(resident.id, 'bpDiastolicPm', v)} min={30}  max={200} required />
                   </div>
+                  {(bpAlertAm(d) || bpAlertPm(d)) && (
+                    <div className={vRow}>
+                      <span className={`${vLbl} text-red-600 font-semibold`}>再検<br /><span className="text-[10px] text-gray-400">収縮/拡張</span></span>
+                      <div className="flex items-center gap-1 justify-center">
+                        {bpAlertAm(d) ? (<>
+                          <input type="number" placeholder="収縮" min={70} max={200}
+                            value={d.bpSystolicRecheck ?? ''} onChange={numHandler(resident.id, 'bpSystolicRecheck')}
+                            className="w-full min-w-0 border border-red-300 rounded-lg px-1 py-1.5 text-center"
+                            style={{ ...inputStyle, fontSize: '16px' }} />
+                          <span className="text-gray-400 shrink-0">/</span>
+                          <input type="number" placeholder="拡張" min={30} max={200}
+                            value={d.bpDiastolicRecheck ?? ''} onChange={numHandler(resident.id, 'bpDiastolicRecheck')}
+                            className="w-full min-w-0 border border-red-300 rounded-lg px-1 py-1.5 text-center"
+                            style={{ ...inputStyle, fontSize: '16px' }} />
+                        </>) : <span className="text-gray-300 text-xs">-</span>}
+                      </div>
+                      <div className="flex items-center gap-1 justify-center">
+                        {bpAlertPm(d) ? (<>
+                          <input type="number" placeholder="収縮" min={70} max={200}
+                            value={d.bpSystolicPmRecheck ?? ''} onChange={numHandler(resident.id, 'bpSystolicPmRecheck')}
+                            className="w-full min-w-0 border border-red-300 rounded-lg px-1 py-1.5 text-center"
+                            style={{ ...inputStyle, fontSize: '16px' }} />
+                          <span className="text-gray-400 shrink-0">/</span>
+                          <input type="number" placeholder="拡張" min={30} max={200}
+                            value={d.bpDiastolicPmRecheck ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPmRecheck')}
+                            className="w-full min-w-0 border border-red-300 rounded-lg px-1 py-1.5 text-center"
+                            style={{ ...inputStyle, fontSize: '16px' }} />
+                        </>) : <span className="text-gray-300 text-xs">-</span>}
+                      </div>
+                    </div>
+                  )}
                   <div className={vRow}>
                     <span className={vLbl}>脈拍<br /><span className="text-[10px] text-gray-400">回/分</span></span>
                     <ComboNum listId="dl-pulse" values={PULSE} current={d.pulse}   onChange={v => upd(resident.id, 'pulse',   v)} min={30} max={200} required />
@@ -784,9 +822,10 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
           </div>
         )}
         {filtered.length > 0 && (
-          <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '1150px', width: '100%' }}>
+          <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '1242px', width: '100%' }}>
             <colgroup>
               <col style={{ width: '90px' }} />   {/* 名前 */}
+              <col style={{ width: '92px' }} />   {/* 測定時刻 */}
               <col style={{ width: '148px' }} />  {/* 血圧AM */}
               <col style={{ width: '148px' }} />  {/* 血圧PM */}
               <col style={{ width: '112px' }} />  {/* 脈拍 AM+PM */}
@@ -802,6 +841,10 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
             <thead>
               <tr>
                 <th className={thName}>名前</th>
+                <th className={thVital}>
+                  <div>測定時刻</div>
+                  <div className="flex justify-around text-[9px] font-normal opacity-70"><span>AM</span><span>PM</span></div>
+                </th>
                 <th className={thVital}>
                   <div>血圧 AM</div>
                   <div className="text-[9px] font-normal opacity-70">収縮 / 拡張</div>
@@ -897,6 +940,15 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                         {isAbsent ? '欠席中 ✕' : '欠席'}
                       </button>
                     </td>
+                    {/* 測定時刻 */}
+                    <td className={td}>
+                      <div className="flex flex-col gap-1 items-center">
+                        <input type="time" value={d.vitalsTimeAm ?? ''} onChange={e => upd(resident.id, 'vitalsTimeAm', e.target.value || null)}
+                          className={numBase} style={{ ...inputStyle, width: '78px' }} />
+                        <input type="time" value={d.vitalsTimePm ?? ''} onChange={e => upd(resident.id, 'vitalsTimePm', e.target.value || null)}
+                          className={numBase} style={{ ...inputStyle, width: '78px' }} />
+                      </div>
+                    </td>
                     {/* 血圧AM */}
                     <td className={`${td} ${cellTone(resident.id, ['bpSystolic', 'bpDiastolic'], bpAlertAm(d), isAbsent)}`}>
                       <div className="flex items-center gap-1 justify-center">
@@ -910,9 +962,18 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                           className={numBase}
                           style={{ ...inputStyle, width: '60px' }} />
                       </div>
-                      {bpAlertAm(d) && !isAbsent && (
+                      {bpAlertAm(d) && !isAbsent && (<>
                         <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">血圧再検</div>
-                      )}
+                        <div className="flex items-center gap-1 justify-center mt-0.5">
+                          <input type="number" placeholder="再収縮" min={70} max={200}
+                            value={d.bpSystolicRecheck ?? ''} onChange={numHandler(resident.id, 'bpSystolicRecheck')}
+                            className={`${numBase} border-red-300`} style={{ ...inputStyle, width: '60px' }} />
+                          <span className="text-gray-400 shrink-0">/</span>
+                          <input type="number" placeholder="再拡張" min={30} max={200}
+                            value={d.bpDiastolicRecheck ?? ''} onChange={numHandler(resident.id, 'bpDiastolicRecheck')}
+                            className={`${numBase} border-red-300`} style={{ ...inputStyle, width: '60px' }} />
+                        </div>
+                      </>)}
                     </td>
                     {/* 血圧PM */}
                     <td className={`${td} ${cellTone(resident.id, ['bpSystolicPm', 'bpDiastolicPm'], bpAlertPm(d), isAbsent)}`}>
@@ -926,9 +987,18 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
                           value={d.bpDiastolicPm ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPm')}
                           className={numBase} style={{ ...inputStyle, width: '60px' }} />
                       </div>
-                      {bpAlertPm(d) && !isAbsent && (
+                      {bpAlertPm(d) && !isAbsent && (<>
                         <div className="text-center mt-0.5 text-[9px] font-bold text-red-600">血圧再検</div>
-                      )}
+                        <div className="flex items-center gap-1 justify-center mt-0.5">
+                          <input type="number" placeholder="再収縮" min={70} max={200}
+                            value={d.bpSystolicPmRecheck ?? ''} onChange={numHandler(resident.id, 'bpSystolicPmRecheck')}
+                            className={`${numBase} border-red-300`} style={{ ...inputStyle, width: '60px' }} />
+                          <span className="text-gray-400 shrink-0">/</span>
+                          <input type="number" placeholder="再拡張" min={30} max={200}
+                            value={d.bpDiastolicPmRecheck ?? ''} onChange={numHandler(resident.id, 'bpDiastolicPmRecheck')}
+                            className={`${numBase} border-red-300`} style={{ ...inputStyle, width: '60px' }} />
+                        </div>
+                      </>)}
                     </td>
                     {/* 脈拍 AM/PM */}
                     <td className={`${td} ${cellTone(resident.id, ['pulse', 'pulsePm'], pulseAlertAm(d) || pulseAlertPm(d), isAbsent)}`}>

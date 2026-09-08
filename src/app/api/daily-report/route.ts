@@ -279,8 +279,9 @@ function buildSheet(
     ((record.bpSystolic ?? 0) >= 160 || (record.bpDiastolic ?? 0) >= 90)
   const bpAmStr = record?.bpSystolic != null
     ? `${record.bpSystolic} / ${record.bpDiastolic ?? '?'}`
+      + (record.bpSystolicRecheck != null ? ` (再検 ${record.bpSystolicRecheck}/${record.bpDiastolicRecheck ?? '?'})` : '')
     : ''
-  mg(`E${r}:G${r}`, `E${r}`, '9:30',   COL.valBg, COL.lblFg, false, 9)
+  mg(`E${r}:G${r}`, `E${r}`, record?.vitalsTimeAm || '9:30',   COL.valBg, COL.lblFg, false, 9)
   mg(`H${r}:J${r}`, `H${r}`,
     record?.tempMorning != null ? String(record.tempMorning) : '',
     COL.valBg, COL.valFg, false, 10)
@@ -300,8 +301,9 @@ function buildSheet(
   sc(`D${r}`, '', COL.valBg, COL.valFg)
   const bpPmStr = record?.bpSystolicPm != null
     ? `${record.bpSystolicPm} / ${record.bpDiastolicPm ?? '?'}`
+      + (record.bpSystolicPmRecheck != null ? ` (再検 ${record.bpSystolicPmRecheck}/${record.bpDiastolicPmRecheck ?? '?'})` : '')
     : ''
-  mg(`E${r}:G${r}`, `E${r}`, '13:30', COL.valBg, COL.lblFg, false, 9)
+  mg(`E${r}:G${r}`, `E${r}`, record?.vitalsTimePm || '13:30', COL.valBg, COL.lblFg, false, 9)
   mg(`H${r}:J${r}`, `H${r}`,
     record?.tempAfternoon != null ? String(record.tempAfternoon) : '',
     COL.valBg, COL.valFg, false, 10)
