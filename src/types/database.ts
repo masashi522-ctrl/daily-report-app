@@ -170,6 +170,9 @@ export interface DailyRecord {
   bpDiastolicRecheck: number | null
   bpSystolicPmRecheck: number | null
   bpDiastolicPmRecheck: number | null
+  /** 血圧再検を行った時刻（"HH:MM"） */
+  bpRecheckTimeAm: string | null
+  bpRecheckTimePm: string | null
   pulse: number | null
   pulsePm: number | null
   tempMorning: number | null

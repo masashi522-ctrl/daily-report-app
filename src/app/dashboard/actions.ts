@@ -19,6 +19,8 @@ function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; da
     bpDiastolicRecheck: data.bpDiastolicRecheck ?? null,
     bpSystolicPmRecheck: data.bpSystolicPmRecheck ?? null,
     bpDiastolicPmRecheck: data.bpDiastolicPmRecheck ?? null,
+    bpRecheckTimeAm: data.bpRecheckTimeAm ?? null,
+    bpRecheckTimePm: data.bpRecheckTimePm ?? null,
     pulse: data.pulse ?? null,
     pulsePm: data.pulsePm ?? null,
     tempMorning: data.tempMorning ?? null,
