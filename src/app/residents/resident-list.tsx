@@ -100,7 +100,7 @@ export default function ResidentList({
       key: 'start-date',
       label: '利用開始日',
       badge: '開始日なし',
-      detail: '記録があるため、実際に利用を始める前の月にも集計対象として並び、月次報告の「新規利用開始」にも出てきません。',
+      detail: '記録があるため、実際に利用を始める前の月にも集計対象として並び、月次報告の「新規利用開始」にも出てきません。（登録から3か月以内の方のみ表示）',
       ids: new Set(missingStartDateIds),
     },
     {

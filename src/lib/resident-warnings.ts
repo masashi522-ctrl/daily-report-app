@@ -34,16 +34,40 @@ export async function residentIdsWithRecords(residentIds: string[]): Promise<Set
   return found
 }
 
+/** 「最近登録した」とみなす期間。これより前に登録した方は、開始日を今さら
+ *  調べるのが難しいことが多いため、開始日なしの警告からは外す */
+const RECENT_REGISTRATION_MONTHS = 3
+
+/**
+ * この絞り込みを導入した日。アプリ導入からまだ日が浅い施設では、
+ * 昔から利用している方も含めて全員がこの数か月以内に登録されているため、
+ * 「登録から3か月」だけでは既存の方を絞り込みきれない。
+ * 導入日より前に登録された方は、導入日を基準にまとめて対象外にする
+ * （導入から3か月経てば、この基準は自然と通常のローリング判定に戻る）。
+ */
+const WARNING_INTRODUCED_AT = new Date('2026-08-12T00:00:00+09:00')
+
+export function isRecentlyRegistered(createdAt: string, now: Date = new Date()): boolean {
+  const rollingThreshold = new Date(now)
+  rollingThreshold.setMonth(rollingThreshold.getMonth() - RECENT_REGISTRATION_MONTHS)
+  const threshold = rollingThreshold > WARNING_INTRODUCED_AT ? rollingThreshold : WARNING_INTRODUCED_AT
+  return new Date(createdAt) >= threshold
+}
+
 /**
  * 利用開始日が未入力のまま記録がある方のID。
  * 開始日が無いと、実際に利用を始める前の月にも集計対象として並び、
  * 月次報告の「新規利用開始」にも出てこない。
+ *
+ * ただし登録から日が経った方は、今さら開始日を調べるのが難しいことが多いため、
+ * 直近{@link RECENT_REGISTRATION_MONTHS}か月以内に登録した方に絞って知らせる。
  */
 export async function residentIdsMissingServiceStart(
-  residents: { id: string; serviceStartDate?: string | null }[],
+  residents: { id: string; serviceStartDate?: string | null; createdAt: string }[],
+  now: Date = new Date(),
 ): Promise<string[]> {
   const candidates = residents
-    .filter(r => !String(r.serviceStartDate ?? '').trim())
+    .filter(r => !String(r.serviceStartDate ?? '').trim() && isRecentlyRegistered(r.createdAt, now))
     .map(r => r.id)
   if (candidates.length === 0) return []
 

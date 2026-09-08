@@ -7,6 +7,7 @@ import AddTemporaryModal from './add-temporary-modal'
 import DaySummaryBar from './day-summary'
 import { summarizeDay } from '@/lib/attendance-stats'
 import { isInServicePeriod } from '@/lib/service-period'
+import { isRecentlyRegistered } from '@/lib/resident-warnings'
 
 function toDateStr(date: Date) {
   return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -69,8 +70,11 @@ export default async function DashboardPage({
   )
 
   // 利用開始日が未入力の方。記録を書く画面で気づけるよう、その日に並ぶ方から数える。
-  // 一覧に出ている＝その日の記録を付ける方なので、記録の有無を別途調べる必要はない
-  const missingStartDate = residents.filter((r: Resident) => !String(r.serviceStartDate ?? '').trim())
+  // 一覧に出ている＝その日の記録を付ける方なので、記録の有無を別途調べる必要はない。
+  // 登録から日が経った方は、今さら開始日を調べるのが難しいことが多いため対象外にする
+  // （/residents の警告と同じ基準。resident-warnings.ts参照）
+  const missingStartDate = residents.filter((r: Resident) =>
+    !String(r.serviceStartDate ?? '').trim() && isRecentlyRegistered(r.createdAt))
 
   // 本日すでに臨時追加済みの residentId
   const temporaryIds = (records ?? [])
@@ -112,7 +116,7 @@ export default async function DashboardPage({
               本日の一覧に、利用開始日が未入力の方が{missingStartDate.length}名います。
             </span>
             <span className="block text-xs mt-0.5">
-              未入力のままだと、実際に利用を始める前の月にも集計対象として並び、月次報告の「新規利用開始」にも出てきません。
+              未入力のままだと、実際に利用を始める前の月にも集計対象として並び、月次報告の「新規利用開始」にも出てきません。（登録から3か月以内の方のみ表示）
             </span>
           </p>
           <Link
