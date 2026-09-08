@@ -64,6 +64,7 @@ export const BATHING_SPECIAL_ITEMS = [
   { key: 'BATH_BENCH',       label: '浴槽台' },
   { key: 'RIGHT_BATH',       label: '右側浴槽' },
   { key: 'LEFT_BATH',        label: '左側浴槽' },
+  { key: 'MACHINE_BATH',     label: '機械浴' },
   { key: 'PERSONAL_ITEMS',   label: '本人持参物品あり' },
   { key: 'SHOWER_REQUESTED', label: '本人希望でシャワー浴' },
   { key: 'SPO2_CHECK',       label: '入浴前後のSpO2（備考欄に記載）' },
