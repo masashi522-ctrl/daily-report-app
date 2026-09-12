@@ -92,6 +92,15 @@ function MetricRows({ metrics, muted }: { metrics: Metrics; muted?: boolean }) {
           </dd>
         </div>
       ))}
+      <div className="mt-1 pt-1 border-t border-dashed border-gray-100">
+        <div className="flex items-baseline justify-between gap-2">
+          <dt className="text-xs text-gray-500">中重度者の割合</dt>
+          <dd className={`text-sm font-medium ${muted ? 'text-gray-500' : 'text-gray-700'}`}>
+            {fmtRate(metrics.severeRate)}
+          </dd>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-0.5">（要介護3以上・加算要件30%以上）</p>
+      </div>
     </dl>
   )
 }
@@ -295,7 +304,13 @@ export default async function MonthlyReportPage({
                 <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">実質稼働率</th>
                 <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">平均延べ利用者数</th>
                 <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">営業日数</th>
-                <th className="text-right py-1.5 font-medium whitespace-nowrap pl-2">延べ利用者数</th>
+                <th className="text-right py-1.5 font-medium whitespace-nowrap px-2">延べ利用者数</th>
+                <th className="text-right py-1.5 font-medium whitespace-nowrap pl-2">
+                  中重度者の割合
+                  <span className="block text-[10px] text-gray-300 font-normal">
+                    （要介護3以上・加算要件30%以上）
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -316,9 +331,12 @@ export default async function MonthlyReportPage({
                   </td>
                   <td className="py-2 text-right px-2">{fmtAvg(fy.metrics.avgDailyVisits)}</td>
                   <td className="py-2 text-right px-2">{fy.metrics.businessDays}日</td>
-                  <td className="py-2 text-right pl-2">
+                  <td className="py-2 text-right px-2">
                     {fy.metrics.totalVisits}人
                     <span className="text-xs text-gray-400 ml-1">（按分 {fy.metrics.weightedVisits}）</span>
+                  </td>
+                  <td className="py-2 text-right pl-2 font-medium text-gray-700">
+                    {fmtRate(fy.metrics.severeRate)}
                   </td>
                 </tr>
               ))}
@@ -332,6 +350,8 @@ export default async function MonthlyReportPage({
           <p>単純稼働率 = 延べ利用者数（実人数）÷（定員 × 営業日数）</p>
           <p>実質稼働率 = 按分後の延べ利用者数 ÷（定員 × 営業日数）</p>
           <p>平均延べ利用者数 = 按分後の延べ利用者数 ÷ 営業日数（1日あたり）</p>
+          <p>中重度者の割合 = 要介護3以上の延べ利用者数 ÷ 延べ利用者数（実人数）。介護度は現在の登録内容で算出しています</p>
+          <p>中重度者ケア体制加算の算定要件は、原則この割合が30%以上であることです（他の要件は含みません）。</p>
           <p>稼働率は現在の定員設定をもとに算出しています。</p>
         </div>
       </div>

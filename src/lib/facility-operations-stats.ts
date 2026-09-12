@@ -15,6 +15,11 @@ const OPERATING_DOW_THRESHOLD = 0.5
 
 export const UNSET_CARE_LEVEL = '未設定'
 
+/** 中重度者ケア体制加算の対象（要介護3・4・5） */
+export function isSevereCareLevel(careLevel: string | null | undefined): boolean {
+  return careLevel === '要介護3' || careLevel === '要介護4' || careLevel === '要介護5'
+}
+
 // サービス提供時間による按分（5時間以上=1.0人／3時間以上5時間未満=0.5人／3時間未満=0人）
 export function weightForHours(hours: number): number {
   if (hours >= 5) return 1
@@ -54,6 +59,10 @@ export interface Metrics {
   occupancyRate: number | null
   /** 実質稼働率：按分後の延べ利用者数 ÷（定員 × 営業日数） */
   effectiveOccupancyRate: number | null
+  /** 要介護3以上の延べ利用者数 */
+  severeVisits: number
+  /** 中重度者の割合：要介護3以上の延べ利用者数 ÷ 延べ利用者数（中重度者ケア体制加算の算定要件は30%以上） */
+  severeRate: number | null
 }
 
 export interface MonthSummary {
@@ -157,6 +166,7 @@ function metricsOf(
   businessDays: number,
   totalVisits: number,
   weightedVisits: number,
+  severeVisits: number,
   capacity: number | null,
 ): Metrics {
   const denominator = capacity && businessDays > 0 ? capacity * businessDays : null
@@ -167,6 +177,8 @@ function metricsOf(
     avgDailyVisits: businessDays > 0 ? round1(weightedVisits / businessDays) : null,
     occupancyRate: denominator ? round1((totalVisits / denominator) * 100) : null,
     effectiveOccupancyRate: denominator ? round1((weightedVisits / denominator) * 100) : null,
+    severeVisits: Math.round(severeVisits),
+    severeRate: totalVisits > 0 ? round1((severeVisits / totalVisits) * 100) : null,
   }
 }
 
@@ -220,6 +232,7 @@ export async function computeFacilityOperationsOverview(
     return hours == null ? 1 : weightForHours(hours)
   }
   const weightById = new Map(residents.map(r => [r.id, weightOf(r)]))
+  const careLevelById = new Map(residents.map(r => [r.id, r.careLevel]))
 
   // ── 実績の集計（前年度4月〜翌月末） ──
   const rangeFrom = `${fy - 1}-04-01`
@@ -233,12 +246,13 @@ export async function computeFacilityOperationsOverview(
     : []
 
   // 「営業日」は1件以上の日次記録（利用・欠席）があった日として推定する
-  const visitsByDate = new Map<string, { count: number; weighted: number }>()
+  const visitsByDate = new Map<string, { count: number; weighted: number; severe: number }>()
   for (const rec of records) {
-    const cur = visitsByDate.get(rec.date) ?? { count: 0, weighted: 0 }
+    const cur = visitsByDate.get(rec.date) ?? { count: 0, weighted: 0, severe: 0 }
     if (!rec.isAbsent) {
       cur.count++
       cur.weighted += weightById.get(rec.residentId) ?? 1
+      if (isSevereCareLevel(careLevelById.get(rec.residentId))) cur.severe++
     }
     visitsByDate.set(rec.date, cur)
   }
@@ -248,14 +262,16 @@ export async function computeFacilityOperationsOverview(
     let businessDays = 0
     let totalVisits = 0
     let weightedVisits = 0
+    let severeVisits = 0
     for (const date of businessDates) {
       if (date < from || date > to) continue
       businessDays++
       const entry = visitsByDate.get(date)
       totalVisits += entry?.count ?? 0
       weightedVisits += entry?.weighted ?? 0
+      severeVisits += entry?.severe ?? 0
     }
-    return metricsOf(businessDays, totalVisits, weightedVisits, capacity)
+    return metricsOf(businessDays, totalVisits, weightedVisits, severeVisits, capacity)
   }
 
   // ── 予測 ──
@@ -291,6 +307,7 @@ export async function computeFacilityOperationsOverview(
     const dow = dowOf(date)
     let count = 0
     let weighted = 0
+    let severe = 0
     for (const r of residents) {
       if (!r.isActive) continue
       if (r.attendanceDays && !r.attendanceDays.split(',').map(Number).includes(dow)) continue
@@ -298,8 +315,9 @@ export async function computeFacilityOperationsOverview(
       if (isAwayOn(r.hospitalizations, date)) continue
       count++
       weighted += weightById.get(r.id) ?? 1
+      if (isSevereCareLevel(r.careLevel)) severe++
     }
-    return { count, weighted }
+    return { count, weighted, severe }
   }
 
   // 予定人数に対する実績の比率。欠席や臨時利用をまとめて吸収する補正率として使う
@@ -314,12 +332,18 @@ export async function computeFacilityOperationsOverview(
   const predictedVisits = (dates: string[]) => {
     let count = 0
     let weighted = 0
+    let severe = 0
     for (const d of dates) {
       const s = scheduledOn(d)
       count += s.count
       weighted += s.weighted
+      severe += s.severe
     }
-    return { count: Math.round(count * forecastRatio), weighted: weighted * forecastRatio }
+    return {
+      count: Math.round(count * forecastRatio),
+      weighted: weighted * forecastRatio,
+      severe: severe * forecastRatio,
+    }
   }
 
   const operatingDatesIn = (y: number, m: number, after?: string) =>
@@ -338,6 +362,7 @@ export async function computeFacilityOperationsOverview(
     currentActual.businessDays + remainingDates.length,
     currentActual.totalVisits + remainingPrediction.count,
     currentActual.weightedVisits + remainingPrediction.weighted,
+    currentActual.severeVisits + remainingPrediction.severe,
     capacity,
   )
 
@@ -347,6 +372,7 @@ export async function computeFacilityOperationsOverview(
     nextDates.length,
     nextPrediction.count,
     nextPrediction.weighted,
+    nextPrediction.severe,
     capacity,
   )
 
@@ -412,7 +438,7 @@ export async function computeFacilityOperationsOverview(
     nextMonth: {
       year: next.year,
       month: next.month,
-      actual: metricsOf(0, 0, 0, capacity),
+      actual: metricsOf(0, 0, 0, 0, capacity),
       forecast: nextForecast,
     },
     currentFiscalYear: {
