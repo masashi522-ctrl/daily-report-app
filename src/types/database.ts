@@ -45,6 +45,10 @@ export interface Staff {
   password: string
   role: Role
   facilityId: string | null
+  /** 連続ログイン失敗回数。ログイン成功でゼロに戻す */
+  failedLoginAttempts: number
+  /** この時刻までログインを拒否する（未設定＝ロックなし） */
+  lockedUntil: string | null
   createdAt: string
   updatedAt: string
 }
