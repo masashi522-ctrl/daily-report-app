@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { logAudit } from '@/lib/audit-log'
 import { toFurigana } from '@/lib/furigana'
 import Anthropic from '@anthropic-ai/sdk'
 import { revalidatePath } from 'next/cache'
@@ -67,8 +68,9 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
   const shareDailyReport         = familyContactEnabled && formData.get('shareDailyReport') === '1'
   const shareActivityPhoto       = familyContactEnabled && formData.get('shareActivityPhoto') === '1'
 
+  const newResidentId = crypto.randomUUID()
   const { error } = await supabase.from('Resident').insert({
-    id: crypto.randomUUID(),
+    id: newResidentId,
     name,
     furigana: furigana || null,
     foodType,
@@ -103,6 +105,12 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
 
   if (error) return { error: `登録に失敗しました: ${error.message}` }
 
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'create', targetType: 'Resident', targetId: newResidentId,
+    summary: `利用者「${name}」を登録`,
+  })
+
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
@@ -124,8 +132,15 @@ export async function deleteResident(id: string): Promise<{ error?: string }> {
     }
   }
 
+  const { data: target } = await supabase.from('Resident').select('name').eq('id', id).maybeSingle()
   const { error } = await supabase.from('Resident').delete().eq('id', id).eq('facilityId', session.facilityId)
   if (error) return { error: `削除に失敗しました: ${error.message}` }
+
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'delete', targetType: 'Resident', targetId: id,
+    summary: `利用者「${target?.name ?? id}」を削除`,
+  })
 
   revalidatePath('/residents')
   revalidatePath('/weight')
@@ -193,6 +208,12 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
 
   if (error) return { error: `更新に失敗しました: ${error.message}` }
 
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'update', targetType: 'Resident', targetId: id,
+    summary: `利用者「${name}」を更新`,
+  })
+
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')
@@ -249,6 +270,11 @@ export async function generateAllFurigana(): Promise<{ updated: number; errors: 
 export async function toggleActive(id: string, isActive: boolean) {
   const session = await requireSession()
   await supabase.from('Resident').update({ isActive, updatedAt: new Date().toISOString() }).eq('id', id).eq('facilityId', session.facilityId)
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'update', targetType: 'Resident', targetId: id,
+    summary: isActive ? '在籍に戻した' : '退所扱いにした',
+  })
   revalidatePath('/residents')
   revalidatePath('/weight')
   revalidatePath('/analytics')

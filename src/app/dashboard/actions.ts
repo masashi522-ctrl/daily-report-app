@@ -1,8 +1,9 @@
 'use server'
 
 import { supabase } from '@/lib/supabase'
-import { requireSession } from '@/lib/session'
+import { requireSession, type SessionPayload } from '@/lib/session'
 import { isResidentInFacility, residentIdsInFacility } from '@/lib/facility-guard'
+import { logAudit } from '@/lib/audit-log'
 import { revalidatePath } from 'next/cache'
 import type { DailyRecord } from '@/types/database'
 
@@ -60,7 +61,7 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
   const session = await requireSession()
   if (!(await isResidentInFacility(data.residentId, session.facilityId))) return
 
-  await saveRecordInternal(data, session.userId)
+  await saveRecordInternal(data, session)
 
   revalidatePath('/dashboard')
   revalidatePath('/weight')
@@ -70,9 +71,9 @@ export async function saveRecord(data: Partial<DailyRecord> & { residentId: stri
 // 施設チェック済みの前提で保存する。一括保存から件数分呼ばれるため再検証しない
 async function saveRecordInternal(
   data: Partial<DailyRecord> & { residentId: string; date: string },
-  staffId: string,
+  session: SessionPayload,
 ) {
-  const record = buildRecordFields(data, staffId)
+  const record = buildRecordFields(data, session.userId)
 
   // Look up existing record to avoid overwriting fields managed by other pages
   const { data: rows } = await supabase
@@ -95,11 +96,22 @@ async function saveRecordInternal(
       weight: data.weight !== undefined ? (data.weight ?? null) : existing.weight,
     }
     await supabase.from('DailyRecord').update(merged).eq('id', existing.id)
+    await logAudit({
+      facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+      action: 'update', targetType: 'DailyRecord', targetId: existing.id,
+      summary: `${data.date}の日次記録を更新`,
+    })
   } else {
+    const id = data.id ?? crypto.randomUUID()
     await supabase.from('DailyRecord').insert({
       ...record,
-      id: data.id ?? crypto.randomUUID(),
+      id,
       createdAt: new Date().toISOString(),
+    })
+    await logAudit({
+      facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+      action: 'create', targetType: 'DailyRecord', targetId: id,
+      summary: `${data.date}の日次記録を作成`,
     })
   }
 }
@@ -112,7 +124,7 @@ export async function saveAllRecords(
 
   const allowed = await residentIdsInFacility(records.map(r => r.residentId), session.facilityId)
   await Promise.all(
-    records.filter(r => allowed.has(r.residentId)).map(r => saveRecordInternal(r, session.userId))
+    records.filter(r => allowed.has(r.residentId)).map(r => saveRecordInternal(r, session))
   )
 
   revalidatePath('/dashboard')

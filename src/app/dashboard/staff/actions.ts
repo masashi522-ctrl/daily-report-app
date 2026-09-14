@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
 import crypto from 'crypto'
 import { requireSession, requireAdmin } from '@/lib/session'
+import { logAudit } from '@/lib/audit-log'
 
 export type StaffFormState = { error?: string; success?: string } | null
 
@@ -22,7 +23,8 @@ export async function createStaff(_prevState: StaffFormState, formData: FormData
 
   const hash = await bcrypt.hash(password, 10)
   const now = new Date().toISOString()
-  const { error } = await supabase.from('Staff').insert({ id: crypto.randomUUID(), name, email, password: hash, role, facilityId: session.facilityId, createdAt: now, updatedAt: now })
+  const newStaffId = crypto.randomUUID()
+  const { error } = await supabase.from('Staff').insert({ id: newStaffId, name, email, password: hash, role, facilityId: session.facilityId, createdAt: now, updatedAt: now })
 
   if (error) {
     if (error.message.includes('duplicate') || error.message.includes('unique')) {
@@ -30,6 +32,12 @@ export async function createStaff(_prevState: StaffFormState, formData: FormData
     }
     return { error: 'アカウントの作成に失敗しました' }
   }
+
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'create', targetType: 'Staff', targetId: newStaffId,
+    summary: `職員「${name}」（${role === 'ADMIN' ? '管理者' : 'スタッフ'}）を追加`,
+  })
 
   revalidatePath('/dashboard/staff')
   return { success: `${name} のアカウントを作成しました` }
@@ -70,6 +78,12 @@ export async function updateStaff(_prevState: StaffFormState, formData: FormData
     return { error: '更新に失敗しました' }
   }
 
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'update', targetType: 'Staff', targetId: id,
+    summary: `職員「${name}」の情報を更新${password ? '（パスワード変更あり）' : ''}`,
+  })
+
   revalidatePath('/dashboard/staff')
   return { success: `${name} の情報を更新しました` }
 }
@@ -77,8 +91,17 @@ export async function updateStaff(_prevState: StaffFormState, formData: FormData
 export async function deleteStaff(id: string) {
   const session = await requireSession()
   if (session.role !== 'ADMIN' && session.userId !== id) return
+
+  const { data: target } = await supabase.from('Staff').select('name').eq('id', id).maybeSingle()
   // 他施設の職員を id 指定で削除できないよう、自施設に限定する
   await supabase.from('Staff').delete().eq('id', id).eq('facilityId', session.facilityId)
+
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'delete', targetType: 'Staff', targetId: id,
+    summary: `職員「${target?.name ?? id}」を削除`,
+  })
+
   revalidatePath('/dashboard/staff')
 }
 
@@ -114,6 +137,12 @@ export async function issueTempPassword(
     .eq('facilityId', session.facilityId)
 
   if (error) return { error: `発行に失敗しました: ${error.message}` }
+
+  await logAudit({
+    facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+    action: 'update', targetType: 'Staff', targetId: staffId,
+    summary: `職員「${staff.name}」に一時パスワードを発行`,
+  })
 
   revalidatePath('/dashboard/staff')
   return { password, name: staff.name }

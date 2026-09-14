@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { isResidentInFacility, residentIdsInFacility } from '@/lib/facility-guard'
+import { logAudit } from '@/lib/audit-log'
 import { revalidatePath } from 'next/cache'
 import type { DailyRecord } from '@/types/database'
 
@@ -58,6 +59,11 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathin
       console.error('[bathing UPDATE error]', error)
       return { data: null, error: error.message }
     }
+    await logAudit({
+      facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+      action: 'update', targetType: 'DailyRecord', targetId: existing.id,
+      summary: `${draft.date}の入浴記録を更新`,
+    })
     revalidatePath('/bathing')
     revalidatePath('/analytics')
     return { data: saved as DailyRecord, error: null }
@@ -85,6 +91,11 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathin
       console.error('[bathing INSERT error]', error)
       return { data: null, error: error.message }
     }
+    await logAudit({
+      facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+      action: 'create', targetType: 'DailyRecord', targetId: saved!.id,
+      summary: `${draft.date}の入浴記録を作成`,
+    })
     revalidatePath('/bathing')
     revalidatePath('/analytics')
     return { data: saved as DailyRecord, error: null }

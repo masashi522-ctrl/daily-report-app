@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { isResidentInFacility } from '@/lib/facility-guard'
+import { logAudit } from '@/lib/audit-log'
 import { revalidatePath } from 'next/cache'
 
 export type WeightFormState = { error?: string; success?: boolean } | null
@@ -37,9 +38,15 @@ export async function saveWeight(
       .update({ weight, updatedAt: new Date().toISOString() })
       .eq('id', existing.id)
     if (error) return { error: `保存に失敗しました: ${error.message}` }
+    await logAudit({
+      facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+      action: 'update', targetType: 'DailyRecord', targetId: existing.id,
+      summary: `${date}の体重を更新`,
+    })
   } else {
+    const id = crypto.randomUUID()
     const { error } = await supabase.from('DailyRecord').insert({
-      id: crypto.randomUUID(),
+      id,
       residentId,
       date,
       staffId: null,
@@ -57,6 +64,11 @@ export async function saveWeight(
       updatedAt: new Date().toISOString(),
     })
     if (error) return { error: `保存に失敗しました: ${error.message}` }
+    await logAudit({
+      facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+      action: 'create', targetType: 'DailyRecord', targetId: id,
+      summary: `${date}の体重を作成`,
+    })
   }
 
   revalidatePath('/weight')
@@ -71,6 +83,13 @@ export async function deleteWeight(residentId: string, date: string): Promise<{ 
     return { error: 'この利用者は操作できません' }
   }
 
+  const { data: existing } = await supabase
+    .from('DailyRecord')
+    .select('id')
+    .eq('residentId', residentId)
+    .eq('date', date)
+    .maybeSingle()
+
   const { error } = await supabase
     .from('DailyRecord')
     .update({ weight: null, updatedAt: new Date().toISOString() })
@@ -78,6 +97,14 @@ export async function deleteWeight(residentId: string, date: string): Promise<{ 
     .eq('date', date)
 
   if (error) return { error: `削除に失敗しました: ${error.message}` }
+
+  if (existing) {
+    await logAudit({
+      facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+      action: 'update', targetType: 'DailyRecord', targetId: existing.id,
+      summary: `${date}の体重を削除`,
+    })
+  }
 
   revalidatePath('/weight')
   revalidatePath('/analytics')

@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
 import { isResidentInFacility, residentIdsInFacility } from '@/lib/facility-guard'
+import { logAudit } from '@/lib/audit-log'
 import { revalidatePath } from 'next/cache'
 import type { DailyRecord } from '@/types/database'
 
@@ -50,6 +51,13 @@ export async function saveTrainingRecord(draft: TrainingDraft): Promise<DailyRec
       .select('*')
       .single()
     if (error) console.error('[training UPDATE error]', error)
+    else {
+      await logAudit({
+        facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+        action: 'update', targetType: 'DailyRecord', targetId: existing.id,
+        summary: `${draft.date}の機能訓練記録を更新`,
+      })
+    }
     revalidatePath('/training')
     revalidatePath('/analytics')
     return (saved as DailyRecord) ?? null
@@ -74,6 +82,13 @@ export async function saveTrainingRecord(draft: TrainingDraft): Promise<DailyRec
       .select('*')
       .single()
     if (error) console.error('[training INSERT error]', error)
+    else {
+      await logAudit({
+        facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
+        action: 'create', targetType: 'DailyRecord', targetId: saved!.id,
+        summary: `${draft.date}の機能訓練記録を作成`,
+      })
+    }
     revalidatePath('/training')
     revalidatePath('/analytics')
     return (saved as DailyRecord) ?? null
