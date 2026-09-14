@@ -57,7 +57,7 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathin
       .single()
     if (error) {
       console.error('[bathing UPDATE error]', error)
-      return { data: null, error: error.message }
+      return { data: null, error: '保存に失敗しました' }
     }
     await logAudit({
       facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
@@ -89,7 +89,7 @@ export async function saveBathingRecord(draft: BathingDraft): Promise<SaveBathin
       .single()
     if (error) {
       console.error('[bathing INSERT error]', error)
-      return { data: null, error: error.message }
+      return { data: null, error: '保存に失敗しました' }
     }
     await logAudit({
       facilityId: session.facilityId, staffId: session.userId, staffName: session.name,

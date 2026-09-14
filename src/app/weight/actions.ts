@@ -37,7 +37,10 @@ export async function saveWeight(
       .from('DailyRecord')
       .update({ weight, updatedAt: new Date().toISOString() })
       .eq('id', existing.id)
-    if (error) return { error: `保存に失敗しました: ${error.message}` }
+    if (error) {
+      console.error('[saveWeight]', error.message)
+      return { error: '保存に失敗しました' }
+    }
     await logAudit({
       facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
       action: 'update', targetType: 'DailyRecord', targetId: existing.id,
@@ -63,7 +66,10 @@ export async function saveWeight(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
-    if (error) return { error: `保存に失敗しました: ${error.message}` }
+    if (error) {
+      console.error('[saveWeight]', error.message)
+      return { error: '保存に失敗しました' }
+    }
     await logAudit({
       facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
       action: 'create', targetType: 'DailyRecord', targetId: id,
@@ -96,7 +102,10 @@ export async function deleteWeight(residentId: string, date: string): Promise<{ 
     .eq('residentId', residentId)
     .eq('date', date)
 
-  if (error) return { error: `削除に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[deleteWeight]', error.message)
+    return { error: '削除に失敗しました' }
+  }
 
   if (existing) {
     await logAudit({

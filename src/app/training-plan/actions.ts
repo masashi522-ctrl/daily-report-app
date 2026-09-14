@@ -79,7 +79,10 @@ export async function saveTrainingPlan(
 
   if (existing) {
     const { error } = await supabase.from('TrainingPlan').update(payload).eq('id', existing.id)
-    if (error) return { error: `保存に失敗しました: ${error.message}` }
+    if (error) {
+      console.error('[training-plan save]', error.message)
+      return { error: '保存に失敗しました' }
+    }
   } else {
     const { error } = await supabase.from('TrainingPlan').insert({
       id: crypto.randomUUID(),
@@ -88,7 +91,10 @@ export async function saveTrainingPlan(
       ...payload,
       createdAt: new Date().toISOString(),
     })
-    if (error) return { error: `保存に失敗しました: ${error.message}` }
+    if (error) {
+      console.error('[training-plan save]', error.message)
+      return { error: '保存に失敗しました' }
+    }
   }
 
   revalidatePath('/training-plan')

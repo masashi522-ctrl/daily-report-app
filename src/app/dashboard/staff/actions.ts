@@ -136,7 +136,10 @@ export async function issueTempPassword(
     .eq('id', staffId)
     .eq('facilityId', session.facilityId)
 
-  if (error) return { error: `発行に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[issueTempPassword]', error.message)
+    return { error: '発行に失敗しました' }
+  }
 
   await logAudit({
     facilityId: session.facilityId, staffId: session.userId, staffName: session.name,

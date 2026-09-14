@@ -83,7 +83,10 @@ export async function saveLineSetting(_prev: LineSettingState, formData: FormDat
     })
     .eq('id', session.facilityId)
 
-  if (error) return { error: `保存に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[saveLineSetting]', error.message)
+    return { error: '保存に失敗しました' }
+  }
 
   revalidatePath('/dashboard/staff')
   revalidatePath('/report')
@@ -107,7 +110,10 @@ export async function clearLineSetting(): Promise<LineSettingState> {
     })
     .eq('id', session.facilityId)
 
-  if (error) return { error: `解除に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[clearLineSetting]', error.message)
+    return { error: '解除に失敗しました' }
+  }
 
   revalidatePath('/dashboard/staff')
   revalidatePath('/report')

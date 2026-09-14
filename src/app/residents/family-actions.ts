@@ -67,7 +67,10 @@ export async function addFamilyContact(
     createdAt: now(),
     updatedAt: now(),
   })
-  if (error) return { error: `登録に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[family-actions register]', error.message)
+    return { error: '登録に失敗しました' }
+  }
 
   revalidatePath('/residents')
   return { success: `${name} を登録しました` }
@@ -96,7 +99,10 @@ export async function updateFamilyContact(
     .eq('facilityId', session.facilityId)
     .select('id')
 
-  if (error) return { error: `更新に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[family-actions update]', error.message)
+    return { error: '更新に失敗しました' }
+  }
   if ((updated?.length ?? 0) === 0) return { error: 'この連絡先は操作できません' }
 
   revalidatePath('/residents')
@@ -112,7 +118,10 @@ export async function deleteFamilyContact(contactId: string): Promise<FamilyActi
     .eq('id', contactId)
     .eq('facilityId', session.facilityId)
 
-  if (error) return { error: `削除に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[family-actions delete]', error.message)
+    return { error: '削除に失敗しました' }
+  }
 
   // 使い終わった連携コードも残さない
   await supabase.from('FamilyLinkCode').delete().eq('familyContactId', contactId)
@@ -141,7 +150,10 @@ export async function issueLinkCode(contactId: string): Promise<{ code?: string;
   const { error } = await supabase.from('FamilyLinkCode').insert({
     code, familyContactId: contactId, facilityId: session.facilityId, expiresAt, usedAt: null, createdAt: now(),
   })
-  if (error) return { error: `発行に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[family-actions issue]', error.message)
+    return { error: '発行に失敗しました' }
+  }
 
   revalidatePath('/residents')
   return { code }
@@ -158,7 +170,10 @@ export async function unlinkFamilyContact(contactId: string): Promise<FamilyActi
     .eq('facilityId', session.facilityId)
     .select('id')
 
-  if (error) return { error: `解除に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[family-actions unlink]', error.message)
+    return { error: '解除に失敗しました' }
+  }
   if ((updated?.length ?? 0) === 0) return { error: 'この連絡先は操作できません' }
 
   revalidatePath('/residents')
@@ -186,7 +201,10 @@ export async function updateShareSettings(
     .eq('id', residentId)
     .eq('facilityId', session.facilityId)
 
-  if (error) return { error: `保存に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[family-actions save]', error.message)
+    return { error: '保存に失敗しました' }
+  }
 
   revalidatePath('/residents')
   revalidatePath('/report')

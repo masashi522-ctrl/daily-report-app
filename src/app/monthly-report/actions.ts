@@ -27,7 +27,10 @@ export async function saveFacilityCapacity(
     .update({ capacity, capacityByCategory })
     .eq('id', session.facilityId)
 
-  if (error) return { error: `保存に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[monthly-report save capacity]', error.message)
+    return { error: '保存に失敗しました' }
+  }
 
   revalidatePath('/monthly-report')
   return { savedAt: new Date().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo' }) }

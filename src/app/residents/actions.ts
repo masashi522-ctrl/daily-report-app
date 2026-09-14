@@ -103,7 +103,10 @@ export async function addResident(prevState: ResidentFormState, formData: FormDa
     updatedAt: new Date().toISOString(),
   })
 
-  if (error) return { error: `登録に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[createResident]', error.message)
+    return { error: '登録に失敗しました' }
+  }
 
   await logAudit({
     facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
@@ -134,7 +137,10 @@ export async function deleteResident(id: string): Promise<{ error?: string }> {
 
   const { data: target } = await supabase.from('Resident').select('name').eq('id', id).maybeSingle()
   const { error } = await supabase.from('Resident').delete().eq('id', id).eq('facilityId', session.facilityId)
-  if (error) return { error: `削除に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[deleteResident]', error.message)
+    return { error: '削除に失敗しました' }
+  }
 
   await logAudit({
     facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
@@ -206,7 +212,10 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
     updatedAt: new Date().toISOString(),
   }).eq('id', id).eq('facilityId', session.facilityId)
 
-  if (error) return { error: `更新に失敗しました: ${error.message}` }
+  if (error) {
+    console.error('[updateResident]', error.message)
+    return { error: '更新に失敗しました' }
+  }
 
   await logAudit({
     facilityId: session.facilityId, staffId: session.userId, staffName: session.name,

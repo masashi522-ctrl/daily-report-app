@@ -150,7 +150,7 @@ export async function addTemporaryAttendance({ residentId, date }: { residentId:
       .eq('id', existing.id)
     if (error) {
       console.error('[addTemporary UPDATE error]', error)
-      return { success: false, error: error.message }
+      return { success: false, error: '保存に失敗しました' }
     }
   } else {
     const { error } = await supabase.from('DailyRecord').insert({
@@ -172,7 +172,7 @@ export async function addTemporaryAttendance({ residentId, date }: { residentId:
     })
     if (error) {
       console.error('[addTemporary INSERT error]', error)
-      return { success: false, error: error.message }
+      return { success: false, error: '保存に失敗しました' }
     }
   }
 
