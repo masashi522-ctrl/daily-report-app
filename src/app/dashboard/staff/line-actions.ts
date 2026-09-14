@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/session'
 import { getBotInfo } from '@/lib/line'
+import { encryptSecret } from '@/lib/secrets'
 import { revalidatePath } from 'next/cache'
 
 export type LineSettingState = { error?: string; success?: string } | null
@@ -73,8 +74,8 @@ export async function saveLineSetting(_prev: LineSettingState, formData: FormDat
   const { error } = await supabase
     .from('Facility')
     .update({
-      lineChannelAccessToken: accessToken,
-      lineChannelSecret: channelSecret,
+      lineChannelAccessToken: encryptSecret(accessToken),
+      lineChannelSecret: encryptSecret(channelSecret),
       lineBotUserId: info.userId,
       lineBotDisplayName: info.displayName ?? null,
       lineLinkedAt: new Date().toISOString(),

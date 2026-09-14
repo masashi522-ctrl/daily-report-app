@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { verifyLineSignature, replyText } from '@/lib/line'
+import { decryptSecret } from '@/lib/secrets'
 
 // ご家族が施設のLINE公式アカウントを友だち追加し、連携コードをトークに送ると
 // ここで FamilyContact と内部ユーザーIDが結びつく。
@@ -45,11 +46,12 @@ export async function POST(request: Request) {
     return new Response('Channel is not configured', { status: 503 })
   }
 
-  if (!verifyLineSignature(body, request.headers.get('x-line-signature'), facility.lineChannelSecret)) {
+  const channelSecret = decryptSecret(facility.lineChannelSecret)
+  if (!verifyLineSignature(body, request.headers.get('x-line-signature'), channelSecret)) {
     return new Response('Invalid signature', { status: 401 })
   }
 
-  const token = facility.lineChannelAccessToken
+  const token = decryptSecret(facility.lineChannelAccessToken)
 
   for (const event of events) {
     const userId = event.source?.userId

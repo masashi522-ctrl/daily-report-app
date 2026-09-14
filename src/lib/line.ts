@@ -1,6 +1,7 @@
 import 'server-only'
 import crypto from 'crypto'
 import { supabase } from './supabase'
+import { decryptSecret } from './secrets'
 
 // LINE Messaging API の薄いラッパー。
 //
@@ -30,8 +31,8 @@ export async function getLineChannel(facilityId: string): Promise<LineChannel | 
   if (!data?.lineChannelAccessToken) return null
   return {
     facilityId: data.id,
-    accessToken: data.lineChannelAccessToken,
-    channelSecret: data.lineChannelSecret ?? null,
+    accessToken: decryptSecret(data.lineChannelAccessToken),
+    channelSecret: data.lineChannelSecret ? decryptSecret(data.lineChannelSecret) : null,
   }
 }
 
