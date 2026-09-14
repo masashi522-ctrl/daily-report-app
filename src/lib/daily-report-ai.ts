@@ -58,8 +58,8 @@ export async function generateAIText(
   const trainingTime = record.functionalTrainingStart
     ? record.functionalTrainingStart + '-' + (record.functionalTrainingEnd ?? '')
     : ''
+  // 氏名は連絡帳の画像に別途印字し、本文にも使わないため、AIへは送らない
   const context = [
-    '利用者名: ' + resident.name,
     resident.careLevel ? '要介護区分: ' + resident.careLevel : '',
     '日付: ' + y + '年' + m + '月' + d + '日（' + DOW_JA[dow] + '曜日）',
     '体温: 午前 ' + (record.tempMorning ?? '未測定') + '℃ / 午後 ' + (record.tempAfternoon ?? '未測定') + '℃',

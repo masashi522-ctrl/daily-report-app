@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
   const { data: resident } = await supabase
     .from('Resident')
-    .select('id, name')
+    .select('id')
     .eq('id', residentId)
     .eq('facilityId', session.facilityId)
     .maybeSingle()
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       {
         role: 'user',
         content: [
-          `${resident.name}様の通所介護計画書（介護計画書）の内容です。`,
+          'この利用者の通所介護計画書（介護計画書）の内容です。',
           'この内容を踏まえて、同じ利用者の「個別機能訓練計画書」の下書きを作成してください。',
           '',
           '条件:',

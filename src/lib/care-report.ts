@@ -153,7 +153,8 @@ export function buildCareReportPrompt(
       }).join('\n')
     : 'なし'
 
-  const prompt = `以下の記録をもとに、${stats.residentName}様の${stats.year}年${stats.month}月の月次サービス利用報告書を作成してください。
+  // 氏名は書類の上部に別途印刷され、本文にも使わないため、AIへは送らない
+  const prompt = `以下の記録をもとに、この利用者の${stats.year}年${stats.month}月の月次サービス利用報告書を作成してください。
 氏名・利用日数・欠席日数は書類の上部に別途印刷されるため、本文には書かないこと。
 
 ■ サービスが実施できなかった記録（入浴・機能訓練）
