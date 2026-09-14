@@ -25,8 +25,8 @@ export default function StaffForm() {
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-52" />
       </div>
       <div>
-        <label className="text-xs text-gray-600 block mb-1">パスワード（6文字以上）</label>
-        <input name="password" type="password" required minLength={6} placeholder="••••••••"
+        <label className="text-xs text-gray-600 block mb-1">パスワード（10文字以上）</label>
+        <input name="password" type="password" required minLength={10} placeholder="••••••••"
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-36" />
       </div>
       <div>

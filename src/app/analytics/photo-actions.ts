@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { requireSession } from '@/lib/session'
+import { isResidentInFacility } from '@/lib/facility-guard'
 import { revalidatePath } from 'next/cache'
 
 const MAX_PHOTOS_PER_MONTH = 5
@@ -23,6 +24,9 @@ export async function uploadResidentPhoto(
   formData: FormData,
 ): Promise<PhotoActionState> {
   const session = await requireSession()
+  if (!(await isResidentInFacility(residentId, session.facilityId))) {
+    return { error: 'この利用者は操作できません' }
+  }
 
   const file = formData.get('file')
   if (!(file instanceof File) || file.size === 0) {

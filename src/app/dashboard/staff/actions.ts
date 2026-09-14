@@ -18,7 +18,7 @@ export async function createStaff(_prevState: StaffFormState, formData: FormData
   const role = formData.get('role') as string || 'STAFF'
 
   if (!name || !email || !password) return { error: 'すべての項目を入力してください' }
-  if (password.length < 6) return { error: 'パスワードは6文字以上にしてください' }
+  if (password.length < 10) return { error: 'パスワードは10文字以上にしてください' }
 
   const hash = await bcrypt.hash(password, 10)
   const now = new Date().toISOString()
@@ -55,7 +55,7 @@ export async function updateStaff(_prevState: StaffFormState, formData: FormData
   }
 
   if (password) {
-    if (password.length < 6) return { error: 'パスワードは6文字以上にしてください' }
+    if (password.length < 10) return { error: 'パスワードは10文字以上にしてください' }
     updates.password = await bcrypt.hash(password, 10)
   }
 

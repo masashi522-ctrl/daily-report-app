@@ -13,7 +13,8 @@ import type { Resident, DailyRecord, FamilyContact } from '@/types/database'
 // 署名付きURLをLINEに渡す。LINEは画像をURLで取りに来るため、
 // 一定時間アクセスできる場所に置く必要がある。
 const BUCKET = 'resident-monthly-photos'
-const IMAGE_TTL_SEC = 60 * 60 * 24 * 7
+// LINEが画像を取得しに来るのは送信直後なので、長時間開けておく必要はない
+const IMAGE_TTL_SEC = 60 * 60
 
 export type SendResult = {
   residentId: string

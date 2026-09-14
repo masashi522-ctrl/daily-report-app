@@ -201,6 +201,7 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
 }
 
 export async function generateFurigana(name: string): Promise<string> {
+  await requireSession()
   if (!name.trim()) return ''
   try {
     return await toFurigana(name.trim())
@@ -210,10 +211,11 @@ export async function generateFurigana(name: string): Promise<string> {
 }
 
 export async function generateAllFurigana(): Promise<{ updated: number; errors: number }> {
-  await requireSession()
+  const session = await requireSession()
   const { data: residents } = await supabase
     .from('Resident')
     .select('id, name, furigana')
+    .eq('facilityId', session.facilityId)
     .is('furigana', null)
 
   if (!residents || residents.length === 0) return { updated: 0, errors: 0 }
@@ -225,7 +227,11 @@ export async function generateAllFurigana(): Promise<{ updated: number; errors: 
     try {
       const furigana = await toFurigana(r.name)
       if (furigana) {
-        await supabase.from('Resident').update({ furigana, updatedAt: new Date().toISOString() }).eq('id', r.id)
+        await supabase
+          .from('Resident')
+          .update({ furigana, updatedAt: new Date().toISOString() })
+          .eq('id', r.id)
+          .eq('facilityId', session.facilityId)
         updated++
       }
     } catch {

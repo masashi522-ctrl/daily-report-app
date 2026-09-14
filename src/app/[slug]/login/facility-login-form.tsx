@@ -2,7 +2,6 @@
 
 import { useActionState } from 'react'
 import { facilityLogin } from '@/app/actions/auth'
-import Link from 'next/link'
 
 export default function FacilityLoginForm({ slug }: { slug: string }) {
   const boundFacilityLogin = facilityLogin.bind(null, slug)
@@ -53,11 +52,6 @@ export default function FacilityLoginForm({ slug }: { slug: string }) {
       >
         {pending ? 'ログイン中...' : 'ログイン'}
       </button>
-
-      <p className="text-center text-xs text-stone-400">
-        アカウントをお持ちでない方は{' '}
-        <Link href="/register" className="text-amber-600 hover:underline">新規登録</Link>
-      </p>
     </form>
   )
 }

@@ -7,9 +7,18 @@ const supabase = createClient(
 )
 
 async function main() {
-  const email = process.argv[2] || 'admin@dayservice.com'
-  const password = process.argv[3] || 'admin1234'
+  const email = process.argv[2]
+  const password = process.argv[3]
   const name = process.argv[4] || '管理者'
+
+  if (!email || !password) {
+    console.error('使い方: tsx src/scripts/create-admin.ts <email> <password> [name]')
+    process.exit(1)
+  }
+  if (password.length < 10) {
+    console.error('パスワードは10文字以上にしてください')
+    process.exit(1)
+  }
 
   const hash = await bcrypt.hash(password, 10)
 

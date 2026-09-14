@@ -54,8 +54,8 @@ export default function EditButton({ staff, isAdmin }: { staff: Staff; isAdmin: 
               </div>
 
               <div>
-                <label className="text-xs text-gray-600 block mb-1">新しいパスワード（変更しない場合は空欄）</label>
-                <input name="password" type="password" minLength={6} placeholder="••••••••"
+                <label className="text-xs text-gray-600 block mb-1">新しいパスワード（変更しない場合は空欄・10文字以上）</label>
+                <input name="password" type="password" minLength={10} placeholder="••••••••"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
 
