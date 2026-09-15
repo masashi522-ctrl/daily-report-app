@@ -7,7 +7,9 @@ import { logAudit } from '@/lib/audit-log'
 import { revalidatePath } from 'next/cache'
 import type { DailyRecord } from '@/types/database'
 
-function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; date: string }, staffId: string) {
+// 新規作成時のみ使用。既存行がない初回保存では、未入力の項目にNULL/falseの
+// デフォルト値を入れる必要があるため、フル項目のオブジェクトを組み立てる
+function buildNewRecordFields(data: Partial<DailyRecord> & { residentId: string; date: string }, staffId: string) {
   return {
     residentId: data.residentId,
     date: data.date,
@@ -57,51 +59,88 @@ function buildRecordFields(data: Partial<DailyRecord> & { residentId: string; da
   }
 }
 
-export async function saveRecord(data: Partial<DailyRecord> & { residentId: string; date: string }) {
-  const session = await requireSession()
-  if (!(await isResidentInFacility(data.residentId, session.facilityId))) return
+// 既存行の更新時は、このユーザーが実際に編集したフィールドだけを抽出する。
+// 全項目を送って上書きすると、その間に別の職員が保存した他項目の入力が
+// 消えてしまうため(後勝ち上書き問題)、触っていない項目はUPDATE対象に含めない
+const STRUCTURAL_FIELDS = new Set(['residentId', 'date', 'id', 'createdAt', 'updatedAt', 'staffId'])
 
-  await saveRecordInternal(data, session)
+function pickProvidedFields(data: Partial<DailyRecord> & { residentId: string; date: string }) {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (!STRUCTURAL_FIELDS.has(key) && value !== undefined) result[key] = value
+  }
+  return result
+}
+
+export type SaveRecordResult = { conflictFields: string[] }
+
+export async function saveRecord(
+  data: Partial<DailyRecord> & { residentId: string; date: string },
+  baseline?: Partial<DailyRecord>,
+): Promise<SaveRecordResult> {
+  const session = await requireSession()
+  if (!(await isResidentInFacility(data.residentId, session.facilityId))) return { conflictFields: [] }
+
+  const result = await saveRecordInternal(data, baseline, session)
 
   revalidatePath('/dashboard')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+  return result
 }
 
 // 施設チェック済みの前提で保存する。一括保存から件数分呼ばれるため再検証しない
 async function saveRecordInternal(
   data: Partial<DailyRecord> & { residentId: string; date: string },
+  baseline: Partial<DailyRecord> | undefined,
   session: SessionPayload,
-) {
-  const record = buildRecordFields(data, session.userId)
-
-  // Look up existing record to avoid overwriting fields managed by other pages
+): Promise<SaveRecordResult> {
   const { data: rows } = await supabase
     .from('DailyRecord')
-    .select('id, bathing, trainingDone, trainingSkipReason, trainingSkipDetail, trainingNote, weight')
+    .select('*')
     .eq('date', data.date)
     .eq('residentId', data.residentId)
     .limit(1)
   const existing = rows?.[0] ?? null
 
   if (existing) {
-    // Preserve fields managed by dedicated pages unless explicitly provided
-    const merged = {
-      ...record,
-      bathing: data.bathing !== undefined ? record.bathing : existing.bathing,
-      trainingDone: data.trainingDone !== undefined ? (data.trainingDone ?? false) : existing.trainingDone,
-      trainingSkipReason: data.trainingSkipReason !== undefined ? (data.trainingSkipReason ?? null) : existing.trainingSkipReason,
-      trainingSkipDetail: data.trainingSkipDetail !== undefined ? (data.trainingSkipDetail ?? null) : existing.trainingSkipDetail,
-      trainingNote: data.trainingNote !== undefined ? (data.trainingNote ?? null) : existing.trainingNote,
-      weight: data.weight !== undefined ? (data.weight ?? null) : existing.weight,
+    const provided = pickProvidedFields(data)
+
+    // baseline = このユーザーが編集を始めた時点でDBにあった値。
+    // 今のDB値がbaselineと異なる = その間に別の職員が同じ項目を更新した競合。
+    // (今のDB値がこのユーザーの新しい値と偶然同じなら実害がないので競合扱いしない)
+    const conflictFields: string[] = []
+    if (baseline) {
+      const existingRec = existing as Record<string, unknown>
+      const baselineRec = baseline as Record<string, unknown>
+      for (const key of Object.keys(provided)) {
+        if (!(key in baselineRec)) continue
+        const baselineVal = baselineRec[key] ?? null
+        const currentVal = existingRec[key] ?? null
+        const newVal = provided[key] ?? null
+        if (baselineVal !== currentVal && currentVal !== newVal) {
+          conflictFields.push(key)
+        }
+      }
     }
-    await supabase.from('DailyRecord').update(merged).eq('id', existing.id)
+    for (const key of conflictFields) delete provided[key]
+
+    const update = {
+      ...provided,
+      staffId: session.userId,
+      updatedAt: new Date().toISOString(),
+    }
+    await supabase.from('DailyRecord').update(update).eq('id', existing.id)
     await logAudit({
       facilityId: session.facilityId, staffId: session.userId, staffName: session.name,
       action: 'update', targetType: 'DailyRecord', targetId: existing.id,
-      summary: `${data.date}の日次記録を更新`,
+      summary: conflictFields.length > 0
+        ? `${data.date}の日次記録を更新（${conflictFields.length}項目は他職員の更新と競合のためスキップ: ${conflictFields.join(', ')}）`
+        : `${data.date}の日次記録を更新`,
     })
+    return { conflictFields }
   } else {
+    const record = buildNewRecordFields(data, session.userId)
     const id = data.id ?? crypto.randomUUID()
     await supabase.from('DailyRecord').insert({
       ...record,
@@ -113,23 +152,27 @@ async function saveRecordInternal(
       action: 'create', targetType: 'DailyRecord', targetId: id,
       summary: `${data.date}の日次記録を作成`,
     })
+    return { conflictFields: [] }
   }
 }
 
 export async function saveAllRecords(
-  records: (Partial<DailyRecord> & { residentId: string; date: string })[]
-) {
-  if (records.length === 0) return
+  entries: { data: Partial<DailyRecord> & { residentId: string; date: string }; baseline?: Partial<DailyRecord> }[]
+): Promise<Record<string, string[]>> {
+  if (entries.length === 0) return {}
   const session = await requireSession()
 
-  const allowed = await residentIdsInFacility(records.map(r => r.residentId), session.facilityId)
-  await Promise.all(
-    records.filter(r => allowed.has(r.residentId)).map(r => saveRecordInternal(r, session))
+  const allowed = await residentIdsInFacility(entries.map(e => e.data.residentId), session.facilityId)
+  const results = await Promise.all(
+    entries
+      .filter(e => allowed.has(e.data.residentId))
+      .map(async e => [e.data.residentId, (await saveRecordInternal(e.data, e.baseline, session)).conflictFields] as const)
   )
 
   revalidatePath('/dashboard')
   revalidatePath('/weight')
   revalidatePath('/analytics')
+  return Object.fromEntries(results.filter(([, fields]) => fields.length > 0))
 }
 
 export async function addTemporaryAttendance({ residentId, date }: { residentId: string; date: string }): Promise<{ success: boolean; error?: string }> {

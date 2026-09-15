@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { FOOD_TYPE_LABELS, BOWEL_AMOUNT_OPTIONS, BOWEL_QUALITY_OPTIONS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
 import { awayStatusOn } from '@/lib/hospitalization'
 import { saveRecord, saveAllRecords } from './actions'
@@ -13,6 +14,19 @@ interface Props {
 }
 
 type RecordDraft = Partial<DailyRecord>
+
+// 他の職員がその間に保存した項目を上書きしないよう、保存時にこのユーザーが
+// 編集を始めた時点でのDB値(baseline)を一緒に送る。編集開始後にrecordMapが
+// 更新されても、そのフィールドを最初に触った時点の値を保ち続ける
+function pickBaseline(existing: DailyRecord | undefined, draft: RecordDraft): Partial<DailyRecord> | undefined {
+  if (!existing) return undefined
+  const baseline: Record<string, unknown> = {}
+  const existingRec = existing as unknown as Record<string, unknown>
+  for (const key of Object.keys(draft)) {
+    baseline[key] = existingRec[key] ?? null
+  }
+  return baseline as Partial<DailyRecord>
+}
 
 function range(from: number, to: number, step: number) {
   const arr: number[] = []
@@ -85,10 +99,13 @@ const GOJUUON_ROWS = [
 ]
 
 export default function DailyRecordTable({ residents, recordMap, date }: Props) {
+  const router = useRouter()
   const [drafts, setDrafts] = useState<Record<string, RecordDraft>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [savingAll, setSavingAll] = useState(false)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
+  // 保存時に他の職員の更新と競合して、書き込みをスキップした項目(residentId -> フィールド名の配列)
+  const [conflicts, setConflicts] = useState<Record<string, string[]>>({})
   const [, startTransition] = useTransition()
   const [searchText, setSearchText] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -96,6 +113,22 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   const [gojuuonRow, setGojuuonRow] = useState<string | null>(null)
   const [incompleteOnly, setIncompleteOnly] = useState(false)
   const [recheckOnly, setRecheckOnly] = useState(false)
+
+  // 他の職員がこの画面を保存すると、こちらの画面には自動で反映されない
+  // (Server Componentの再取得はナビゲーション時のみ)ため、一定間隔と
+  // タブ復帰時にサーバーの最新データを取り直す。編集中のdrafts自体は
+  // useState/router.refresh()の仕様上保持されるので、入力中の内容は消えない
+  useEffect(() => {
+    const interval = setInterval(() => router.refresh(), 45_000)
+    const onVisible = () => { if (document.visibilityState === 'visible') router.refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [router])
 
   const todayNum = new Date(date + 'T00:00:00').getDay()
   const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
@@ -307,12 +340,15 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     return drafts[id] ?? recordMap[id] ?? { isAbsent: false }
   }
 
+  // drafts[id]には「実際に触った項目だけ」を積む。getDraft(id)(recordMapへの
+  // フォールバック込み)をベースにすると、保存時に未編集項目まで送ってしまい
+  // 他の職員の入力を上書きしてしまう(保存時はdrafts[id]のみを送信するため)
   function upd(id: string, field: string, value: unknown) {
-    setDrafts(prev => ({ ...prev, [id]: { ...getDraft(id), [field]: value } }))
+    setDrafts(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), [field]: value } }))
   }
 
   function updMany(id: string, fields: Partial<RecordDraft>) {
-    setDrafts(prev => ({ ...prev, [id]: { ...getDraft(id), ...fields } }))
+    setDrafts(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), ...fields } }))
   }
 
   function numHandler(id: string, field: string) {
@@ -321,29 +357,56 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
   }
 
   async function handleSave(residentId: string) {
+    // 触った項目だけを送る(未編集分は既存DBの値を保持し、他の職員の入力を消さない)
+    const draft = drafts[residentId]
+    if (!draft) {
+      setSavedIds(prev => new Set(prev).add(residentId))
+      return
+    }
     setSaving(residentId)
-    const draft = getDraft(residentId)
     const existing = recordMap[residentId]
+    const baseline = pickBaseline(existing, draft)
     startTransition(async () => {
-      await saveRecord({ ...draft, residentId, date, id: existing?.id })
+      const { conflictFields } = await saveRecord({ ...draft, residentId, date, id: existing?.id }, baseline)
       setSaving(null)
       setDrafts(prev => { const next = { ...prev }; delete next[residentId]; return next })
       setSavedIds(prev => new Set(prev).add(residentId))
+      setConflicts(prev => {
+        const next = { ...prev }
+        if (conflictFields.length > 0) next[residentId] = conflictFields
+        else delete next[residentId]
+        return next
+      })
+      if (conflictFields.length > 0) router.refresh()
     })
   }
 
   async function handleSaveAll() {
     if (savingAll) return
     setSavingAll(true)
-    const toSave = filtered.map(resident => {
-      const draft = getDraft(resident.id)
-      const existing = recordMap[resident.id]
-      return { ...draft, residentId: resident.id, date, id: existing?.id }
+    const editedIds = filtered.map(r => r.id).filter(id => drafts[id])
+    const entries = editedIds.map(residentId => {
+      const draft = drafts[residentId]
+      const existing = recordMap[residentId]
+      return {
+        data: { ...draft, residentId, date, id: existing?.id },
+        baseline: pickBaseline(existing, draft),
+      }
     })
     startTransition(async () => {
-      await saveAllRecords(toSave)
-      setDrafts({})
+      const conflictMap = entries.length > 0 ? await saveAllRecords(entries) : {}
+      setDrafts(prev => {
+        const next = { ...prev }
+        for (const id of editedIds) delete next[id]
+        return next
+      })
       setSavedIds(prev => new Set([...prev, ...filtered.map(r => r.id)]))
+      setConflicts(prev => {
+        const next = { ...prev }
+        for (const id of editedIds) delete next[id]
+        return { ...next, ...conflictMap }
+      })
+      if (Object.keys(conflictMap).length > 0) router.refresh()
       setSavingAll(false)
     })
   }
@@ -387,6 +450,26 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
 
   return (
     <>
+      {Object.keys(conflicts).length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="text-sm text-amber-900 flex-1 min-w-[16rem]">
+            <span className="font-semibold">
+              ⚠ 他の職員の更新と重なったため、一部の入力は保存されませんでした
+            </span>
+            <span className="block text-xs mt-0.5">
+              対象: {Object.keys(conflicts).map(id => residents.find(r => r.id === id)?.name ?? id).join('、')}
+              （計{Object.values(conflicts).reduce((sum, f) => sum + f.length, 0)}項目）。
+              画面を更新して最新の内容を確認し、必要な項目を入力し直してください。
+            </span>
+          </p>
+          <button
+            onClick={() => { setConflicts({}); router.refresh() }}
+            className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 font-medium whitespace-nowrap hover:border-amber-500"
+          >
+            画面を更新する
+          </button>
+        </div>
+      )}
       {/* 利用者絞り込み */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-wrap gap-2 items-center">
         {/* 曜日フィルタ＋カウント */}
@@ -845,18 +928,30 @@ const thMeal   = `${thBase} bg-amber-50    text-amber-700  border-amber-100`
         {filtered.length > 0 && (
           <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '1236px', width: '100%' }}>
             <colgroup>
-              <col style={{ width: '90px' }} />   {/* 名前 */}
-              <col style={{ width: '92px' }} />   {/* 測定時刻（AM/PM 二段） */}
-              <col style={{ width: '160px' }} />  {/* 血圧（AM/PM 二段） */}
-              <col style={{ width: '76px' }} />   {/* 脈拍（AM/PM 二段） */}
-              <col style={{ width: '76px' }} />   {/* 体温（AM/PM 二段） */}
-              <col style={{ width: '80px' }} />   {/* 水分（AM/PM 二段） */}
-              <col style={{ width: '92px' }} />   {/* 食事 */}
-              <col style={{ width: '120px' }} />  {/* 排便 */}
-              <col style={{ width: '120px' }} />  {/* 服薬・口腔 */}
-              <col style={{ width: '90px' }} />   {/* 特記 */}
-              <col style={{ width: '150px' }} />  {/* その日の様子 */}
-              <col style={{ width: '90px' }} />   {/* 保存 */}
+              {/* 名前 */}
+              <col style={{ width: '90px' }} />
+              {/* 測定時刻（AM/PM 二段） */}
+              <col style={{ width: '92px' }} />
+              {/* 血圧（AM/PM 二段） */}
+              <col style={{ width: '160px' }} />
+              {/* 脈拍（AM/PM 二段） */}
+              <col style={{ width: '76px' }} />
+              {/* 体温（AM/PM 二段） */}
+              <col style={{ width: '76px' }} />
+              {/* 水分（AM/PM 二段） */}
+              <col style={{ width: '80px' }} />
+              {/* 食事 */}
+              <col style={{ width: '92px' }} />
+              {/* 排便 */}
+              <col style={{ width: '120px' }} />
+              {/* 服薬・口腔 */}
+              <col style={{ width: '120px' }} />
+              {/* 特記 */}
+              <col style={{ width: '90px' }} />
+              {/* その日の様子 */}
+              <col style={{ width: '150px' }} />
+              {/* 保存 */}
+              <col style={{ width: '90px' }} />
             </colgroup>
             <thead>
               <tr>
