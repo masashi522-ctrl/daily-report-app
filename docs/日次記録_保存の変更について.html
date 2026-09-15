@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日次記録：保存の仕組みの改善について</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+
+<style>
+:root{
+  --paper:#f5f6f4; --surface:#ffffff;
+  --ink:#1f242b; --ink-soft:#545e68; --ink-faint:#8b9299;
+  --accent:#0f766e; --accent-ink:#0b5952; --accent-pale:#e6f2f0;
+  --good:#2d6a4f; --good-pale:#e5f0ea;
+  --warn:#b45309; --warn-bg:#fdf4e7; --warn-line:#f0d8b4;
+  --rule:#dde1e0; --rule-strong:#c3c9c7;
+  --shadow:0 1px 2px rgba(31,36,43,.04), 0 12px 30px -20px rgba(31,36,43,.3);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#181b1e; --surface:#212529;
+    --ink:#e8eaec; --ink-soft:#aab0b6; --ink-faint:#767d83;
+    --accent:#4fbfb2; --accent-ink:#7ed6cb; --accent-pale:#17322f;
+    --good:#7fc4a3; --good-pale:#173026;
+    --warn:#e0a45c; --warn-bg:#2c2114; --warn-line:#4a3820;
+    --rule:#33383c; --rule-strong:#454b50;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -20px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#181b1e; --surface:#212529;
+  --ink:#e8eaec; --ink-soft:#aab0b6; --ink-faint:#767d83;
+  --accent:#4fbfb2; --accent-ink:#7ed6cb; --accent-pale:#17322f;
+  --good:#7fc4a3; --good-pale:#173026;
+  --warn:#e0a45c; --warn-bg:#2c2114; --warn-line:#4a3820;
+  --rule:#33383c; --rule-strong:#454b50;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -20px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+  font-size:16px; line-height:1.95; letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;
+}
+.page{max-width:760px; margin:0 auto; padding:40px 20px 80px}
+.sheet{
+  background:var(--surface); border:1px solid var(--rule); border-radius:3px;
+  box-shadow:var(--shadow); padding:52px 56px 48px;
+}
+
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; letter-spacing:.2em;
+  color:var(--ink-faint); text-transform:uppercase; margin:0 0 16px;
+}
+h1{
+  font-family:"Shippori Mincho",serif; font-weight:800;
+  font-size:clamp(24px,4vw,30px); letter-spacing:.03em; line-height:1.5;
+  margin:0 0 10px; text-wrap:balance; color:var(--ink);
+}
+.lede{color:var(--ink-soft); max-width:58ch; margin:0 0 28px}
+
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 28px; padding:16px 0;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
+  margin-bottom:38px;
+}
+.meta div{display:flex; flex-direction:column; gap:2px}
+.meta dt{font-size:11px; letter-spacing:.1em; color:var(--ink-faint)}
+.meta dd{margin:0; font-size:14.5px; font-weight:500}
+
+section{margin-top:36px}
+section:first-of-type{margin-top:0}
+.sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:14px}
+.sec-no{
+  font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--accent);
+  font-weight:500; letter-spacing:.04em; padding-top:2px;
+}
+h2{
+  font-family:"Shippori Mincho",serif; font-weight:700; font-size:18.5px;
+  margin:0; letter-spacing:.02em; color:var(--ink);
+}
+.intro{color:var(--ink-soft); max-width:60ch; margin:0 0 16px}
+
+.scenario{
+  background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:3px;
+  padding:16px 20px; color:var(--ink); font-size:14.5px; line-height:1.9;
+}
+.scenario b{color:var(--warn)}
+.scenario ol{margin:8px 0 0; padding-left:1.3em}
+.scenario li{margin:4px 0}
+
+ul.measures{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
+ul.measures li{
+  position:relative; padding:11px 0 11px 34px; border-top:1px solid var(--rule);
+  color:var(--ink-soft); max-width:64ch;
+}
+ul.measures li:last-child{border-bottom:1px solid var(--rule)}
+ul.measures li::before{
+  content:"✓"; position:absolute; left:2px; top:11px;
+  width:20px; height:20px; border-radius:50%; background:var(--good-pale);
+  color:var(--good); font-size:12px; font-weight:700; line-height:20px; text-align:center;
+}
+ul.measures b{color:var(--ink); font-weight:700}
+
+.mock{
+  border:1px solid var(--warn-line); background:var(--warn-bg); border-radius:6px;
+  padding:14px 16px; margin:16px 0; font-size:13.5px; color:var(--ink);
+}
+.mock .title{font-weight:700; color:var(--warn); margin-bottom:4px}
+.mock .body{color:var(--ink-soft); line-height:1.8}
+.mock .btn{
+  display:inline-block; margin-top:10px; padding:5px 12px; border-radius:6px;
+  border:1px solid var(--warn-line); background:var(--surface); font-size:12.5px; font-weight:600;
+}
+
+.callout{
+  background:var(--accent-pale); border-radius:3px; padding:16px 20px;
+  margin-top:18px; color:var(--ink); font-size:14.5px; line-height:1.85;
+}
+.callout b{color:var(--accent-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--rule);
+  font-size:12.5px; color:var(--ink-faint); line-height:1.9;
+}
+footer .rev{font-size:14px; color:var(--ink-soft); margin-bottom:8px}
+footer .rev b{color:var(--ink); font-weight:600}
+
+@media (max-width:600px){
+  .sheet{padding:36px 24px 32px}
+}
+
+@media print{
+  :root{
+    --paper:#ffffff; --surface:#ffffff;
+    --ink:#181b1e; --ink-soft:#454b50; --ink-faint:#6b7278;
+    --accent:#0b5952; --accent-ink:#083f3b; --accent-pale:#eaf4f2;
+    --good:#1f5138; --good-pale:#e6f1ec;
+    --warn:#8a4a0c; --warn-bg:#fbf1e2; --warn-line:#e3c391;
+    --rule:#d3d8d7; --rule-strong:#b3bab8;
+    --shadow:none;
+  }
+  @page{ size:A4; margin:20mm 18mm; }
+  body{background:#fff; font-size:11.8pt; line-height:1.8}
+  .page{padding:0; max-width:none}
+  .sheet{box-shadow:none; border:none; padding:0}
+  ul.measures li, .callout, .scenario, .mock{break-inside:avoid}
+  a{color:inherit; text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="sheet">
+
+    <p class="eyebrow">Update Notes</p>
+    <h1>日次記録：保存の仕組みを改善しました</h1>
+    <p class="lede">複数の職員が同じ利用者の記録を同時に編集した際に、後から保存した側の入力によって、先に保存されていた別の職員の入力が消えてしまう場合があることがわかりました。今回、この問題を解消する改善を行いました。</p>
+
+    <dl class="meta">
+      <div><dt>対象</dt><dd>日次記録（バイタル・食事・排便・服薬など）の保存</dd></div>
+      <div><dt>対応日</dt><dd>2026年9月15日</dd></div>
+      <div><dt>影響</dt><dd>操作方法の変更なし（保存ボタンはこれまでと同じ）</dd></div>
+    </dl>
+
+    <section>
+      <div class="sec-head"><span class="sec-no">01</span><h2>何が起きていたか</h2></div>
+      <div class="scenario">
+        <b>起きていた現象。</b>次のような流れで、入力した内容が保存後に消えることがありました。
+        <ol>
+          <li>Aさんが利用者の記録画面を開いたまま、しばらく作業する</li>
+          <li>その間にBさんが同じ利用者の別の項目（例：その日の様子）を入力して保存する</li>
+          <li>AさんがBさんの変更に気づかず、自分の入力（例：血圧）を保存する</li>
+          <li>Aさんの保存によって、Bさんが書いた内容が上書きされて消えてしまう</li>
+        </ol>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-no">02</span><h2>今回の改善内容</h2></div>
+      <p class="intro">保存の仕組みを見直し、以下の3点を実装しました。</p>
+      <ul class="measures">
+        <li><b>編集した項目だけを保存する。</b>これまでは保存時に画面全体の内容をまとめて送っていましたが、実際に入力・変更した項目だけを保存するようにしました。これにより、他の職員が別の項目に入力した内容を誤って上書きすることがなくなりました</li>
+        <li><b>同じ項目を同時に編集した場合は検知して警告する。</b>ごくまれに、二人が全く同じ項目を同時に編集した場合には、後から保存した側の画面に警告を表示し、その項目だけは保存されないようにしました（他の項目は通常どおり保存されます）</li>
+        <li><b>他の職員の保存を画面に自動で反映する。</b>画面を長く開いたままにしていても、一定時間ごと、または他の画面から戻ってきたタイミングで、最新の内容が自動的に反映されるようにしました</li>
+      </ul>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-no">03</span><h2>新しく表示される警告について</h2></div>
+      <p class="intro">同じ項目の同時編集が実際に発生した場合のみ、保存後に画面上部へ次のような表示が出ます。</p>
+      <div class="mock">
+        <div class="title">⚠ 他の職員の更新と重なったため、一部の入力は保存されませんでした</div>
+        <div class="body">対象：〇〇 〇〇さん（計1項目）。画面を更新して最新の内容を確認し、必要な項目を入力し直してください。</div>
+        <span class="btn">画面を更新する</span>
+      </div>
+      <p class="intro">この表示が出た場合は、「画面を更新する」を押して最新の内容をご確認のうえ、必要であれば該当項目を入力し直してください。表示が出なければ、通常どおり保存は完了しています。</p>
+      <div class="callout"><b>記録は残ります。</b>今回の改善後は、保存できなかった項目がある場合は必ずこの警告で分かるようになっています。何も表示されなければ、入力内容はすべて反映されています。</div>
+    </section>
+
+    <footer>
+      <p class="rev"><b>対応日：2026年9月15日</b></p>
+      <p>本資料は今回の改善内容をお知らせするものです。操作方法自体に変更はありません。ご不明な点があれば運営施設までお問い合わせください。</p>
+    </footer>
+
+  </div>
+</div>
+</body>
+</html>
