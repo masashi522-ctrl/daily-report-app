@@ -377,7 +377,9 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
         else delete next[residentId]
         return next
       })
-      if (conflictFields.length > 0) router.refresh()
+      // 保存直後は画面のrecordMapがまだ古い(保存前)ままで、下書きは消えているため
+      // 入力内容が一瞬消えたように見える。競合の有無にかかわらず必ず再取得する
+      router.refresh()
     })
   }
 
@@ -406,7 +408,8 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
         for (const id of editedIds) delete next[id]
         return { ...next, ...conflictMap }
       })
-      if (Object.keys(conflictMap).length > 0) router.refresh()
+      // handleSaveと同様、保存直後の表示の古さ(=入力が消えたように見える)を防ぐため必ず再取得する
+      if (entries.length > 0) router.refresh()
       setSavingAll(false)
     })
   }
