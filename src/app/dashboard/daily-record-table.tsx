@@ -336,8 +336,11 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     setSearchText('')
   }
 
+  // drafts[id]は「触った項目だけ」しか持たないため、表示用にはDBの値
+  // (recordMap)の上にdraftsを重ねる。drafts[id]をそのまま返すと、1項目でも
+  // 触った瞬間に未編集の項目(=DBには保存済み)まで空欄に見えてしまう
   function getDraft(id: string): RecordDraft {
-    return drafts[id] ?? recordMap[id] ?? { isAbsent: false }
+    return { ...(recordMap[id] ?? { isAbsent: false }), ...(drafts[id] ?? {}) }
   }
 
   // drafts[id]には「実際に触った項目だけ」を積む。getDraft(id)(recordMapへの
