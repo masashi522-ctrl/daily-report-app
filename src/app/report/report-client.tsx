@@ -46,12 +46,15 @@ export default function ReportClient({
   residents,
   date,
   lineConfigured,
+  generatedIds,
 }: {
   residents: Resident[]
   date: string
   lineConfigured: boolean
+  generatedIds: string[]
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [generated, setGenerated] = useState<Set<string>>(new Set(generatedIds))
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendResults, setSendResults] = useState<SendResult[] | null>(null)
@@ -122,6 +125,7 @@ export default function ReportClient({
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      setGenerated(prev => new Set([...prev, ...selectedIds]))
     } catch (e) {
       console.error(e)
       alert('連絡帳の生成に失敗しました。再度お試しください。')
@@ -230,6 +234,11 @@ export default function ReportClient({
                         {resident.careLevel && (
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${colors.badge}`}>
                             {resident.careLevel}
+                          </span>
+                        )}
+                        {generated.has(resident.id) && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700">
+                            作成済
                           </span>
                         )}
                       </div>

@@ -227,6 +227,8 @@ export interface DailyRecord {
   trainingNote: string | null
   // 臨時利用
   isTemporaryAttendance: boolean
+  /** 連絡帳（Excel）をダウンロードした日時。連絡帳生成画面の「作成済」表示に使う */
+  reportGeneratedAt: string | null
   createdAt: string
   updatedAt: string
 }

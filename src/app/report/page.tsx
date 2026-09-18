@@ -20,11 +20,12 @@ export default async function ReportPage({
   // その日に記録があり欠席でない利用者IDを取得
   const { data: records } = await supabase
     .from('DailyRecord')
-    .select('residentId')
+    .select('residentId, reportGeneratedAt')
     .eq('date', today)
     .eq('isAbsent', false)
 
   const recordedIds = (records ?? []).map(r => r.residentId)
+  const generatedIds = (records ?? []).filter(r => r.reportGeneratedAt).map(r => r.residentId)
 
   // 記録がある自施設の利用者のみ取得
   const { data: residents } = recordedIds.length > 0
@@ -45,6 +46,7 @@ export default async function ReportPage({
       residents={(residents ?? []) as Resident[]}
       date={today}
       lineConfigured={lineConfigured}
+      generatedIds={generatedIds}
     />
   )
 }

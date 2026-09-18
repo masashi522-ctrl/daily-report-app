@@ -619,6 +619,15 @@ export async function GET(request: Request) {
 
   if (wb.worksheets.length === 0) return new Response('No residents found', { status: 404 })
 
+  // ダウンロードできた分だけ「作成済」にする。記録の無い利用者は対象外
+  const generatedIds = residents.filter(rr => recordMap.has(rr.id)).map(rr => rr.id)
+  if (generatedIds.length > 0) {
+    await supabase.from('DailyRecord')
+      .update({ reportGeneratedAt: new Date().toISOString() })
+      .in('residentId', generatedIds)
+      .eq('date', date)
+  }
+
   const buf = await wb.xlsx.writeBuffer()
   const suffix = residentIds.length === 1
     ? (residents[0]?.name ?? '利用者')
