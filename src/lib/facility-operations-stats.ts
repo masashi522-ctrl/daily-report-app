@@ -5,7 +5,7 @@ import {
   type HospitalizationPeriod,
 } from '@/types/database'
 import { isAwayOn } from '@/lib/hospitalization'
-import { isInServicePeriod } from '@/lib/service-period'
+import { isInServicePeriod, effectiveAttendanceDays } from '@/lib/service-period'
 import { fetchDailyRecords } from '@/lib/daily-records'
 
 // 予測の補正率と営業曜日を推定するために遡る日数
@@ -204,7 +204,7 @@ export async function computeFacilityOperationsOverview(
     supabase
       .from('Resident')
       .select(
-        'id, careLevel, serviceTimeCategory, serviceStartTime, serviceEndTime, attendanceDays, serviceStartDate, serviceEndDate, hospitalizations, isActive',
+        'id, careLevel, serviceTimeCategory, serviceStartTime, serviceEndTime, attendanceDays, attendanceDaysPrevious, attendanceDaysEffectiveFrom, serviceStartDate, serviceEndDate, hospitalizations, isActive',
       )
       .eq('facilityId', facilityId),
   ])
@@ -218,6 +218,8 @@ export async function computeFacilityOperationsOverview(
     serviceStartTime: string | null
     serviceEndTime: string | null
     attendanceDays: string | null
+    attendanceDaysPrevious: string | null
+    attendanceDaysEffectiveFrom: string | null
     serviceStartDate: string | null
     serviceEndDate: string | null
     hospitalizations: HospitalizationPeriod[] | null
@@ -310,7 +312,8 @@ export async function computeFacilityOperationsOverview(
     let severe = 0
     for (const r of residents) {
       if (!r.isActive) continue
-      if (r.attendanceDays && !r.attendanceDays.split(',').map(Number).includes(dow)) continue
+      const days = effectiveAttendanceDays(r, date)
+      if (days && !days.split(',').map(Number).includes(dow)) continue
       if (!isInServicePeriod(r, date)) continue
       if (isAwayOn(r.hospitalizations, date)) continue
       count++

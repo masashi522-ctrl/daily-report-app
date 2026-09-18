@@ -9,6 +9,11 @@ import { FOOD_TYPE_LABELS, CARE_LEVEL_OPTIONS, SERVICE_START_TIMES, SERVICE_TIME
 
 const DAYS = ['日', '月', '火', '水', '木', '金', '土']
 
+function daysLabel(days: string | null) {
+  if (!days) return '未設定'
+  return days.split(',').map(Number).sort().map(i => DAYS[i]).join('・')
+}
+
 function DayCheckboxes({ name, checkedDays }: { name: string; checkedDays: number[] }) {
   return (
     <div className="flex gap-1.5">
@@ -116,6 +121,9 @@ export default function EditResidentForm({
   const [hospitalizations, setHospitalizations] = useState<HospitalizationPeriod[]>(
     resident.hospitalizations ?? [],
   )
+
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+  const attendanceDaysPending = !!resident.attendanceDaysEffectiveFrom && resident.attendanceDaysEffectiveFrom > today
 
   const checkedDays         = resident.attendanceDays    ? resident.attendanceDays.split(',').map(Number) : []
   const checkedBathing      = resident.bathingDays       ? resident.bathingDays.split(',').map(Number)    : []
@@ -236,6 +244,20 @@ export default function EditResidentForm({
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-2">利用曜日</label>
         <DayCheckboxes name="attendanceDays" checkedDays={checkedDays} />
+        {attendanceDaysPending && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
+            {resident.attendanceDaysEffectiveFrom}まで「{daysLabel(resident.attendanceDaysPrevious)}」、それ以降は上記の曜日になります
+          </p>
+        )}
+        <div className="mt-2">
+          <label className="text-xs text-gray-500 block mb-1">
+            上記の変更を適用する日
+            <span className="text-gray-400 font-normal"> （空欄なら今日から。未来日を指定すると、その日になるまでは今の曜日のまま表示されます）</span>
+          </label>
+          <input type="date" name="attendanceDaysEffectiveFrom"
+            defaultValue={attendanceDaysPending ? resident.attendanceDaysEffectiveFrom ?? '' : ''}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        </div>
       </div>
       <div>
         <label className="text-xs font-medium text-gray-700 block mb-1">

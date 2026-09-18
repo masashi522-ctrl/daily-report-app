@@ -9,7 +9,7 @@ import {
   type FoodType,
   type Resident,
 } from '@/types/database'
-import { hasLeftBy } from '@/lib/service-period'
+import { hasLeftBy, jstToday } from '@/lib/service-period'
 
 const DAYS =['日', '月', '火', '水', '木', '金', '土']
 
@@ -128,7 +128,14 @@ export default function ResidentDetailModal({
           </Section>
 
           <Section title="利用予定">
-            <Row label="利用曜日">{daysLabel(r.attendanceDays) || <Empty />}</Row>
+            <Row label="利用曜日">
+              {daysLabel(r.attendanceDays) || <Empty />}
+              {r.attendanceDaysEffectiveFrom && r.attendanceDaysEffectiveFrom > jstToday() && (
+                <span className="block text-xs text-amber-600 mt-0.5">
+                  {r.attendanceDaysEffectiveFrom}まで「{daysLabel(r.attendanceDaysPrevious) || '未設定'}」
+                </span>
+              )}
+            </Row>
             <Row label="入浴曜日">{daysLabel(r.bathingDays) || <Empty />}</Row>
             <Row label="機能訓練">{r.trainingDays ? '対象' : <Empty />}</Row>
             <Row label="体重測定">{r.weightMeasureEveryVisit ? '毎回利用時に測定' : <Empty />}</Row>

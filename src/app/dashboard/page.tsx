@@ -6,7 +6,7 @@ import DailyRecordTable from './daily-record-table'
 import AddTemporaryModal from './add-temporary-modal'
 import DaySummaryBar from './day-summary'
 import { summarizeDay } from '@/lib/attendance-stats'
-import { isInServicePeriod } from '@/lib/service-period'
+import { isInServicePeriod, effectiveAttendanceDays } from '@/lib/service-period'
 import { isRecentlyRegistered } from '@/lib/resident-warnings'
 
 function toDateStr(date: Date) {
@@ -20,7 +20,12 @@ export default async function DashboardPage({
 }) {
   const session = await requireSession()
   const params = await searchParams
-  const today = params.date || toDateStr(new Date())
+  const realToday = toDateStr(new Date())
+  const today = params.date || realToday
+  // 過去日は、利用者マスタの「今の」利用曜日設定ではなく実際の記録の有無で判断する。
+  // でないと、月の途中で利用曜日を追加/削除したとき、その変更が過去の日付にも
+  // 適用されてしまい、当時は対象でなかった利用者が過去日の一覧に出てしまう
+  const isPastDate = today < realToday
 
   const { data: allResidents } = await supabase
     .from('Resident')
@@ -51,19 +56,24 @@ export default async function DashboardPage({
   const dateLabel = `${displayDate.getFullYear()}年${displayDate.getMonth() + 1}月${displayDate.getDate()}日（${dayNames[todayDow]}）`
 
   // 本日スケジュール外の利用者 → 臨時追加候補（曜日未設定 or 今日が含まれない）
+  // 過去日は、その日に記録が無い＝当時のスケジュール外だった人として扱う
   const nonScheduledResidents = residents.filter((r: Resident) => {
-    if (!r.attendanceDays) return true
-    return !r.attendanceDays.split(',').map(Number).includes(todayDow)
+    if (isPastDate) return !recordMap.has(r.id)
+    const days = effectiveAttendanceDays(r, today)
+    if (!days) return true
+    return !days.split(',').map(Number).includes(todayDow)
   })
 
   // その日の利用状況。画面に並ぶ対象者（曜日の予定者＋臨時追加）から
   // 欠席の方を除いて数える
   const attendees = residents.filter((r: Resident) => {
     const rec = recordMap.get(r.id)
+    if (isPastDate) return rec != null && !rec.isAbsent
     if (rec?.isAbsent) return false
     if (rec?.isTemporaryAttendance) return true
-    if (!r.attendanceDays) return true
-    return r.attendanceDays.split(',').map(Number).includes(todayDow)
+    const days = effectiveAttendanceDays(r, today)
+    if (!days) return true
+    return days.split(',').map(Number).includes(todayDow)
   })
   const daySummary = summarizeDay(
     attendees.map((r: Resident) => ({ resident: r, specialNotes: recordMap.get(r.id)?.specialNotes ?? null })),
@@ -134,6 +144,7 @@ export default async function DashboardPage({
         residents={residents}
         recordMap={Object.fromEntries(recordMap)}
         date={today}
+        isPastDate={isPastDate}
       />
     </div>
   )

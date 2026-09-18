@@ -37,6 +37,29 @@ export function jstToday() {
 }
 
 /**
+ * 指定した日付の時点で有効な利用曜日。
+ * 利用曜日は attendanceDaysEffectiveFrom より前は attendanceDaysPrevious を、
+ * その日以降は attendanceDays を使う（未来の曜日追加を事前登録できるようにするため）。
+ */
+export function effectiveAttendanceDays(
+  resident: {
+    attendanceDays?: string | null
+    attendanceDaysPrevious?: string | null
+    attendanceDaysEffectiveFrom?: string | null
+  },
+  date: string,
+): string | null {
+  if (
+    resident.attendanceDaysEffectiveFrom &&
+    date < resident.attendanceDaysEffectiveFrom &&
+    resident.attendanceDaysPrevious != null
+  ) {
+    return resident.attendanceDaysPrevious
+  }
+  return resident.attendanceDays ?? null
+}
+
+/**
  * 「利用終了日をまだ過ぎていない」を表す PostgREST の条件。
  * 在籍者を並べる画面で .eq('isActive', true).or(notEndedFilter(jstToday())) のように使い、
  * 終了日を過ぎた方が、誰も編集しなくても翌日から一覧から外れるようにする。

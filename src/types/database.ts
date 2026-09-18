@@ -131,6 +131,10 @@ export interface Resident {
   /** 旧「表示順」。現在は使用しておらず、一覧はすべてふりがな順に統一している */
   sortOrder: number
   attendanceDays: string | null
+  /** attendanceDaysEffectiveFrom より前の日付に使う、変更前の利用曜日。未来日の適用開始を予約していないときは null */
+  attendanceDaysPrevious: string | null
+  /** attendanceDays が有効になる日。null なら attendanceDays は即時（登録時から）有効 */
+  attendanceDaysEffectiveFrom: string | null
   bathingDays: string | null
   trainingDays: string | null
   weightMeasureEveryVisit: boolean

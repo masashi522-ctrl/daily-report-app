@@ -163,7 +163,8 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
   const foodType = (formData.getAll('foodType') as string[]).join(',')
   const foodRestrictions = formData.get('foodRestrictions') as string
   const specialCondition = formData.get('specialCondition') as string
-  const attendanceDays          = (formData.getAll('attendanceDays') as string[]).join(',')
+  const attendanceDays          = (formData.getAll('attendanceDays') as string[]).join(',') || null
+  const attendanceDaysEffectiveFromInput = (formData.get('attendanceDaysEffectiveFrom') as string)?.trim() || null
   const bathingDays             = (formData.getAll('bathingDays')    as string[]).join(',')
   const trainingDays            = formData.get('trainingTarget') ? '1' : null
   const careLevel               = (formData.get('careLevel') as string) || null
@@ -184,13 +185,32 @@ export async function updateResident(id: string, prevState: ResidentFormState, f
 
   if (!name) return { error: '名前は必須です' }
 
+  // 利用曜日の変更に未来の適用開始日が指定されていれば、その日までは
+  // 「今、実際に有効な曜日」を attendanceDaysPrevious として残しておく。
+  // (指定が無い、または今日以前なら、これまで通り即時反映する)
+  const today = jstToday()
+  let attendanceDaysPrevious: string | null = null
+  let attendanceDaysEffectiveFrom: string | null = null
+  if (attendanceDaysEffectiveFromInput && attendanceDaysEffectiveFromInput > today) {
+    const { data: existing } = await supabase
+      .from('Resident')
+      .select('attendanceDays, attendanceDaysPrevious, attendanceDaysEffectiveFrom')
+      .eq('id', id)
+      .maybeSingle()
+    const currentlyPending = !!existing?.attendanceDaysEffectiveFrom && existing.attendanceDaysEffectiveFrom > today
+    attendanceDaysPrevious = currentlyPending ? existing.attendanceDaysPrevious : (existing?.attendanceDays ?? null)
+    attendanceDaysEffectiveFrom = attendanceDaysEffectiveFromInput
+  }
+
   const { error } = await supabase.from('Resident').update({
     name,
     furigana: furigana || null,
     foodType,
     foodRestrictions: foodRestrictions || null,
     specialCondition: specialCondition || null,
-    attendanceDays:      attendanceDays      || null,
+    attendanceDays,
+    attendanceDaysPrevious,
+    attendanceDaysEffectiveFrom,
     bathingDays:         bathingDays         || null,
     trainingDays:        trainingDays        || null,
     careLevel,

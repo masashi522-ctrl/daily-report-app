@@ -5,12 +5,15 @@ import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { FOOD_TYPE_LABELS, BOWEL_AMOUNT_OPTIONS, BOWEL_QUALITY_OPTIONS, type FoodType, type Resident, type DailyRecord } from '@/types/database'
 import { awayStatusOn } from '@/lib/hospitalization'
+import { effectiveAttendanceDays } from '@/lib/service-period'
 import { saveRecord, saveAllRecords } from './actions'
 
 interface Props {
   residents: Resident[]
   recordMap: Record<string, DailyRecord>
   date: string
+  /** 過去日かどうか。過去日は利用者マスタの「今の」利用曜日ではなく実際の記録の有無で判断する */
+  isPastDate: boolean
 }
 
 type RecordDraft = Partial<DailyRecord>
@@ -98,7 +101,7 @@ const GOJUUON_ROWS = [
   { label: 'わ', chars: 'わをんワヲン' },
 ]
 
-export default function DailyRecordTable({ residents, recordMap, date }: Props) {
+export default function DailyRecordTable({ residents, recordMap, date, isPastDate }: Props) {
   const router = useRouter()
   const [drafts, setDrafts] = useState<Record<string, RecordDraft>>({})
   const [saving, setSaving] = useState<string | null>(null)
@@ -217,13 +220,19 @@ export default function DailyRecordTable({ residents, recordMap, date }: Props) 
     return row ? row.chars.includes(searchChar) : true
   }
 
-  // 今日の曜日登録者（臨時利用者も含む）
-  const scheduledToday = residents.filter(r =>
-    !todayOnly ||
-    recordMap[r.id]?.isTemporaryAttendance === true ||
-    !r.attendanceDays ||
-    r.attendanceDays.split(',').map(Number).includes(todayNum)
-  )
+  // 今日の曜日登録者（臨時利用者も含む）。過去日は、今の利用曜日設定ではなく
+  // 実際にその日の記録があるかどうかで判断する（月の途中で利用曜日を変えても
+  // 過去の日付には影響しないように）
+  const scheduledToday = residents.filter(r => {
+    if (!todayOnly) return true
+    if (isPastDate) return recordMap[r.id] != null
+    const days = effectiveAttendanceDays(r, date)
+    return (
+      recordMap[r.id]?.isTemporaryAttendance === true ||
+      !days ||
+      days.split(',').map(Number).includes(todayNum)
+    )
+  })
 
   // テーブル/カード用フィルタ（名前・50音・複数選択・未入力フィルタ込み）
   const filtered = scheduledToday.filter(r => {
