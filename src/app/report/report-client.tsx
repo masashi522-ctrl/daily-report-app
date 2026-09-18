@@ -24,7 +24,23 @@ function careLevelColor(careLevel: string | null) {
   return { bg: 'bg-sky-50', border: 'border-sky-200', badge: 'bg-sky-100 text-sky-700' }
 }
 
-type Group = { label: string; residents: Resident[] }
+/** 'H:MM' や 'HH:MM' を分に変換。形式が違えば null */
+function toMinutes(t: string): number | null {
+  const m = /^(\d{1,2})[:：](\d{2})$/.exec(t.trim())
+  if (!m) return null
+  const h = Number(m[1])
+  const mi = Number(m[2])
+  return Number.isFinite(h) && Number.isFinite(mi) ? h * 60 + mi : null
+}
+
+/** 提供終了時間が属する1時間単位の帯（例: '16:30' → 16時台） */
+function endTimeHour(serviceEndTime: string | null): number | null {
+  if (!serviceEndTime) return null
+  const minutes = toMinutes(serviceEndTime)
+  return minutes == null ? null : Math.floor(minutes / 60)
+}
+
+type Group = { label: string; hour: number | null; residents: Resident[] }
 
 export default function ReportClient({
   residents,
@@ -45,11 +61,24 @@ export default function ReportClient({
   const dow = new Date(date + 'T00:00:00').getDay()
   const dateLabel = `${y}年${m}月${d}日（${DOW[dow]}曜日）`
 
-  // 要介護・要支援・未設定でグループ化
+  // 提供終了時間帯（1時間単位）でグループ化。時間未設定は最後にまとめる
+  const byHour = new Map<number, Resident[]>()
+  const unsetResidents: Resident[] = []
+  for (const r of residents) {
+    const hour = endTimeHour(r.serviceEndTime)
+    if (hour == null) {
+      unsetResidents.push(r)
+    } else {
+      const list = byHour.get(hour) ?? []
+      list.push(r)
+      byHour.set(hour, list)
+    }
+  }
   const groups: Group[] = [
-    { label: '要介護', residents: residents.filter(r => r.careLevel?.startsWith('要介護')) },
-    { label: '要支援', residents: residents.filter(r => r.careLevel?.startsWith('要支援')) },
-    { label: '区分未設定', residents: residents.filter(r => !r.careLevel) },
+    ...[...byHour.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([hour, hourResidents]) => ({ label: `${hour}時〜${hour + 1}時`, hour, residents: hourResidents })),
+    { label: '終了時間未設定', hour: null, residents: unsetResidents },
   ].filter(g => g.residents.length > 0)
 
   function toggle(id: string) {
@@ -155,13 +184,7 @@ export default function ReportClient({
         const allSelected = groupIds.every(id => selectedIds.has(id))
         const someSelected = groupIds.some(id => selectedIds.has(id))
 
-        const isKaigo = group.label === '要介護'
-        const isShien = group.label === '要支援'
-        const headerBg = isKaigo
-          ? 'from-rose-500 to-pink-600'
-          : isShien
-          ? 'from-sky-500 to-blue-600'
-          : 'from-gray-400 to-gray-500'
+        const headerBg = group.hour == null ? 'from-gray-400 to-gray-500' : 'from-teal-500 to-cyan-600'
 
         return (
           <div key={group.label} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
